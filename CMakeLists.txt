@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.6)
 project("Reactions" VERSION 0.0.0
 DESCRIPTION "A header only c++ library to parse reaction strings"
 LANGUAGES CXX)
