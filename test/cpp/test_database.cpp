@@ -63,5 +63,5 @@ int main() {
     return errors;
   });
 
-  return pdg_database_coll.run() != false;
+  return !pdg_database_coll.run();
 }
