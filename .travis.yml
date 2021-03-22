@@ -1,0 +1,48 @@
+language: python
+
+python:
+   - "3.7"
+   - "3.8"
+
+os: linux
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-7
+      - cmake
+env:
+  - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+
+before_install:
+  - eval "${MATRIX_EVAL}"
+  - ${CC} --version
+  - ${CXX} --version
+  - cmake --version
+  - pip install -r test/requirements.txt
+
+install:
+   - mkdir build
+   - cd build
+   - cmake ../ -DINSTALL_TESTS=ON
+   - make install
+   - cd ..
+
+jobs:
+  include;
+    - name: cpp
+      script:
+        - ./build/test/test_database
+        - ./build/test/test_processes
+    - name: cmake
+      install:
+      - mkdir test/cmake/build
+      - cd test/cmake/build
+      - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../ -DCMAKE_CXX_COMPILER=${CXX}
+      - ./main
+    - name: python
+      install:
+        - pip install .
+      scripts:
+        - pytest

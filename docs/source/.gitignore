@@ -1,0 +1,3 @@
+# Ignore some automatically generated files
+api/
+_static/cpp/

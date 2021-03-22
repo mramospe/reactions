@@ -1,0 +1,9 @@
+*~
+build/
+dist/
+reactions.egg-info/
+__pycache__
+*.so
+docs/cpp
+/include/reactions/database_pdg.hpp
+.coverage

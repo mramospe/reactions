@@ -1,0 +1,286 @@
+/*! \file
+  \brief Define elements to work with elements from the Particle Database Group
+  (PDG) and manage the database service.
+*/
+#ifndef REACTIONS_PDG_HPP
+#define REACTIONS_PDG_HPP
+
+#include "reactions/exceptions.hpp"
+#include "reactions/pow_enum.hpp"
+
+#include <fstream>
+#include <ios>
+#include <stdexcept>
+#include <tuple>
+#include <vector>
+
+namespace reactions::database_pdg {
+  /// Forward declaration of the database type
+  class database;
+} // namespace reactions::database_pdg
+
+/*! \brief PDG database and element
+ */
+namespace reactions::database_pdg {
+
+  /// Definitions for internal use only
+  namespace detail {
+    template <class T> std::string to_string(T const &v) {
+      return std::to_string(v);
+    }
+
+    template <> std::string to_string(std::string const &v) { return v; }
+  } // namespace detail
+
+  /// Base class of a PDG particle
+  using base_element = std::tuple<std::string, int, int, float, float, float,
+                                  std::string, int, float>;
+
+  /// Enumeration to access the PDG element fields
+  REACTIONS_POW_ENUM_WITH_UNKNOWN(pdg_element_field, name, geant_id, pdg_id,
+                                  charge, mass, tau, evtgen_name, pythia_id,
+                                  max_width);
+
+  // Check that the number of fields and accessors are the same
+  static_assert(pdg_element_field_properties::size ==
+                std::tuple_size_v<base_element>);
+
+  /*! \brief A PDG particle, based on the fields of a particle in the PDG
+   * database.
+   */
+  class element : protected base_element {
+
+  public:
+    /// Base class
+    using base_type = base_element;
+
+    /// Number of data fields
+    static const size_t nfields = std::tuple_size_v<base_type>;
+
+    /// Inherit constructors
+    using base_type::base_type;
+
+    /// Assign the element from a tuple with the data fields
+    element &operator=(base_type &&tup) {
+      base_type::operator=(std::move(tup));
+      return *this;
+    }
+
+    /// Compare the ID of the two particles
+    bool operator==(element const &other) const {
+      return pdg_id() == other.pdg_id();
+    }
+
+    /// Compare the ID of the two particles
+    bool operator!=(element const &other) const {
+      return pdg_id() != other.pdg_id();
+    }
+
+    /// Get an element using an accessor
+    template <pdg_element_field E> auto const &get() const {
+      return std::get<pdg_element_field_properties::index<E>()>(*this);
+    }
+
+    /// Name of the particle
+    std::string const &name() const { return get<pdg_element_field::name>(); }
+
+    /// GEANT ID
+    int const &geant_id() const { return get<pdg_element_field::geant_id>(); }
+
+    /// PDG ID
+    int const &pdg_id() const { return get<pdg_element_field::pdg_id>(); }
+
+    /// Charge
+    float const &charge() const { return get<pdg_element_field::charge>(); }
+
+    /// Mass
+    float const &mass() const { return get<pdg_element_field::mass>(); }
+
+    /// Lifetime
+    float const &tau() const { return get<pdg_element_field::tau>(); }
+
+    /// EVTGEN name
+    std::string const &evtgen_name() const {
+      return get<pdg_element_field::evtgen_name>();
+    }
+
+    /// Pythia ID
+    int const &pythia_id() const { return get<pdg_element_field::pythia_id>(); }
+
+    /// Maximum width
+    float const &max_width() const {
+      return get<pdg_element_field::max_width>();
+    }
+
+  protected:
+    template <size_t... I>
+    friend std::ifstream &read_stream_impl(std::index_sequence<I...>,
+                                           std::ifstream &, element &);
+  };
+
+  /// Implementation of the way to read a PDG element from a file
+  template <size_t... I>
+  std::ifstream &read_stream_impl(std::index_sequence<I...>,
+                                  std::ifstream &file, element &el) {
+    ((file >> std::get<I>(el)), ...);
+    return file;
+  }
+
+  /// Read the element from a file
+  std::ifstream &operator>>(std::ifstream &file, element &el) {
+    return read_stream_impl(std::make_index_sequence<element::nfields>(), file,
+                            el);
+  }
+
+  /*! \brief Database of elements following the PDG convention
+   *
+   */
+  class database {
+
+  public:
+    /// Disable the cache
+    void disable_cache() { m_cache.clear(); }
+
+    /* \brief Enable the internal cache.
+     *
+     * All the values in the database will be read an stored in a internal
+     * cache. This will speed-up the code, with the caveat of consuming some
+     * memory.
+     */
+    void enable_cache() {
+
+      if (m_cache.size())
+        return;
+
+      auto file = open_database();
+      while (!file.eof()) {
+        m_cache.emplace_back();
+        read_element(m_cache.back(), file);
+      }
+      file.close();
+    }
+
+    /// Get the only instance of this class
+    static database &instance() {
+      static database db;
+      return db;
+    }
+
+    /// Get the path to the database file
+    std::string const &get_database_path() const { return m_db; }
+
+    /* \brief Set the path to the database file.
+     *
+     * If the cache is enabled, reloads the content using the new path.
+     */
+    void set_database_path(std::string const &s) {
+      m_db = s;
+      if (m_cache.size()) {
+        disable_cache();
+        enable_cache();
+      }
+    }
+
+    /// Create an element accessing by ID
+    element operator()(int id) const {
+      return access<pdg_element_field::pdg_id>(id);
+    }
+
+    /// Create an element accessing by name
+    element operator()(std::string const &str) const {
+      return access<pdg_element_field::name>(str);
+    }
+
+  private:
+    /// Path to the database file
+    std::string m_db = "@PDG_TABLE@";
+
+    /// Possible cache for the elements
+    std::vector<element> m_cache;
+
+    /// Open the database
+    std::ifstream open_database() const {
+
+      if (m_db.empty())
+        throw reactions::exceptions::database_error(
+            "The PDG database has not been specified");
+
+      std::ifstream file;
+      file.open(m_db);
+      if (!file.is_open())
+        throw reactions::exceptions::database_error(
+            "Unable to access the database");
+
+      return file;
+    }
+
+    /// Read the database file and advance to the next non-commented line
+    bool read_advance(std::ifstream &file) const {
+
+      // skip whitespaces
+      char c;
+      do {
+        file.get(c);
+      } while (c == ' ');
+
+      if (c == '#') {
+        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        return false; // commented line
+      } else if (c == '\n')
+        return false; // empty line
+
+      // move one position backwards since we are already reading an element
+      file.unget();
+
+      return true;
+    }
+
+    /// Advance to the next element in the file and read it
+    bool read_element(element &el, std::ifstream &file) const {
+
+      if (!read_advance(file))
+        return false;
+
+      if (!(file >> el))
+        throw reactions::exceptions::database_error(
+            "Error reading PDG database; data format not understood");
+
+      return true; // succeded
+    }
+
+    /// Access an element using the field accessor
+    template <pdg_element_field E, class T> element access(T const &v) const {
+
+      if (m_cache.size()) {
+        for (auto const &el : m_cache)
+          if (el.get<E>() == v)
+            return el;
+      } else {
+        auto file = open_database();
+
+        while (!file.eof()) {
+          element el;
+          if (read_element(el, file) && el.get<E>() == v) {
+            file.close();
+            return el;
+          }
+        }
+
+        file.close();
+      }
+
+      throw reactions::exceptions::lookup_error(
+          (std::string{"Unable to find element with "} +
+           pdg_element_field_properties::to_string(E) + "=" +
+           detail::to_string(v))
+              .c_str());
+    }
+
+    database() {}
+    database(database &&) = delete;
+    database(database const &) = delete;
+    void operator=(database const &other) = delete;
+  };
+} // namespace reactions::database_pdg
+
+#endif // REACTIONS_PDG_HPP

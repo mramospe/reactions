@@ -1,0 +1,107 @@
+#!/bin/env bash
+
+# help message
+usage=$(cat <<EOF
+Execute actions in the current repository.
+
+Usage: ./repository options...
+
+-h|--help: print this message and exit
+-b|--build: build the project under a "build" directory. It can be used together with "--clean".
+-c|--clean: clean the repository of temporary files, caches, build directories, ...
+-f|--format: format the code
+--force: when specified before any number of commands described above, forces their execution, without any further interaction with the user
+EOF
+     )
+
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+	-h|--help)
+	    echo "$usage"
+	    exit 0
+	    ;;
+	-b|--build)
+
+	    echo "Building project"
+	    mkdir -p build
+	    cd build
+	    cmake ../ -DINSTALL_TESTS=ON
+	    make -j $[$(($(nproc) - 1)) | 1] install
+	    cd ..
+	    shift
+	    ;;
+	-c|--clean)
+
+	    echo "Running \"make clean\" in the documentation directory"
+	    (cd $(dirname "$0")/docs && make clean && cd - &> /dev/null)
+	    if [ $? -eq 0 ]; then
+		echo "Removal executed successfully"
+	    else
+		echo "ERROR: Failed to remove documentation files"
+		exit 1
+	    fi
+	    
+	    # determine the files to remove
+	    files=($(find . -regex '.*\(build\|\.pyc\|__pycache__\|\.so\|cache.*\|~\)$'))
+
+	    if [[ ! -z "$files" ]]; then
+
+		echo "Will remove the additional files:"
+		for f in ${files[@]}; do
+		    echo " - $f"
+		done
+
+		if [ -z $force ]; then
+		    read -e -p "In total, ${#files[@]} files will be removed. Proceed? (Y/n): " action
+		    while [[ $action != "Y" && $action != "n" ]]; do
+			read -e -p "Invalid argument \"$action\". Please answer Y or n: " action
+		    done
+		fi
+
+		if [[ $action == "Y" || $force == "true" ]]; then
+		    # remove the files
+		    for f in ${files[@]}; do
+			if [[ -f $f || -d $f ]]; then
+			    rm -r $f
+			fi
+		    done
+
+		    if [ $? -eq 0 ]; then
+			echo "Files removed successfully"
+		    else
+			echo "ERROR: Failed to remove some files"
+			exit 1
+		    fi
+		fi
+	    else
+		echo "No additional files found to remove"
+	    fi
+	    shift
+	    ;;	    
+	-f|--format)
+	    echo "Applying format:"
+	    echo "- C++ files"
+	    clang-format -i include/reactions/*.{hpp,in} src/*.{cpp,hpp} test/cpp/*.{cpp,hpp}
+	    if [ ! $? -eq 0 ]; then
+		echo "ERROR: Problems applying format"
+		exit 1
+	    fi
+	    echo "- python files"
+	    autopep8 -i setup.py python/reactions/*.py test/python/*.py docs/source/conf.py
+	    if [ ! $? -eq 0 ]; then
+		echo "ERROR: Problems applying format"
+		exit 1
+	    fi
+	    shift
+	    ;;
+	--force)
+	    force=true
+	    shift
+	    ;;
+	*)
+	    echo "ERROR: Unknown argument \"$key\""
+	    exit 1
+	    ;;
+    esac
+done

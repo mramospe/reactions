@@ -1,0 +1,6 @@
+# Include the license file and the requirements
+include LICENSE.txt
+include requirements.txt
+include include/reactions/*.hpp
+include include/reactions/*.hpp.in
+include python/reactions/data/*.txt
