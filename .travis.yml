@@ -10,7 +10,7 @@ addons:
       - g++-7
       - cmake
 env:
-  - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+  - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7 && gcc=gcc-7 && g++=g++-7"
 
 before_install:
   - eval "${MATRIX_EVAL}"
@@ -39,9 +39,9 @@ jobs:
       - ./main
     - name: python 3.7
       python: 3.7
-      install: CXX=${CXX} pip install .
+      install: pip install .
       script: pytest
     - name: python 3.8
       python: 3.8
-      install: CXX=${CXX} pip install .
+      install: pip install .
       script: pytest
