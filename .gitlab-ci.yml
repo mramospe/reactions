@@ -6,6 +6,7 @@ stages:
 
 before_script:
    - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_99 x86_64-centos7-gcc10-opt
+   - export PYTHONPATH=$(echo $PYTHONPATH | awk -v RS=: -v ORS=: '/LCG.*site-packages/ {next} {print}' | sed 's/:*$//')
 
 build-cpp:
    stage: build
@@ -21,10 +22,13 @@ build-cpp:
 
 build-python:
    stage: build
-   script: pip install -e .
+   script:
+      - python -m venv vpython3
+      - source vpython3/bin/activate
+      - pip install .
    artifacts:
       paths:
-         - python/
+         - vpython3/
 
 cpp:
    stage: test
@@ -45,6 +49,7 @@ cmake:
 python:
    stage: test
    script:
+      - source vpython3/bin/activate
       - pip install -r test/python/requirements.txt
       - pytest
    dependencies:
