@@ -30,7 +30,7 @@ install:
    - cd ..
 
 jobs:
-  include;
+  include:
     - name: cpp
       script: for f in ./build/test/test_*; do ./$f; done
     - name: cmake
