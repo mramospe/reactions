@@ -10,7 +10,7 @@ addons:
       - g++-7
       - cmake
 env:
-  - CC=gcc-7 CXX=g++-7 CODECOV_TOKEN='cd56154e-95e9-47df-82bd-e293140faed9'
+  - CC=gcc-7 CXX=g++-7
 
 before_install:
   - ${CC} --version
