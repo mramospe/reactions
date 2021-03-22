@@ -6,7 +6,7 @@ stages:
 
 build-cpp:
    stage: build
-   install:
+   script:
       - mkdir build
       - cd build
       - cmake ../ -DINSTALL_TESTS=ON
@@ -18,7 +18,7 @@ build-cpp:
 
 build-python:
    stage: build
-   install: pip install -e .
+   script: pip install -e .
    artifacts:
       paths:
          - python/
@@ -39,6 +39,7 @@ cmake:
 
 python:
    stage: test
-   script: pytest
-   install: pip install -r test/requirements.txt
+   script:
+      - pip install -r test/requirements.txt
+      - pytest
    dependencies: build-python
