@@ -1,0 +1,44 @@
+image: gitlab-registry.cern.ch/lhcb-docker/analysis-ci/cc7:latest
+
+stages:
+   - build
+   - test
+
+build-cpp:
+   stage: build
+   install:
+      - mkdir build
+      - cd build
+      - cmake ../ -DINSTALL_TESTS=ON
+      - make install
+      - cd ..
+   artifacts:
+      paths:
+         - build/
+
+build-python:
+   stage: build
+   install: pip install -e .
+   artifacts:
+      paths:
+         - python/
+
+cpp:
+   stage: test
+   script: for f in ./build/test/test_*; do ./$f; done
+   dependencies: build-cpp
+
+cmake:
+   stage: test
+   script:
+      - mkdir test/cmake/build
+      - cd test/cmake/build
+      - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../
+      - ./main
+   dependencies: build-cpp
+
+python:
+   stage: test
+   script: pytest
+   install: pip install -r test/requirements.txt
+   dependencies: build-python

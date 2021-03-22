@@ -34,7 +34,7 @@ jobs:
     - name: cpp
       script: for f in ./build/test/test_*; do ./$f; done
     - name: cmake
-      install:
+      script:
       - mkdir test/cmake/build
       - cd test/cmake/build
       - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../ -DCMAKE_CXX_COMPILER=${CXX}
@@ -42,5 +42,5 @@ jobs:
     - name: python
       install:
         - pip install .
-      scripts:
+      script:
         - pytest
