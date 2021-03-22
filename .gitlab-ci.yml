@@ -42,6 +42,7 @@ cmake:
       - mkdir test/cmake/build
       - cd test/cmake/build
       - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../
+      - make
       - ./main
    dependencies:
       - build-cpp
