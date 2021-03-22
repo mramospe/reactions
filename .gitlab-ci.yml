@@ -32,7 +32,9 @@ build-python:
 
 cpp:
    stage: test
-   script: for f in ./build/test/test_*; do ./$f; done
+   script:
+      - ./build/test/test_database
+      - ./build/test/test_processes
    dependencies:
       - build-cpp
 

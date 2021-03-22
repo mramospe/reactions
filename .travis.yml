@@ -31,7 +31,9 @@ after_success:
 jobs:
   include:
     - name: cpp
-      script: for f in ./build/test/test_*; do ./$f; done
+      script:
+         - ./build/test/test_database
+         - ./build/test/test_processes
       after_success: " "
     - name: cmake
       script:
