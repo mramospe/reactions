@@ -26,7 +26,8 @@ build-python:
 cpp:
    stage: test
    script: for f in ./build/test/test_*; do ./$f; done
-   dependencies: build-cpp
+   dependencies:
+      - build-cpp
 
 cmake:
    stage: test
@@ -35,11 +36,13 @@ cmake:
       - cd test/cmake/build
       - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../
       - ./main
-   dependencies: build-cpp
+   dependencies:
+      - build-cpp
 
 python:
    stage: test
    script:
       - pip install -r test/python/requirements.txt
       - pytest
-   dependencies: build-python
+   dependencies:
+      - build-python
