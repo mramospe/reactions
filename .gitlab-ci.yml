@@ -40,6 +40,6 @@ cmake:
 python:
    stage: test
    script:
-      - pip install -r test/requirements.txt
+      - pip install -r test/python/requirements.txt
       - pytest
    dependencies: build-python
