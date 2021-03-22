@@ -25,10 +25,14 @@ install:
    - make install
    - cd ..
 
+after_success:
+   - codecov
+
 jobs:
   include:
     - name: cpp
       script: for f in ./build/test/test_*; do ./$f; done
+      after_success: " "
     - name: cmake
       script:
       - mkdir test/cmake/build
@@ -36,6 +40,7 @@ jobs:
       - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../ -DCMAKE_CXX_COMPILER=${CXX}
       - make
       - ./main
+      after_success: " "
     - name: python 3.7
       python: 3.7
       install: pip install .
