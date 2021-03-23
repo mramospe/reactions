@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    ori_doxyfile = os.path.join(root, 'Doxyfile')
+    ori_doxyfile = os.path.join(root, 'docs', 'Doxyfile')
     tmp_doxyfile = os.path.join(tmpdir, 'Doxyfile')
 
     shutil.copyfile(ori_doxyfile, tmp_doxyfile)
