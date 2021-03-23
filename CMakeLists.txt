@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 cmake_policy(SET CMP0048 NEW)
-project("Reactions" VERSION 0.0.0.dev0
+project("Reactions" VERSION 0.0.0
 DESCRIPTION "A header only c++ library to parse reaction strings"
 LANGUAGES CXX)
 
