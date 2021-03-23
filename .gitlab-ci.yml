@@ -1,0 +1,59 @@
+image: gitlab-registry.cern.ch/lhcb-docker/analysis-ci/cc7:latest
+
+stages:
+   - build
+   - test
+
+before_script:
+   - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_99 x86_64-centos7-gcc10-opt
+   - "export PYTHONPATH=$(echo $PYTHONPATH | awk -v RS=: -v ORS=: '/LCG.*site-packages/ {next} {print}' | sed 's/:*$//')"
+
+build-cpp:
+   stage: build
+   script:
+      - mkdir build
+      - cd build
+      - cmake ../ -DINSTALL_TESTS=ON
+      - make install
+      - cd ..
+   artifacts:
+      paths:
+         - build/
+
+build-python:
+   stage: build
+   script:
+      - python -m venv vpython3
+      - source vpython3/bin/activate
+      - pip install .
+   artifacts:
+      paths:
+         - vpython3/
+
+cpp:
+   stage: test
+   script:
+      - ./build/test/test_database
+      - ./build/test/test_processes
+   dependencies:
+      - build-cpp
+
+cmake:
+   stage: test
+   script:
+      - mkdir test/cmake/build
+      - cd test/cmake/build
+      - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../
+      - make
+      - ./main
+   dependencies:
+      - build-cpp
+
+python:
+   stage: test
+   script:
+      - source vpython3/bin/activate
+      - pip install -r test/python/requirements.txt
+      - pytest
+   dependencies:
+      - build-python

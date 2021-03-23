@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 2.8)
+cmake_policy(SET CMP0048 NEW)
 project("Reactions" VERSION 0.0.0
 DESCRIPTION "A header only c++ library to parse reaction strings"
 LANGUAGES CXX)
@@ -62,6 +63,6 @@ if(INSTALL_TESTS)
     foreach(testsourcefile ${TEST_SOURCES})
       get_filename_component(testname ${testsourcefile} NAME_WE)
       add_executable(${testname} ${testsourcefile})
-      set_target_properties(${testname} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
+      set_target_properties(${testname} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test CXX_STANDARD 17 CXX_STANDARD_REQUIRED YES)
     endforeach(testsourcefile ${TEST_SOURCES})
 endif(INSTALL_TESTS)
