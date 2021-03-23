@@ -1,7 +1,7 @@
 Reactions
 =========
 
-[![Build Status](https://travis-ci.org/mramospe/reactions.svg?branch=master)](https://travis-ci.org/mramospe/reactions)
+[![Build Status](https://travis-ci.com/mramospe/reactions.svg?branch=master)](https://travis-ci.com/mramospe/reactions)
 [![Coverage](https://codecov.io/gh/mramospe/reactions/branch/master/graph/badge.svg)](https://codecov.io/gh/mramospe/reactions)
 [![Documentation (Python)](https://img.shields.io/badge/python_documentation-link-blue.svg)](https://reactions.readthedocs.io/en/latest)
 [![Documentation (C++)](https://img.shields.io/badge/c++_documentation-link-blue.svg)](https://reactions.readthedocs.io/en/latest/_static/cpp)
