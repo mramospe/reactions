@@ -412,7 +412,8 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
         ext_modules=[Extension('reactions.reactions',
                                include_dirs=[tmp_include_dir, 'include'],
                                sources=[os.path.relpath(s, PWD) for s in files_with_extension(
-                                   'cpp', os.path.join(PWD, 'src'))],
+                                   'cpp', os.path.join(PWD, 'src')) + files_with_extension(
+                                       'hpp', os.path.join(PWD, 'src'))],
                                extra_compile_args=['-std=c++17'],
                                language='c++')],
 
