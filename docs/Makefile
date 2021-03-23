@@ -26,10 +26,6 @@ gh-pages: html
 # Forces running certain rules
 FORCE: ;
 
-# Build the static CPP files
-cpp: ../Doxyfile
-	cd .. && doxygen && cd -
-
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %-doc: Makefile $(PROJECT_SOURCES)
@@ -38,7 +34,7 @@ cpp: ../Doxyfile
 	@$(SPHINXBUILD) -M $(subst -doc,,$@) "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 # Shortcuts
-html: cpp html-doc;
+html: html-doc;
 
 latexpdf: latexpdf-doc;
 

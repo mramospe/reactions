@@ -45,10 +45,12 @@ with tempfile.TemporaryDirectory() as tmpdir:
     intro_file = os.path.join(root, 'docs', 'source',
                               '_static', 'CPP_INTRODUCTION.md')
 
-    cpp_doc_dir = os.path.join(os.path.dirname(__file__), '_static', 'cpp')
+    static_doc_dir = os.path.join(os.path.dirname(__file__), '_static')
+    cpp_doc_dir = os.path.join(static_doc_dir, 'cpp')
 
     with open(tmp_doxyfile, 'at') as df:
         df.write(f'''
+TAGFILES = {os.path.join(static_doc_dir, "cppreference-doxygen-web.tag.xml=http://en.cppreference.com/w/")}
 INPUT = {intro_file} {os.path.join(root, "include")}
 USE_MDFILE_AS_MAINPAGE = {intro_file}
 PROJECT_NUMBER = {reactions.__version__}
