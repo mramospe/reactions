@@ -143,3 +143,26 @@ def test_decay():
     assert reac == reactions.decay('pi+ -> nu_mu~ mu-', kind='pdg')
     reac = reactions.decay('KS0 -> {pi+ -> mu+ nu_mu} pi-')
     assert reac == reactions.decay('KS0 -> pi- {pi+ -> nu_mu mu+}')
+
+
+def test_syntax():
+
+    for proc in reactions.reaction, reactions.decay:
+
+        with pytest.raises(RuntimeError):
+            proc('A ->')
+
+        with pytest.raises(RuntimeError):
+            proc('-> B C')
+
+        with pytest.raises(RuntimeError):
+            proc('{A -> B C')
+
+        with pytest.raises(RuntimeError):
+            proc('A -> B C}')
+
+        with pytest.raises(RuntimeError):
+            proc('A -> -> B C')
+
+        with pytest.raises(RuntimeError):
+            proc('A -> B {C')
