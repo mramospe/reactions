@@ -100,8 +100,10 @@ namespace reactions::processes {
           }
         } else if (tokens::match_token<tokens::right_bra>(sit)) {
 
-          if (sit != start)
+          if (sit != start) {
             fill_element(start);
+            start = sit;
+          }
 
           break;
 
@@ -535,14 +537,14 @@ namespace reactions {
           this->m_products.emplace_back(
               std::make_unique<element_type>(builder(std::string{start, sit})));
         } else
-          throw exceptions::__syntax_error("Missing arrow", end - sit);
+          throw exceptions::__syntax_error("Missing arrow", end - start);
       };
       auto fill_decay = [&] {
         if (!m_head) {
           throw exceptions::__syntax_error("Missing head", end - sit);
         } else if (fill_products) {
-          this->m_products.push_back(std::make_unique<decay>(
-              sit += tokens::left_bra::size, end, builder));
+          this->m_products.push_back(
+              std::make_unique<decay>(sit, end, builder));
         } else
           throw exceptions::__syntax_error("Missing arrow", end - sit);
       };

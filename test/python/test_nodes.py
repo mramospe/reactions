@@ -166,3 +166,10 @@ def test_syntax():
 
         with pytest.raises(RuntimeError):
             proc('A -> B {C')
+
+    with pytest.raises(RuntimeError):
+        reactions.decay('A B -> C D')
+
+    reactions.reaction('A -> B {C D -> E} F')
+    with pytest.raises(RuntimeError):
+        reactions.decay('A -> B {C D -> E} F')
