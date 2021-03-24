@@ -84,12 +84,11 @@ namespace reactions::processes {
             // begin a new expression
             fill_expression();
 
-            if (!tokens::match_token<tokens::right_bra>(
-                    sit - tokens::right_bra::size))
+            if (!tokens::match_token<tokens::right_bra>(sit))
               throw exceptions::__syntax_error("Expected closing braces",
                                                end - sit);
 
-            start = sit;
+            start = (sit += tokens::right_bra::size);
 
             continue;
 
@@ -103,9 +102,6 @@ namespace reactions::processes {
 
           if (sit != start)
             fill_element(start);
-
-          // close the reaction
-          start = (sit += tokens::right_bra::size);
 
           break;
 
@@ -397,9 +393,6 @@ namespace reactions {
     }
 
   protected:
-    /// Build the reaction parsing the input string
-    reaction(std::string const &str, builder_type builder)
-        : reaction{str.cbegin(), str.cend(), builder} {}
     /// Constructor from the string iterators
     reaction(std::string::const_iterator &&begin,
              std::string::const_iterator const &end, builder_type builder)
@@ -514,9 +507,6 @@ namespace reactions {
     }
 
   protected:
-    /// Build the decay parsing the input string
-    decay(std::string const &str, builder_type builder)
-        : decay{str.cbegin(), str.cend(), builder} {}
     /// Constructor from the string iterators
     decay(std::string::const_iterator &&begin,
           std::string::const_iterator const &end, builder_type builder)
@@ -605,7 +595,21 @@ namespace reactions {
   make_reaction_for(std::string const &str,
                     typename reaction<Element>::builder_type builder) {
     try {
-      return {str, builder};
+
+      auto sit = str.cbegin();
+      auto const send = str.cend();
+
+      reaction<Element> r{sit, send, builder};
+
+      if (sit != send) {
+        if (tokens::match_token<tokens::right_bra>(sit))
+          throw exceptions::__syntax_error("Mismatching braces", send - sit);
+        else
+          throw exceptions::__syntax_error("Invalid syntax", send - sit);
+      }
+
+      return r;
+
     } catch (exceptions::__syntax_error &e) {
       throw e.update(str);
     }
@@ -632,7 +636,21 @@ namespace reactions {
   decay<Element> make_decay_for(std::string const &str,
                                 typename decay<Element>::builder_type builder) {
     try {
-      return {str, builder};
+
+      auto sit = str.cbegin();
+      auto const send = str.cend();
+
+      decay<Element> d{sit, send, builder};
+
+      if (sit != send) {
+        if (tokens::match_token<tokens::right_bra>(sit))
+          throw exceptions::__syntax_error("Mismatching braces", send - sit);
+        else
+          throw exceptions::__syntax_error("Invalid syntax", send - sit);
+      }
+
+      return d;
+
     } catch (exceptions::__syntax_error &e) {
       throw e.update(str);
     }
