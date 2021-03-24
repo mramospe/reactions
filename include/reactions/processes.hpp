@@ -33,7 +33,19 @@ namespace reactions::processes {
     /// Node types
     REACTIONS_POW_ENUM_WITH_UNKNOWN(node_kind, element, reaction, decay);
 
-    /// Internal function to process an expression
+    /*! \brief Internal function to process an expression
+     *
+     * This function takes the current position in the expression, the end
+     * of it and three functions:
+     *
+     * * **fill_element**: fills an element. The function must check whether
+     * it needs to fill a component on the left or right side of an arrow. The
+     * start of the element is provided to the function.
+     * * **fill_expression**: fills an expression. The function must check
+     * whether it needs to fill a component on the left or right side of an
+     * arrow.
+     * * **arrow_switch**: action to execute when an arrow is detected.
+     */
     template <class FillElement, class FillExpression, class ArrowSwitch>
     void process_expression(std::string::const_iterator &sit,
                             std::string::const_iterator const &end,
