@@ -338,14 +338,20 @@ namespace reactions {
 
       nodes_type *current_set = &m_reactants;
 
-      int level = 0;    // since element names can contain parentheses
+      while (tokens::match_token<tokens::space>(sit))
+        ++sit; // remove leading spaces
+
+      if (tokens::match_token<tokens::left_bra>(sit))
+        throw exceptions::__syntax_error(
+            "Reaction starts with another reaction", end - sit);
+
       auto start = sit; // keep track of the beginning of an expression
       while (sit != end) {
 
         if (tokens::match_token<tokens::space>(sit)) {
 
           if (sit == start) {
-            // remove leading spaces
+            // remove consecutive spaces
             start = ++sit;
             continue;
           } else {
@@ -355,19 +361,38 @@ namespace reactions {
             start = (sit += tokens::space::size);
             continue;
           }
-        } else if (tokens::match_token<tokens::left_par>(sit)) {
+        } else if (tokens::match_token<tokens::left_bra>(sit)) {
+
           if (sit == start) {
             // begin a new reaction
             current_set->push_back(std::make_unique<reaction>(
-                sit += tokens::left_par::size, end, builder));
-            start = sit;
+                sit += tokens::left_bra::size, end, builder));
+
+            if (!tokens::match_token<tokens::right_bra>(
+                    sit - tokens::right_bra::size))
+              throw exceptions::__syntax_error("Expected closing braces",
+                                               end - sit);
+
             continue;
+
           } else {
-            // otherwise it can be part of an element name
-            ++level;
-            sit += tokens::left_par::size;
+            // add the new element
+            current_set->push_back(std::make_unique<element_type>(
+                builder(std::string{start, sit})));
+            start = sit; // end up in the previous conditional
             continue;
           }
+        } else if (tokens::match_token<tokens::right_bra>(sit)) {
+
+          if (sit != start)
+            current_set->push_back(std::make_unique<element_type>(
+                builder(std::string{start, sit})));
+
+          // close the reaction
+          start = (sit += tokens::right_bra::size);
+
+          break;
+
         } else if (tokens::match_token<tokens::arrow>(sit)) {
 
           if (sit != start)
@@ -386,30 +411,7 @@ namespace reactions {
           current_set = &m_products;
 
           continue;
-        } else if (tokens::match_token<tokens::right_par>(sit)) {
 
-          if (sit != start && level == 1) {
-
-            --level;
-
-            sit += tokens::right_par::size;
-
-            // the parenthesis is part of an element
-
-            continue;
-          } else {
-
-            if (sit != start)
-              // case where an element is at the end of a parenthesized
-              // expression
-              current_set->push_back(std::make_unique<element_type>(
-                  builder(std::string{start, sit})));
-
-            // close the reaction
-            start = (sit += tokens::right_par::size);
-
-            break;
-          }
         } else
           ++sit;
       }
@@ -418,9 +420,8 @@ namespace reactions {
         current_set->push_back(
             std::make_unique<element_type>(builder(std::string{start, sit})));
 
-      if (level != 0)
-        throw exceptions::__syntax_error("Parentheses mismatch reading element",
-                                         end - start);
+      if (!m_reactants.size())
+        throw exceptions::__syntax_error("Expected reactants", end - sit);
 
       if (!m_products.size())
         throw exceptions::__syntax_error("Expected products", end - sit);
@@ -510,7 +511,6 @@ namespace reactions {
           std::string::const_iterator const &end, builder_type builder)
         : processes::node_object{} {
 
-      int level = 0;    // since element names can contain parentheses
       auto start = sit; // keep track of the beginning of an expression
       bool fill_products = false; // keep track of the elements we are adding
 
@@ -522,61 +522,63 @@ namespace reactions {
             std::make_unique<element_type>(builder(std::string{start, sit})));
       };
 
+      while (tokens::match_token<tokens::space>(sit))
+        ++sit; // remove leading spaces
+
+      if (tokens::match_token<tokens::left_bra>(sit))
+        throw exceptions::__syntax_error("Decay starts with another decay",
+                                         end - sit);
+
       while (sit != end) {
 
         if (tokens::match_token<tokens::space>(sit)) {
 
           if (sit == start) {
 
-            // remove leading spaces
+            // remove consecutive spaces
             start = ++sit;
             continue;
 
           } else {
-
-            if (level != 0)
-              throw exceptions::__syntax_error(
-                  "Parentheses mismatch reading element", end - sit);
 
             if (!m_head)
               fill_head_func();
             else if (fill_products)
               fill_products_func();
             else
-              throw exceptions::__syntax_error("Invalid syntax", end - start);
+              throw exceptions::__syntax_error("Arrow expected", end - start);
 
             start = (sit += tokens::space::size);
 
             continue;
           }
-        } else if (tokens::match_token<tokens::left_par>(sit)) {
+        } else if (tokens::match_token<tokens::left_bra>(sit)) {
 
-          if (sit == start) {
+          if (fill_products)
+            m_products.push_back(std::make_unique<decay>(
+                sit += tokens::left_bra::size, end, builder));
+          else
+            throw exceptions::__syntax_error("Specifying a decay as head",
+                                             end - start);
 
-            if (fill_products) {
-              m_products.push_back(std::make_unique<decay>(
-                  sit += tokens::left_par::size, end, builder));
-              // the right parentheses is not processed by the new decay builder
-              start = (sit += tokens::right_par::size);
-              continue;
-            } else
-              throw exceptions::__syntax_error("Invalid syntax", end - start);
+          if (!tokens::match_token<tokens::right_bra>(sit -
+                                                      tokens::right_bra::size))
+            throw exceptions::__syntax_error("Expected closing braces",
+                                             end - sit);
 
-          } else {
-            ++level;
-            sit += tokens::left_par::size;
-            continue;
+          continue;
+
+        } else if (tokens::match_token<tokens::right_bra>(sit)) {
+
+          if (sit != start) {
+            if (!m_head || !fill_products)
+              throw exceptions::__syntax_error("Invalid syntax", end - sit);
+
+            fill_products_func();
           }
 
-        } else if (tokens::match_token<tokens::right_par>(sit)) {
-
-          if (level > 0) {
-            --level;
-            sit += tokens::right_par::size;
-            continue;
-          } else
-            // close the decay
-            break;
+          start = (sit += tokens::right_bra::size);
+          break;
 
         } else if (tokens::match_token<tokens::arrow>(sit)) {
 
@@ -611,8 +613,8 @@ namespace reactions {
         else if (m_head)
           throw exceptions::__syntax_error("Arrow expected", end - sit);
         else
-          throw exceptions::__syntax_error("Decay with a single element",
-                                           end - start);
+          throw exceptions::__syntax_error(
+              "Specifying decay with a single element", end - start);
       }
     }
 

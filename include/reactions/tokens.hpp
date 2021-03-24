@@ -22,9 +22,9 @@ namespace reactions::tokens {
   /// Defines a reaction
   using arrow = token<'-', '>'>;
   /// Defines the begining of a reaction
-  using left_par = token<'('>;
+  using left_bra = token<'{'>;
   /// Defines the end of a reaction
-  using right_par = token<')'>;
+  using right_bra = token<'}'>;
 
   template <char... C, std::size_t... I>
   bool match_token_impl(token<C...>, std::index_sequence<I...>,

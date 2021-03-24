@@ -47,17 +47,17 @@ int main() {
   REACTIONS_TEST_UTILS_ADD_TEST(reaction_coll,
                                 reaction_tester<string>{"A B -> C D"});
   REACTIONS_TEST_UTILS_ADD_TEST(
-      reaction_coll, reaction_tester<string>{"A B -> (C -> D E) (F G -> H I)"});
+      reaction_coll, reaction_tester<string>{"A B -> {C -> D E} {F G -> H I}"});
   REACTIONS_TEST_UTILS_ADD_TEST(reaction_coll,
                                 reaction_tester<string>{"pi+ -> mu+ nu_mu"});
   REACTIONS_TEST_UTILS_ADD_TEST(
       reaction_coll, reaction_tester<string>{"pi+->mu+ nu_mu"}); // spaces
   REACTIONS_TEST_UTILS_ADD_TEST(
       reaction_coll,
-      reaction_tester<string>{"KS0 -> (pi+ -> mu+ nu_mu) mu- phi(1020)"});
+      reaction_tester<string>{"KS0 -> {pi+ -> mu+ nu_mu} mu- phi(1020)"});
   REACTIONS_TEST_UTILS_ADD_TEST(
       reaction_coll, reaction_tester<string>{
-                         "KS0->( pi+->mu+ nu_mu ) mu- phi(1020)"}); // spaces
+                         "KS0->{ pi+->mu+ nu_mu } mu- phi(1020)"}); // spaces
 
   REACTIONS_TEST_UTILS_ADD_TEST(reaction_coll,
                                 reaction_tester<pdg>{"pi+ -> mu+ nu_mu"});
@@ -70,15 +70,18 @@ int main() {
       decay_coll, decay_tester<string>{"pi+->mu+ nu_mu"}); // spaces
   REACTIONS_TEST_UTILS_ADD_TEST(
       decay_coll,
-      decay_tester<string>{"KS0 -> (pi+ -> mu+ nu_mu) mu- phi(1020)"});
+      decay_tester<string>{"KS0 -> {pi+ -> mu+ nu_mu} mu- phi(1020)"});
   REACTIONS_TEST_UTILS_ADD_TEST(
       decay_coll,
-      decay_tester<string>{"KS0->( pi+->mu+ nu_mu ) mu- phi(1020)"}); // spaces
+      decay_tester<string>{"KS0->{ pi+->mu+ nu_mu } mu- phi(1020)"}); // spaces
 
   REACTIONS_TEST_UTILS_ADD_TEST(decay_coll,
                                 decay_tester<pdg>{"pi+ -> mu+ nu_mu"});
 
-  if (reaction_coll.run() && decay_coll.run())
+  bool const reaction_code = reaction_coll.run();
+  bool const decay_code = decay_coll.run();
+
+  if (reaction_code && decay_code)
     return 0;
   else
     return 1;
