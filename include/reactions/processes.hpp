@@ -124,6 +124,32 @@ namespace reactions::processes {
       if (sit != start)
         fill_element(start);
     }
+
+    /// Make a new process (a reaction or a decay)
+    template <class Process>
+    Process make_process(std::string const &str,
+                         typename Process::builder_type builder) {
+
+      try {
+
+        auto sit = str.cbegin();
+        auto const send = str.cend();
+
+        Process p{sit, send, builder};
+
+        if (sit != send) {
+          if (tokens::match_token<tokens::right_bra>(sit))
+            throw exceptions::__syntax_error("Mismatching braces", send - sit);
+          else
+            throw exceptions::__syntax_error("Invalid syntax", send - sit);
+        }
+
+        return p;
+
+      } catch (exceptions::__syntax_error &e) {
+        throw e.update(str);
+      }
+    }
   } // namespace detail
 
   /*! \brief Base class for types referred to a node
@@ -327,23 +353,6 @@ namespace reactions {
     Element m_element;
   };
 
-  // Friend function must be declared before the class which declares the
-  // friendship
-
-  template <element_kind K>
-  reaction<element_traits::element_t<K>> make_reaction(std::string const &);
-
-  template <class Element>
-  reaction<Element> make_reaction_for(std::string const &,
-                                      typename reaction<Element>::builder_type);
-
-  template <class Element>
-  decay<Element> make_decay_for(std::string const &str,
-                                typename decay<Element>::builder_type builder);
-
-  template <element_kind K>
-  decay<element_traits::element_t<K>> make_decay(std::string const &);
-
   /** \brief Description of a process where reactants generate a set of products
    *
    * Nested reactions must be expressed within parenteses.
@@ -404,21 +413,10 @@ namespace reactions {
                                std::string::const_iterator const &,
                                builder_type);
 
-    /// Create a new instance using the protected constructor
-    friend std::shared_ptr<reaction>
-    std::make_shared<reaction>(std::string::const_iterator &,
-                               std::string::const_iterator const &,
-                               builder_type);
-
-    // Must declare it with different type for friendship to work properly
-    template <class E>
-    friend reaction<E>
-    reactions::make_reaction_for(std::string const &,
-                                 typename reaction<E>::builder_type);
-
-    template <element_kind K>
-    friend reaction<element_traits::element_t<K>>
-    reactions::make_reaction(std::string const &);
+    template <class Process>
+    friend Process
+    reactions::processes::detail::make_process(std::string const &,
+                                               typename Process::builder_type);
 
     /// Constructor from the string iterators
     reaction(std::string::const_iterator &sit,
@@ -517,19 +515,10 @@ namespace reactions {
     std::make_unique<decay>(std::string::const_iterator &,
                             std::string::const_iterator const &, builder_type);
 
-    /// Create a new instance using the protected constructor
-    friend std::shared_ptr<decay>
-    std::make_shared<decay>(std::string::const_iterator &,
-                            std::string::const_iterator const &, builder_type);
-
-    // Must declare it with different type for friendship to work properly
-    template <class T>
-    friend decay<T> reactions::make_decay_for(std::string const &,
-                                              typename decay<T>::builder_type);
-
-    template <element_kind K>
-    friend decay<element_traits::element_t<K>>
-    reactions::make_decay(std::string const &);
+    template <class Process>
+    friend Process
+    reactions::processes::detail::make_process(std::string const &,
+                                               typename Process::builder_type);
 
     /// Constructor from the string iterators
     decay(std::string::const_iterator &sit,
@@ -594,25 +583,7 @@ namespace reactions {
   reaction<Element>
   make_reaction_for(std::string const &str,
                     typename reaction<Element>::builder_type builder) {
-    try {
-
-      auto sit = str.cbegin();
-      auto const send = str.cend();
-
-      reaction<Element> r{sit, send, builder};
-
-      if (sit != send) {
-        if (tokens::match_token<tokens::right_bra>(sit))
-          throw exceptions::__syntax_error("Mismatching braces", send - sit);
-        else
-          throw exceptions::__syntax_error("Invalid syntax", send - sit);
-      }
-
-      return r;
-
-    } catch (exceptions::__syntax_error &e) {
-      throw e.update(str);
-    }
+    return processes::detail::make_process<reaction<Element>>(str, builder);
   }
 
   /*! \brief Create a new reaction
@@ -635,25 +606,7 @@ namespace reactions {
   template <class Element>
   decay<Element> make_decay_for(std::string const &str,
                                 typename decay<Element>::builder_type builder) {
-    try {
-
-      auto sit = str.cbegin();
-      auto const send = str.cend();
-
-      decay<Element> d{sit, send, builder};
-
-      if (sit != send) {
-        if (tokens::match_token<tokens::right_bra>(sit))
-          throw exceptions::__syntax_error("Mismatching braces", send - sit);
-        else
-          throw exceptions::__syntax_error("Invalid syntax", send - sit);
-      }
-
-      return d;
-
-    } catch (exceptions::__syntax_error &e) {
-      throw e.update(str);
-    }
+    return processes::detail::make_process<decay<Element>>(str, builder);
   }
 
   /*! \brief Create a new decay
