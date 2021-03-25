@@ -43,6 +43,9 @@ jobs:
       - make
       - ./main
       after_success: " "
+    - name: format
+      python: 3.7
+      script: python setup.py check_format --regex '(include|python|test|src|doc)'
     - name: python 3.7
       python: 3.7
       install: pip install .
