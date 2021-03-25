@@ -27,24 +27,24 @@
     return -1;                                                                 \
   }
 
-#define REACTIONS_PYTHON_DATABASE_CATCH_ERRORS(database)                       \
+#define REACTIONS_PYTHON_CATCH_ERRORS(...)                                     \
   catch (exceptions::syntax_error & e) {                                       \
     PyErr_SetString(SyntaxError, e.what());                                    \
-    Py_DecRef((PyObject *)database);                                           \
+    __VA_ARGS__;                                                               \
     return -1;                                                                 \
   }                                                                            \
   catch (exceptions::database_error & e) {                                     \
     PyErr_SetString(DatabaseError, e.what());                                  \
-    Py_DecRef((PyObject *)database);                                           \
+    __VA_ARGS__;                                                               \
     return -1;                                                                 \
   }                                                                            \
   catch (exceptions::lookup_error & e) {                                       \
     PyErr_SetString(LookupError, e.what());                                    \
-    Py_DecRef((PyObject *)database);                                           \
+    __VA_ARGS__;                                                               \
     return -1;                                                                 \
   }                                                                            \
   catch (...) {                                                                \
-    Py_DecRef((PyObject *)database);                                           \
+    __VA_ARGS__;                                                               \
     return -1;                                                                 \
   }
 

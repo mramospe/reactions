@@ -272,8 +272,8 @@ namespace reactions::database_pdg {
 
       throw reactions::exceptions::lookup_error(
           (std::string{"Unable to find element with "} +
-           pdg_element_field_properties::to_string(E) + "=" +
-           detail::to_string(v))
+           pdg_element_field_properties::to_string(E) + " \"" +
+           detail::to_string(v) + '"')
               .c_str());
     }
 

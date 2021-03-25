@@ -12,7 +12,7 @@ import warnings
 
 from setuptools import Command, Extension, setup, find_packages
 
-PWD = os.path.dirname(__file__)
+PWD = os.path.abspath(os.path.dirname(__file__))
 
 
 def check_format_process(name, directory, process, compare=None):
@@ -36,11 +36,21 @@ def check_format_process(name, directory, process, compare=None):
                 f'Found problems for files in directory "{directory}"')
 
 
-def files_with_extension(ext, where):
+def files_with_extension(where, *exts):
     """
     Return all the files with the given extension in the package.
     """
-    return [os.path.join(root, f) for root, _, files in os.walk(where) for f in filter(lambda s: s.endswith(f'.{ext}'), files)]
+    return [os.path.join(root, f) for root, _, files in os.walk(where) for f in filter(lambda s: any(s.endswith(f'.{e}') for e in exts), files)]
+
+
+def python_files_in(d):
+    """ Python files in the given directory """
+    return files_with_extension(d, 'py')
+
+
+def cpp_files_in(d):
+    """ C++ files in the given directory """
+    return files_with_extension(d, 'hpp', 'cpp', 'hpp.in')
 
 
 def license_for_language(language):
@@ -110,13 +120,12 @@ class ApplyFormatCommand(DirectoryWorker):
         for directory in self.directories:
 
             # Format the python files
-            python_files = files_with_extension('py', directory)
+            python_files = python_files_in(directory)
             python_proc = None if not python_files else subprocess.Popen(
                 ['autopep8', '-i'] + python_files)
 
             # Format C files
-            c_files = files_with_extension(
-                'cpp', directory) + files_with_extension('hpp', directory)
+            c_files = cpp_files_in(directory)
             c_proc = None if not c_files else subprocess.Popen(
                 ['clang-format', '-i'] + c_files)
 
@@ -161,9 +170,8 @@ class ApplyCopyrightCommand(DirectoryWorker):
         Execution of the command action.
         """
         for directory in self.directories:
-            python_files = files_with_extension('py', directory)
-            c_files = files_with_extension(
-                'cpp', directory) + files_with_extension('hpp', directory)
+            python_files = python_files_in(directory)
+            c_files = cpp_files_in(directory)
 
             lic = license_for_language('python')
             for pf in python_files:
@@ -183,9 +191,8 @@ class CheckFormatCommand(DirectoryWorker):
         Execution of the command action.
         """
         for directory in self.directories:
-            python_files = files_with_extension('py', directory)
-            c_files = files_with_extension(
-                'cpp', directory) + files_with_extension('hpp', directory)
+            python_files = python_files_in(directory)
+            c_files = cpp_files_in(directory)
 
             # Check python files
             process = subprocess.Popen(['autopep8', '--diff'] + python_files,
@@ -213,7 +220,7 @@ class CheckPyFlakesCommand(DirectoryWorker):
         Execution of the command action.
         """
         for directory in self.directories:
-            python_files = files_with_extension('py', directory)
+            python_files = python_files_in(directory)
 
             process = subprocess.Popen(['pyflakes'] + python_files,
                                        stdout=subprocess.PIPE,
@@ -227,155 +234,13 @@ class CheckPyFlakesCommand(DirectoryWorker):
                     f'PyFlakes failed to process files:{os.linesep}{files}')
 
 
-class CheckCopyrightCommand(DirectoryWorker):
-
-    description = 'check that the copyright is present in the directory files'
-
-    def _check_copyright(self, path, preamble):
-        """
-        Check that the given file has the provided copyright.
-        """
-        with open(path) as f:
-            text = f.read()
-            if not text.startswith(preamble):
-                # it might be an executable (skip the first line)
-                t = ''.join(text.splitlines(keepends=True)[1:])
-                if not t.startswith(preamble):
-                    raise RuntimeError(
-                        f'Copyright not present in file "{path}"')
-
-    def run(self):
-        """
-        Execution of the command action.
-        """
-        for directory in self.directories:
-
-            python_files = files_with_extension('py', directory)
-            c_files = files_with_extension(
-                'cpp', directory) + files_with_extension('hpp', directory)
-
-            lic = license_for_language('python')
-            for pf in python_files:
-                self._check_copyright(pf, lic)
-
-            lic = license_for_language('cpp')
-            for cf in c_files:
-                self._check_copyright(cf, lic)
-
-
-class RemoveCopyrightCommand(DirectoryWorker):
-
-    description = 'remove the copyright from the files in the given directories'
-
-    def _remove_copyright(self, path, preamble):
-        """
-        Remove the copyright if present in the given file.
-        """
-        with open(path) as f:
-            text = f.read()
-
-        if preamble in text:
-            with open(path, 'wt') as f:
-                f.write(text.replace(preamble, '', 1))
-
-    def run(self):
-        """
-        Execution of the command action.
-        """
-        for directory in self.directories:
-
-            python_files = files_with_extension('py', directory)
-            c_files = files_with_extension(
-                'cpp', directory) + files_with_extension('hpp', directory)
-
-            lic = license_for_language('python')
-            for pf in python_files:
-                self._remove_copyright(pf, lic)
-
-            lic = license_for_language('cpp')
-            for cf in c_files:
-                self._remove_copyright(cf, lic)
-
-
-class CheckDocumentationCommand(Command):
-
-    description = 'check that all the exposed functions have documentation about them and their arguments'
-
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def _get_missing_descriptions(self, obj, from_class=False):
-        """
-        Get the names of the arguments that are not documented in the provided
-        function. If *from_class* is provided, then the object is assumed to
-        be a class member.
-        """
-        s = inspect.getfullargspec(obj)
-
-        missing = []
-        if s.args is not None and obj.__doc__:
-
-            if from_class:
-                args = s.args[1:]  # first argument is the class
-            else:
-                args = s.args
-
-            for a in filter(lambda s: not f':param {s}:' in obj.__doc__, args):
-                missing.append(a)
-
-        return missing
-
-    def run(self):
-        """
-        Execution of the command action.
-        """
-        module = importlib.import_module(
-            'reactions')  # import the package even if it is not installed
-
-        missing_args = {}
-
-        for m in module.__all__:  # iterate over exposed objects
-
-            o = getattr(module, m)
-
-            if inspect.isfunction(o):  # check functions
-                missing = self._get_missing_descriptions(o)
-                if missing:
-                    missing_args[m] = missing
-
-            elif inspect.isclass(o):  # check classes
-
-                for n, f in inspect.getmembers(o, predicate=inspect.isfunction):
-                    missing = self._get_missing_descriptions(
-                        f, from_class=True)
-                    if missing:
-                        missing_args[f'{o.__name__}.{n}'] = missing
-
-                for n, f in inspect.getmembers(o, predicate=inspect.ismethod):
-                    missing = self._get_missing_descriptions(
-                        f, from_class=True)
-                    if missing:
-                        missing_args[f'{o.__name__}.{n}'] = missing
-
-        if missing_args:
-            output = os.linesep.join(
-                f'- {m}: {s}' for m, s in sorted(missing_args.items()))
-            raise RuntimeError(
-                f'Missing descriptions in the following functions:{os.linesep}{output}')
-
-
 with tempfile.TemporaryDirectory() as tmp_include_dir:
 
     # so the "include" statements work properly
     os.mkdir(os.path.join(tmp_include_dir, 'reactions'))
 
     # modify headers that need to be configured
-    for input_filename in files_with_extension('in', os.path.join(PWD, 'include')):
+    for input_filename in files_with_extension(os.path.join(PWD, 'include'), 'in'):
         output_filename = os.path.join(
             tmp_include_dir, 'reactions', os.path.basename(input_filename[:-3]))
         with open(input_filename) as input_file, open(output_filename, 'wt') as output_file:
@@ -389,13 +254,9 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
 
         description='Package to define and handle reactions and decays',
 
-        cmdclass={'apply_copyright': ApplyCopyrightCommand,
-                  'apply_format': ApplyFormatCommand,
-                  'check_copyright': CheckCopyrightCommand,
+        cmdclass={'apply_format': ApplyFormatCommand,
                   'check_format': CheckFormatCommand,
-                  'check_pyflakes': CheckPyFlakesCommand,
-                  'remove_copyright': RemoveCopyrightCommand,
-                  'check_documentation': CheckDocumentationCommand},
+                  'check_pyflakes': CheckPyFlakesCommand},
 
         # Read the long description from the README
         long_description=open(os.path.join(PWD, 'README.md')).read(),
@@ -410,9 +271,10 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
 
         # Modules
         ext_modules=[Extension('reactions.reactions',
-                               include_dirs=[tmp_include_dir, 'include'],
+                               include_dirs=[tmp_include_dir,
+                                             'include', os.path.join(PWD, 'src')],
                                sources=[os.path.relpath(s, PWD) for s in files_with_extension(
-                                   'cpp', os.path.join(PWD, 'src'))],
+                                   os.path.join(PWD, 'src'), 'cpp')],
                                extra_compile_args=['-std=c++17'],
                                language='c++')],
 

@@ -139,18 +139,19 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
           });
       python_node_fill_reaction(self, reac);
     }
-    REACTIONS_PYTHON_DATABASE_CATCH_ERRORS(
-        pdg_instance); // delete database on error
-
-    Py_DecRef((PyObject *)pdg_instance);
+    REACTIONS_PYTHON_CATCH_ERRORS(
+        Py_DecRef((PyObject *)pdg_instance)) // delete database on error
 
     break;
   }
   case (element_kind::string): {
 
-    auto reac = make_reaction<element_kind::string>(str);
-    python_node_fill_reaction(self, reac);
-    break;
+    try {
+      auto reac = make_reaction<element_kind::string>(str);
+      python_node_fill_reaction(self, reac);
+      break;
+    }
+    REACTIONS_PYTHON_CATCH_ERRORS()
   }
   case (element_kind::unknown):
 
@@ -389,17 +390,19 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
           });
       python_node_fill_decay(self, reac);
     }
-    REACTIONS_PYTHON_DATABASE_CATCH_ERRORS(
-        pdg_instance); // delete database on error
-
-    Py_DecRef((PyObject *)pdg_instance);
+    REACTIONS_PYTHON_CATCH_ERRORS(
+        Py_DecRef((PyObject *)pdg_instance)) // delete database on error
 
     break;
   }
   case (element_kind::string): {
 
-    auto reac = make_decay<element_kind::string>(str);
-    python_node_fill_decay(self, reac);
+    try {
+      auto reac = make_decay<element_kind::string>(str);
+      python_node_fill_decay(self, reac);
+    }
+    REACTIONS_PYTHON_CATCH_ERRORS()
+
     break;
   }
   case (element_kind::unknown):

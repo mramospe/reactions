@@ -76,7 +76,7 @@ def test_reaction():
         assert reactions.node_type(e) == 'element'
 
     # more complex reactions
-    reactions.reaction('p+ p~- -> (pi+ -> mu+ nu_mu) pi-')
+    reactions.reaction('p+ p~- -> {pi+ -> mu+ nu_mu} pi-')
 
     # we can create empty reactions
     reac = reactions.reaction(kind='pdg')
@@ -100,8 +100,8 @@ def test_reaction():
 
     # order does not matter
     assert reac == reactions.reaction('pi+ -> nu_mu~ mu-', kind='pdg')
-    reac = reactions.reaction('p+ p~- -> (pi+ -> mu+ nu_mu) pi-')
-    assert reac == reactions.reaction('p~- p+ -> pi- (pi+ -> nu_mu mu+)')
+    reac = reactions.reaction('p+ p~- -> {pi+ -> mu+ nu_mu} pi-')
+    assert reac == reactions.reaction('p~- p+ -> pi- {pi+ -> nu_mu mu+}')
 
 
 def test_decay():
@@ -117,7 +117,7 @@ def test_decay():
         assert reactions.node_type(e) == 'element'
 
     # more complex reactions
-    reactions.decay('p+ -> (pi+ -> mu+ nu_mu) pi-')
+    reactions.decay('p+ -> {pi+ -> mu+ nu_mu} pi-')
 
     # we can create empty reactions
     reac = reactions.decay(kind='pdg')
@@ -141,5 +141,35 @@ def test_decay():
 
     # order does not matter
     assert reac == reactions.decay('pi+ -> nu_mu~ mu-', kind='pdg')
-    reac = reactions.decay('KS0 -> (pi+ -> mu+ nu_mu) pi-')
-    assert reac == reactions.decay('KS0 -> pi- (pi+ -> nu_mu mu+)')
+    reac = reactions.decay('KS0 -> {pi+ -> mu+ nu_mu} pi-')
+    assert reac == reactions.decay('KS0 -> pi- {pi+ -> nu_mu mu+}')
+
+
+def test_syntax():
+
+    for proc in reactions.reaction, reactions.decay:
+
+        with pytest.raises(RuntimeError):
+            proc('A ->')
+
+        with pytest.raises(RuntimeError):
+            proc('-> B C')
+
+        with pytest.raises(RuntimeError):
+            proc('{A -> B C')
+
+        with pytest.raises(RuntimeError):
+            proc('A -> B C}')
+
+        with pytest.raises(RuntimeError):
+            proc('A -> -> B C')
+
+        with pytest.raises(RuntimeError):
+            proc('A -> B {C')
+
+    with pytest.raises(RuntimeError):
+        reactions.decay('A B -> C D')
+
+    reactions.reaction('A -> B {C D -> E} F')
+    with pytest.raises(RuntimeError):
+        reactions.decay('A -> B {C D -> E} F')

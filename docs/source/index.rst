@@ -48,6 +48,20 @@ sensitive basis, so `A -> B C` is the same as `A -> C B`.
    import reactions
    assert reactions.decay('A -> B C') == reactions.decay('A -> C B')
 
+It is possible to check the syntax of several reactions and/or decays executing
+the package as a script
+
+.. code-block:: bash
+
+   python -m reactions --decays 'A -> B C' --reactions 'A B -> C D' --kind string
+   python -m reactions --decays 'KS0 -> pi+ pi-' --reactions 'e+ e- -> gamma gamma' --kind pdg
+
+You can check the script options providing the `--help` argument:
+
+.. code-block:: bash
+
+   python -m reactions --help
+
 This package is also available in `C++`, and the documentation can be visited
 `here <_static/cpp/index.html>`_.
 

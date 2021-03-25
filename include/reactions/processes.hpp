@@ -32,6 +32,126 @@ namespace reactions::processes {
   namespace detail {
     /// Node types
     REACTIONS_POW_ENUM_WITH_UNKNOWN(node_kind, element, reaction, decay);
+
+    /*! \brief Internal function to process an expression
+     *
+     * This function takes the current position in the expression, the end
+     * of it and three functions:
+     *
+     * * **fill_element**: fills an element. The function must check whether
+     * it needs to fill a component on the left or right side of an arrow. The
+     * start of the element is provided to the function.
+     * * **fill_expression**: fills an expression. The function must check
+     * whether it needs to fill a component on the left or right side of an
+     * arrow.
+     * * **arrow_switch**: action to execute when an arrow is detected.
+     */
+    template <class FillElement, class FillExpression, class ArrowSwitch>
+    void process_expression(std::string::const_iterator &sit,
+                            std::string::const_iterator const &end,
+                            FillElement fill_element,
+                            FillExpression fill_expression,
+                            ArrowSwitch arrow_switch) {
+
+      while (tokens::match_token<tokens::space>(sit))
+        ++sit; // remove leading spaces
+
+      if (tokens::match_token<tokens::left_bra>(sit))
+        throw exceptions::__syntax_error(
+            "Expression starts with another expression", end - sit);
+
+      auto start = sit; // keep track of the beginning of an expression
+      while (sit != end) {
+
+        if (tokens::match_token<tokens::space>(sit)) {
+
+          if (sit == start) {
+            // remove consecutive spaces
+            start = ++sit;
+            continue;
+          } else {
+            // add the new element
+            fill_element(start);
+            start = (sit += tokens::space::size);
+            continue;
+          }
+        } else if (tokens::match_token<tokens::left_bra>(sit)) {
+
+          if (sit == start) {
+
+            sit += tokens::left_bra::size;
+
+            // begin a new expression
+            fill_expression();
+
+            if (!tokens::match_token<tokens::right_bra>(sit))
+              throw exceptions::__syntax_error("Expected closing braces",
+                                               end - sit);
+
+            start = (sit += tokens::right_bra::size);
+
+            continue;
+
+          } else {
+            // add the new element
+            fill_element(start);
+            start = sit; // end up in the previous conditional
+            continue;
+          }
+        } else if (tokens::match_token<tokens::right_bra>(sit)) {
+
+          if (sit != start) {
+            fill_element(start);
+            start = sit;
+          }
+
+          break;
+
+        } else if (tokens::match_token<tokens::arrow>(sit)) {
+
+          if (sit != start)
+            fill_element(start);
+
+          start = (sit += tokens::arrow::size);
+
+          // switch to the products
+          arrow_switch();
+
+          continue;
+
+        } else
+          ++sit;
+      }
+
+      if (sit != start)
+        fill_element(start);
+    }
+
+    /// Make a new process (a reaction or a decay)
+    template <class Process>
+    Process make_process(std::string const &str,
+                         typename Process::builder_type builder) {
+
+      try {
+
+        auto sit = str.cbegin();
+        auto const send = str.cend();
+
+        Process p{sit, send, builder};
+
+        if (sit != send) {
+          if (tokens::match_token<tokens::right_bra>(sit))
+            throw exceptions::__syntax_error("Mismatching braces", send - sit);
+          else
+            throw exceptions::__syntax_error("Invalid syntax", send - sit);
+        }
+
+        return p;
+
+      } catch (exceptions::__syntax_error &e) {
+        throw e.update(str);
+      }
+    }
   } // namespace detail
 
   /*! \brief Base class for types referred to a node
@@ -235,23 +355,6 @@ namespace reactions {
     Element m_element;
   };
 
-  // Friend function must be declared before the class which declares the
-  // friendship
-
-  template <element_kind K>
-  reaction<element_traits::element_t<K>> make_reaction(std::string const &);
-
-  template <class Element>
-  reaction<Element> make_reaction_for(std::string const &,
-                                      typename reaction<Element>::builder_type);
-
-  template <class Element>
-  decay<Element> make_decay_for(std::string const &str,
-                                typename decay<Element>::builder_type builder);
-
-  template <element_kind K>
-  decay<element_traits::element_t<K>> make_decay(std::string const &);
-
   /** \brief Description of a process where reactants generate a set of products
    *
    * Nested reactions must be expressed within parenteses.
@@ -301,9 +404,6 @@ namespace reactions {
     }
 
   protected:
-    /// Build the reaction parsing the input string
-    reaction(std::string const &str, builder_type builder)
-        : reaction{str.cbegin(), str.cend(), builder} {}
     /// Constructor from the string iterators
     reaction(std::string::const_iterator &&begin,
              std::string::const_iterator const &end, builder_type builder)
@@ -315,21 +415,10 @@ namespace reactions {
                                std::string::const_iterator const &,
                                builder_type);
 
-    /// Create a new instance using the protected constructor
-    friend std::shared_ptr<reaction>
-    std::make_shared<reaction>(std::string::const_iterator &,
-                               std::string::const_iterator const &,
-                               builder_type);
-
-    // Must declare it with different type for friendship to work properly
-    template <class E>
-    friend reaction<E>
-    reactions::make_reaction_for(std::string const &,
-                                 typename reaction<E>::builder_type);
-
-    template <element_kind K>
-    friend reaction<element_traits::element_t<K>>
-    reactions::make_reaction(std::string const &);
+    template <class Process>
+    friend Process
+    reactions::processes::detail::make_process(std::string const &,
+                                               typename Process::builder_type);
 
     /// Constructor from the string iterators
     reaction(std::string::const_iterator &sit,
@@ -338,92 +427,32 @@ namespace reactions {
 
       nodes_type *current_set = &m_reactants;
 
-      int level = 0;    // since element names can contain parentheses
-      auto start = sit; // keep track of the beginning of an expression
-      while (sit != end) {
-
-        if (tokens::match_token<tokens::space>(sit)) {
-
-          if (sit == start) {
-            // remove leading spaces
-            start = ++sit;
-            continue;
-          } else {
-            // add the new element
-            current_set->push_back(std::make_unique<element_type>(
-                builder(std::string{start, sit})));
-            start = (sit += tokens::space::size);
-            continue;
-          }
-        } else if (tokens::match_token<tokens::left_par>(sit)) {
-          if (sit == start) {
-            // begin a new reaction
-            current_set->push_back(std::make_unique<reaction>(
-                sit += tokens::left_par::size, end, builder));
-            start = sit;
-            continue;
-          } else {
-            // otherwise it can be part of an element name
-            ++level;
-            sit += tokens::left_par::size;
-            continue;
-          }
-        } else if (tokens::match_token<tokens::arrow>(sit)) {
-
-          if (sit != start)
-            current_set->push_back(std::make_unique<element_type>(
-                builder(std::string{start, sit})));
-
-          if (!m_reactants.size())
-            throw exceptions::__syntax_error("Missing reactants", end - sit);
-
-          if (current_set == &m_products)
-            throw exceptions::__syntax_error("Duplicated arrow", end - sit);
-
-          start = (sit += tokens::arrow::size);
-
-          // switch to the products
-          current_set = &m_products;
-
-          continue;
-        } else if (tokens::match_token<tokens::right_par>(sit)) {
-
-          if (sit != start && level == 1) {
-
-            --level;
-
-            sit += tokens::right_par::size;
-
-            // the parenthesis is part of an element
-
-            continue;
-          } else {
-
-            if (sit != start)
-              // case where an element is at the end of a parenthesized
-              // expression
-              current_set->push_back(std::make_unique<element_type>(
-                  builder(std::string{start, sit})));
-
-            // close the reaction
-            start = (sit += tokens::right_par::size);
-
-            break;
-          }
-        } else
-          ++sit;
-      }
-
-      if (sit != start)
+      auto fill_element =
+          [&](std::string::const_iterator const &start) -> void {
         current_set->push_back(
             std::make_unique<element_type>(builder(std::string{start, sit})));
+      };
+      auto fill_reaction = [&]() -> void {
+        current_set->push_back(std::make_unique<reaction>(sit, end, builder));
+      };
+      auto arrow_switch = [&]() -> void {
+        if (!m_reactants.size())
+          throw exceptions::__syntax_error("Missing reactants", end - sit);
 
-      if (level != 0)
-        throw exceptions::__syntax_error("Parentheses mismatch reading element",
-                                         end - start);
+        if (current_set == &m_products)
+          throw exceptions::__syntax_error("Duplicated arrow", end - sit);
+
+        current_set = &m_products;
+      };
+
+      processes::detail::process_expression(sit, end, fill_element,
+                                            fill_reaction, arrow_switch);
+
+      if (!m_reactants.size())
+        throw exceptions::__syntax_error("Missing reactants", end - sit);
 
       if (!m_products.size())
-        throw exceptions::__syntax_error("Expected products", end - sit);
+        throw exceptions::__syntax_error("Missing products", end - sit);
     }
 
     /// Reactants
@@ -478,9 +507,6 @@ namespace reactions {
     }
 
   protected:
-    /// Build the decay parsing the input string
-    decay(std::string const &str, builder_type builder)
-        : decay{str.cbegin(), str.cend(), builder} {}
     /// Constructor from the string iterators
     decay(std::string::const_iterator &&begin,
           std::string::const_iterator const &end, builder_type builder)
@@ -491,129 +517,56 @@ namespace reactions {
     std::make_unique<decay>(std::string::const_iterator &,
                             std::string::const_iterator const &, builder_type);
 
-    /// Create a new instance using the protected constructor
-    friend std::shared_ptr<decay>
-    std::make_shared<decay>(std::string::const_iterator &,
-                            std::string::const_iterator const &, builder_type);
-
-    // Must declare it with different type for friendship to work properly
-    template <class T>
-    friend decay<T> reactions::make_decay_for(std::string const &,
-                                              typename decay<T>::builder_type);
-
-    template <element_kind K>
-    friend decay<element_traits::element_t<K>>
-    reactions::make_decay(std::string const &);
+    template <class Process>
+    friend Process
+    reactions::processes::detail::make_process(std::string const &,
+                                               typename Process::builder_type);
 
     /// Constructor from the string iterators
     decay(std::string::const_iterator &sit,
           std::string::const_iterator const &end, builder_type builder)
         : processes::node_object{} {
 
-      int level = 0;    // since element names can contain parentheses
-      auto start = sit; // keep track of the beginning of an expression
       bool fill_products = false; // keep track of the elements we are adding
 
-      auto fill_head_func = [this, &start, &sit, &builder]() {
-        this->m_head.emplace(builder(std::string{start, sit}));
-      };
-      auto fill_products_func = [this, &start, &sit, &builder]() {
-        this->m_products.push_back(
-            std::make_unique<element_type>(builder(std::string{start, sit})));
-      };
-
-      while (sit != end) {
-
-        if (tokens::match_token<tokens::space>(sit)) {
-
-          if (sit == start) {
-
-            // remove leading spaces
-            start = ++sit;
-            continue;
-
-          } else {
-
-            if (level != 0)
-              throw exceptions::__syntax_error(
-                  "Parentheses mismatch reading element", end - sit);
-
-            if (!m_head)
-              fill_head_func();
-            else if (fill_products)
-              fill_products_func();
-            else
-              throw exceptions::__syntax_error("Invalid syntax", end - start);
-
-            start = (sit += tokens::space::size);
-
-            continue;
-          }
-        } else if (tokens::match_token<tokens::left_par>(sit)) {
-
-          if (sit == start) {
-
-            if (fill_products) {
-              m_products.push_back(std::make_unique<decay>(
-                  sit += tokens::left_par::size, end, builder));
-              // the right parentheses is not processed by the new decay builder
-              start = (sit += tokens::right_par::size);
-              continue;
-            } else
-              throw exceptions::__syntax_error("Invalid syntax", end - start);
-
-          } else {
-            ++level;
-            sit += tokens::left_par::size;
-            continue;
-          }
-
-        } else if (tokens::match_token<tokens::right_par>(sit)) {
-
-          if (level > 0) {
-            --level;
-            sit += tokens::right_par::size;
-            continue;
-          } else
-            // close the decay
-            break;
-
-        } else if (tokens::match_token<tokens::arrow>(sit)) {
-
-          if (fill_products)
-            throw exceptions::__syntax_error("Duplicated arrow", end - sit);
-
-          if (sit != start)
-            fill_head_func();
-          else if (!m_head)
-            throw exceptions::__syntax_error("Missing head particle",
-                                             end - sit);
-
-          start = (sit += tokens::arrow::size);
-
-          fill_products = true;
-
+      auto fill_element =
+          [&](std::string::const_iterator const &start) -> void {
+        if (!m_head) {
+          this->m_head.emplace(builder(std::string{start, sit}));
+        } else if (fill_products) {
+          this->m_products.emplace_back(
+              std::make_unique<element_type>(builder(std::string{start, sit})));
         } else
-          ++sit;
-      }
+          throw exceptions::__syntax_error("Missing arrow", end - start);
+      };
+      auto fill_decay = [&] {
+        if (!m_head) {
+          throw exceptions::__syntax_error("Missing head", end - sit);
+        } else if (fill_products) {
+          this->m_products.push_back(
+              std::make_unique<decay>(sit, end, builder));
+        } else
+          throw exceptions::__syntax_error("Missing arrow", end - sit);
+      };
+      auto arrow_switch = [&] {
+        if (fill_products)
+          throw exceptions::__syntax_error("Duplicated arrow", end - sit);
+
+        else if (!m_head)
+          throw exceptions::__syntax_error("Missing head particle", end - sit);
+
+        fill_products = true;
+      };
+
+      processes::detail::process_expression(sit, end, fill_element, fill_decay,
+                                            arrow_switch);
 
       if (!m_head)
         throw exceptions::__syntax_error("No elements have been parsed",
-                                         end - start);
+                                         end - sit);
 
       if (!m_products.size())
         throw exceptions::__syntax_error("Expected products", end - sit);
-
-      if (sit != start) {
-        if (fill_products)
-          m_products.push_back(
-              std::make_unique<element_type>(builder(std::string{start, sit})));
-        else if (m_head)
-          throw exceptions::__syntax_error("Arrow expected", end - sit);
-        else
-          throw exceptions::__syntax_error("Decay with a single element",
-                                           end - start);
-      }
     }
 
     /// Head particle
@@ -632,11 +585,7 @@ namespace reactions {
   reaction<Element>
   make_reaction_for(std::string const &str,
                     typename reaction<Element>::builder_type builder) {
-    try {
-      return {str, builder};
-    } catch (exceptions::__syntax_error &e) {
-      throw e.update(str);
-    }
+    return processes::detail::make_process<reaction<Element>>(str, builder);
   }
 
   /*! \brief Create a new reaction
@@ -659,11 +608,7 @@ namespace reactions {
   template <class Element>
   decay<Element> make_decay_for(std::string const &str,
                                 typename decay<Element>::builder_type builder) {
-    try {
-      return {str, builder};
-    } catch (exceptions::__syntax_error &e) {
-      throw e.update(str);
-    }
+    return processes::detail::make_process<decay<Element>>(str, builder);
   }
 
   /*! \brief Create a new decay
