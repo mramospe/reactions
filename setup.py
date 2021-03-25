@@ -36,11 +36,21 @@ def check_format_process(name, directory, process, compare=None):
                 f'Found problems for files in directory "{directory}"')
 
 
-def files_with_extension(ext, where):
+def files_with_extension(where, *exts):
     """
     Return all the files with the given extension in the package.
     """
-    return [os.path.join(root, f) for root, _, files in os.walk(where) for f in filter(lambda s: s.endswith(f'.{ext}'), files)]
+    return [os.path.join(root, f) for root, _, files in os.walk(where) for f in filter(lambda s: any(s.endswith(f'.{e}') for e in exts), files)]
+
+
+def python_files_in(d):
+    """ Python files in the given directory """
+    return files_with_extension(d, 'py')
+
+
+def cpp_files_in(d):
+    """ C++ files in the given directory """
+    return files_with_extension(d, 'hpp', 'cpp', 'hpp.in')
 
 
 def license_for_language(language):
@@ -110,13 +120,12 @@ class ApplyFormatCommand(DirectoryWorker):
         for directory in self.directories:
 
             # Format the python files
-            python_files = files_with_extension('py', directory)
+            python_files = python_files_in(directory)
             python_proc = None if not python_files else subprocess.Popen(
                 ['autopep8', '-i'] + python_files)
 
             # Format C files
-            c_files = files_with_extension(
-                'cpp', directory) + files_with_extension('hpp', directory)
+            c_files = cpp_files_in(directory)
             c_proc = None if not c_files else subprocess.Popen(
                 ['clang-format', '-i'] + c_files)
 
@@ -161,9 +170,8 @@ class ApplyCopyrightCommand(DirectoryWorker):
         Execution of the command action.
         """
         for directory in self.directories:
-            python_files = files_with_extension('py', directory)
-            c_files = files_with_extension(
-                'cpp', directory) + files_with_extension('hpp', directory)
+            python_files = python_files_in(directory)
+            c_files = cpp_files_in(directory)
 
             lic = license_for_language('python')
             for pf in python_files:
