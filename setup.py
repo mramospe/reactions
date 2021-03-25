@@ -191,9 +191,8 @@ class CheckFormatCommand(DirectoryWorker):
         Execution of the command action.
         """
         for directory in self.directories:
-            python_files = files_with_extension('py', directory)
-            c_files = files_with_extension(
-                'cpp', directory) + files_with_extension('hpp', directory)
+            python_files = python_files_in(directory)
+            c_files = cpp_files_in(directory)
 
             # Check python files
             process = subprocess.Popen(['autopep8', '--diff'] + python_files,
@@ -221,7 +220,7 @@ class CheckPyFlakesCommand(DirectoryWorker):
         Execution of the command action.
         """
         for directory in self.directories:
-            python_files = files_with_extension('py', directory)
+            python_files = python_files_in(directory)
 
             process = subprocess.Popen(['pyflakes'] + python_files,
                                        stdout=subprocess.PIPE,
@@ -241,7 +240,7 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
     os.mkdir(os.path.join(tmp_include_dir, 'reactions'))
 
     # modify headers that need to be configured
-    for input_filename in files_with_extension('in', os.path.join(PWD, 'include')):
+    for input_filename in files_with_extension(os.path.join(PWD, 'include'), 'in'):
         output_filename = os.path.join(
             tmp_include_dir, 'reactions', os.path.basename(input_filename[:-3]))
         with open(input_filename) as input_file, open(output_filename, 'wt') as output_file:
@@ -275,7 +274,7 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
                                include_dirs=[tmp_include_dir,
                                              'include', os.path.join(PWD, 'src')],
                                sources=[os.path.relpath(s, PWD) for s in files_with_extension(
-                                   'cpp', os.path.join(PWD, 'src'))],
+                                   os.path.join(PWD, 'src'), 'cpp')],
                                extra_compile_args=['-std=c++17'],
                                language='c++')],
 
