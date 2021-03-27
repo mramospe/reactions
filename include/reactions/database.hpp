@@ -7,8 +7,6 @@
 #include <string>
 #include <type_traits>
 
-#include <iostream>
-
 namespace reactions::database {
 
   /// Optional for float values
