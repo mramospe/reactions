@@ -254,13 +254,8 @@ namespace reactions::database_pdg {
 
       std::string line;
 
-      while (std::getline(file, line)) {
-
-        if (line.empty())
-          continue;
-
+      while (std::getline(file, line))
         m_cache.emplace_back(read_element(line));
-      }
 
       file.close();
     }
@@ -402,9 +397,6 @@ namespace reactions::database_pdg {
         std::string line;
 
         while (std::getline(file, line)) {
-
-          if (line.empty())
-            continue;
 
           element el = read_element(line);
 
