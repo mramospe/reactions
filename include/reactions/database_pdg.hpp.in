@@ -315,10 +315,13 @@ namespace reactions::database_pdg {
             "The PDG database has not been specified");
 
       std::ifstream file;
-      file.open(m_db);
-      if (!file.is_open())
+
+      try {
+        file.open(m_db);
+      } catch (...) {
         throw reactions::exceptions::database_error(
             "Unable to access the database");
+      }
 
       // skip comments
       char c;
