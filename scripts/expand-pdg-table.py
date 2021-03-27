@@ -65,7 +65,7 @@ def parse_value(v):
 def parse_error(e):
     """ Format an error """
     if e.strip():
-        return f'{float(e):>{ERROR_SIZE}.{ERROR_SIZE - 7}e}'
+        return f'{abs(float(e)):>{ERROR_SIZE}.{ERROR_SIZE - 7}e}'
     else:
         return ERROR_SIZE * ' '
 
@@ -96,17 +96,18 @@ if __name__ == '__main__':
                         help='If set, overwrite the output file, if existing')
     args = parser.parse_args()
 
-    # order of the fields in the output table, together with the size reserved for them
+    # Order of the fields in the output table, together with the size reserved for them
+    # Nte that the lower and upper errors are inverted with respect to the PDG
     FIELDS = (
         ('name', format_name),
         ('id', format_id),
         ('three_charge', format_three_charge),
         ('mass', parse_value),
-        ('mass_error_upper', parse_error),
         ('mass_error_lower', parse_error),
+        ('mass_error_upper', parse_error),
         ('width', parse_value),
-        ('width_error_upper', parse_error),
         ('width_error_lower', parse_error),
+        ('width_error_upper', parse_error),
         ('is_self_cc', parse_is_self_cc),
     )
 
@@ -174,8 +175,8 @@ if __name__ == '__main__':
                 mass_error_upper=line[MASS_ERROR_UPPER_FIELD],
                 mass_error_lower=line[MASS_ERROR_LOWER_FIELD],
                 width=line[WIDTH_FIELD],
-                width_error_upper=line[WIDTH_ERROR_LOWER_FIELD],
-                width_error_lower=line[WIDTH_ERROR_UPPER_FIELD],
+                width_error_upper=line[WIDTH_ERROR_UPPER_FIELD],
+                width_error_lower=line[WIDTH_ERROR_LOWER_FIELD],
             )
             name, charge = (s.strip() for s in line[107:128].split())
 
