@@ -18,8 +18,14 @@ def test_pdg_element():
     # create an element from the database
     el = reactions.pdg_element('pi+')
     assert reactions.node_type(el) == 'element'
+    assert el.name == 'pi+'
+    assert el.pdg_id == 211
+
     el = reactions.pdg_element(211)
     assert reactions.node_type(el) == 'element'
+
+    # check that empty values in C++ correspond to None in python
+    assert reactions.pdg_element('H0').width is None
 
     # create a custom element
     reactions.pdg_element('gamma', 1, 0, 0., 0., 0., 1.e+16, 0., 0., True)

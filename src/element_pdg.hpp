@@ -128,6 +128,76 @@ static PyMethodDef ElementPDG_methods[] = {
     // sentinel
     {NULL, NULL, 0, NULL}};
 
+/// Define a function to get access to an attribute of a PDG element
+#define REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(name, converter)                \
+  static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
+    using ef = reactions::database_pdg::pdg_element_field;                     \
+    if constexpr (reactions::database_pdg::detail::is_optional_field_v<        \
+                      ef::name>)                                               \
+      if (!self->element.has<ef::name>())                                      \
+        Py_RETURN_NONE;                                                        \
+      else                                                                     \
+        return converter(self->element.get<ef::name>());                       \
+    else                                                                       \
+      return converter(self->element.get<ef::name>());                         \
+  }
+
+/// Define a function to evaluate a member function of a PDG element
+#define REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(name, converter)              \
+  static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
+    return converter(self->element.name());                                    \
+  }
+
+/// Convert a std::string to a python unicode string
+#define REACTIONS_PYTHON_CPP_STRING_TOPY(string)                               \
+  PyUnicode_FromString(string.c_str())
+
+// Define the getters of the ElementPDG class
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(name, REACTIONS_PYTHON_CPP_STRING_TOPY)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(pdg_id, PyLong_FromLong)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(three_charge, PyLong_FromLong)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(mass, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(mass_error_lower, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(mass_error_upper, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(width, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(width_error_lower, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(width_error_upper, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(is_self_cc, PyBool_FromLong)
+
+// Define the functions (used later also to define "getters")
+REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(charge, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(mass_error, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(width_error, PyFloat_FromDouble)
+
+/// Provide the data needed to define a "getter" function
+#define REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(name, description)             \
+  { #name, (getter)ElementPDG_get_##name, NULL, description, NULL }
+
+/// Properties of the ElementPDG class
+static PyGetSetDef ElementPDG_getsetters[] = {
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(name, "Get the name"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(pdg_id, "Get the PDG ID"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        three_charge, "Get the value of three times the charge"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(mass, "Get the value of the mass"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        mass_error_lower, "Get the value of the lower mass error"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        mass_error_upper, "Get the value of the upper mass error"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(width,
+                                            "Get the value of the width"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        width_error_lower, "Get the value of the lower width error"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        width_error_upper, "Get the value of the upper width error"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        is_self_cc, "Return whether this element is self charge-conjugate"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(charge,
+                                            "Get the value of the charge"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(mass_error, "Get the mass error"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(width_error, "Get the width error"),
+};
+
 /// Type declaration
 static PyTypeObject ElementPDGType = {
     PyVarObject_HEAD_INIT(NULL, 0) "reactions.pdg_element", /* tp_name */
@@ -158,7 +228,7 @@ static PyTypeObject ElementPDGType = {
     0,                                        /* tp_iternext */
     ElementPDG_methods,                       /* tp_methods */
     0,                                        /* tp_members */
-    0,                                        /* tp_getset */
+    ElementPDG_getsetters,                    /* tp_getset */
     &NodeType,                                /* tp_base */
     0,                                        /* tp_dict */
     0,                                        /* tp_descr_get */
