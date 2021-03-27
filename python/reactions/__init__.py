@@ -13,7 +13,7 @@ try:
     # Set the path to the database(s)
     import os
     set_pdg_database(os.path.abspath(os.path.join(
-        os.path.dirname(__file__), 'data', 'ParticleTable.txt')))
+        os.path.dirname(__file__), 'data', 'pdg_mass_width_2020.mcd')))
     del os
 
     # Variables exported

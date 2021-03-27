@@ -5,12 +5,16 @@
 #ifndef REACTIONS_PDG_HPP
 #define REACTIONS_PDG_HPP
 
+#include "reactions/database.hpp"
 #include "reactions/exceptions.hpp"
 #include "reactions/pow_enum.hpp"
 
+#include <cmath>
 #include <fstream>
 #include <ios>
+#include <iostream>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <tuple>
 #include <vector>
@@ -24,27 +28,81 @@ namespace reactions::database_pdg {
  */
 namespace reactions::database_pdg {
 
+  using float_opt = reactions::database::float_opt;
+
+  /// Base class of a PDG particle
+  using base_element =
+      std::tuple<std::string, int, int, float_opt, float_opt, float_opt,
+                 float_opt, float_opt, float_opt, bool>;
+
+  /// Enumeration to access the PDG element fields
+  REACTIONS_POW_ENUM_WITH_UNKNOWN(pdg_element_field, name, pdg_id, three_charge,
+                                  mass, mass_error_lower, mass_error_upper,
+                                  width, width_error_lower, width_error_upper,
+                                  is_self_cc);
+
+  /// Return the bounds defining a field in a line from the database file
+  template <pdg_element_field E> struct bounds_for_field;
+  template <> struct bounds_for_field<name> {
+    static constexpr auto min = 0, max = 16;
+  };
+  template <> struct bounds_for_field<pdg_id> {
+    static constexpr auto min = 17, max = 27;
+  };
+  template <> struct bounds_for_field<three_charge> {
+    static constexpr auto min = 28, max = 30;
+  };
+  template <> struct bounds_for_field<mass> {
+    static constexpr auto min = 31, max = 47;
+  };
+  template <> struct bounds_for_field<mass_error_lower> {
+    static constexpr auto min = 48, max = 57;
+  };
+  template <> struct bounds_for_field<mass_error_upper> {
+    static constexpr auto min = 58, max = 67;
+  };
+  template <> struct bounds_for_field<width> {
+    static constexpr auto min = 68, max = 84;
+  };
+  template <> struct bounds_for_field<width_error_lower> {
+    static constexpr auto min = 85, max = 94;
+  };
+  template <> struct bounds_for_field<width_error_upper> {
+    static constexpr auto min = 95, max = 104;
+  };
+  template <> struct bounds_for_field<is_self_cc> {
+    static constexpr auto min = 105, max = 106;
+  };
+
+  // Check that the number of fields and accessors are the same
+  static_assert(pdg_element_field_properties::size ==
+                std::tuple_size_v<base_element>);
+
   /// Definitions for internal use only
   namespace detail {
+
+    template <pdg_element_field E>
+    using field_t =
+        std::tuple_element_t<pdg_element_field_properties::index<E>(),
+                             base_element>;
+
+    template <pdg_element_field E, class Enable = void>
+    struct is_optional_field : std::false_type {};
+
+    template <pdg_element_field E>
+    struct is_optional_field<
+        E, std::enable_if_t<reactions::database::is_optional_v<field_t<E>>>>
+        : std::true_type {};
+
+    template <pdg_element_field E>
+    constexpr auto is_optional_field_v = is_optional_field<E>::value;
+
     template <class T> std::string to_string(T const &v) {
       return std::to_string(v);
     }
 
     template <> std::string to_string(std::string const &v) { return v; }
   } // namespace detail
-
-  /// Base class of a PDG particle
-  using base_element = std::tuple<std::string, int, int, float, float, float,
-                                  std::string, int, float>;
-
-  /// Enumeration to access the PDG element fields
-  REACTIONS_POW_ENUM_WITH_UNKNOWN(pdg_element_field, name, geant_id, pdg_id,
-                                  charge, mass, tau, evtgen_name, pythia_id,
-                                  max_width);
-
-  // Check that the number of fields and accessors are the same
-  static_assert(pdg_element_field_properties::size ==
-                std::tuple_size_v<base_element>);
 
   /*! \brief A PDG particle, based on the fields of a particle in the PDG
    * database.
@@ -79,59 +137,124 @@ namespace reactions::database_pdg {
 
     /// Get an element using an accessor
     template <pdg_element_field E> auto const &get() const {
-      return std::get<pdg_element_field_properties::index<E>()>(*this);
+      if constexpr (detail::is_optional_field_v<E>)
+        return std::get<pdg_element_field_properties::index<E>()>(*this)
+            .value();
+      else
+        return std::get<pdg_element_field_properties::index<E>()>(*this);
+    }
+
+    /// Check whether
+    template <pdg_element_field E> constexpr bool has() const {
+      if constexpr (detail::is_optional_field_v<E>)
+        return std::get<pdg_element_field_properties::index<E>()>(*this)
+            .has_value();
+      else
+        return true;
     }
 
     /// Name of the particle
     std::string const &name() const { return get<pdg_element_field::name>(); }
 
-    /// GEANT ID
-    int const &geant_id() const { return get<pdg_element_field::geant_id>(); }
-
     /// PDG ID
     int const &pdg_id() const { return get<pdg_element_field::pdg_id>(); }
 
-    /// Charge
-    float const &charge() const { return get<pdg_element_field::charge>(); }
+    /// Three times the charge, as an integer
+    int const &three_charge() const {
+      return get<pdg_element_field::three_charge>();
+    }
+
+    /// Charge as a floating point number
+    float charge() const { return get<pdg_element_field::three_charge>() / 3.; }
+
+    /// Whether the element is its own charge-conjugate
+    bool const &is_self_cc() const {
+      return get<pdg_element_field::is_self_cc>();
+    }
 
     /// Mass
     float const &mass() const { return get<pdg_element_field::mass>(); }
 
-    /// Lifetime
-    float const &tau() const { return get<pdg_element_field::tau>(); }
-
-    /// EVTGEN name
-    std::string const &evtgen_name() const {
-      return get<pdg_element_field::evtgen_name>();
+    /// Lower mass error
+    float const &mass_error_lower() const {
+      return get<pdg_element_field::mass_error_lower>();
     }
 
-    /// Pythia ID
-    int const &pythia_id() const { return get<pdg_element_field::pythia_id>(); }
-
-    /// Maximum width
-    float const &max_width() const {
-      return get<pdg_element_field::max_width>();
+    /// Upper mass error
+    float const &mass_error_upper() const {
+      return get<pdg_element_field::mass_error_upper>();
     }
 
-  protected:
-    template <size_t... I>
-    friend std::ifstream &read_stream_impl(std::index_sequence<I...>,
-                                           std::ifstream &, element &);
+    /// Mass error
+    float mass_error() const {
+
+      auto const el = has<pdg_element_field::mass_error_lower>()
+                          ? get<pdg_element_field::mass_error_lower>()
+                          : 0.f;
+      auto const eu = has<pdg_element_field::mass_error_upper>()
+                          ? get<pdg_element_field::mass_error_upper>()
+                          : 0.f;
+
+      return std::sqrt(el * el + eu * eu);
+    }
+
+    /// Width
+    float const &width() const { return get<pdg_element_field::width>(); }
+
+    /// Lower width error
+    float const &width_error_lower() const {
+      return get<pdg_element_field::width_error_lower>();
+    }
+
+    /// Upper width error
+    float const &width_error_upper() const {
+      return get<pdg_element_field::width_error_upper>();
+    }
+
+    /// Width error
+    float width_error() const {
+
+      auto const el = has<pdg_element_field::width_error_lower>()
+                          ? get<pdg_element_field::width_error_lower>()
+                          : 0.f;
+      auto const eu = has<pdg_element_field::width_error_upper>()
+                          ? get<pdg_element_field::width_error_upper>()
+                          : 0.f;
+
+      return std::sqrt(el * el + eu * eu);
+    }
+
+    template <std::size_t I> bool read_field(std::string const &line) {
+
+      static constexpr auto field = pdg_element_field_properties::list[I];
+      static constexpr auto min = bounds_for_field<field>::min;
+      static constexpr auto max = bounds_for_field<field>::max;
+
+      if constexpr (detail::is_optional_field_v<field>) {
+
+        typename std::tuple_element_t<I, base_type>::value_type value;
+
+        auto sc = reactions::database::read_field<min, max>(value, line);
+
+        if (sc == reactions::database::conversion_status::success)
+          std::get<I>(*this).emplace(value);
+
+        return sc != reactions::database::conversion_status::failed;
+      } else
+        return reactions::database::read_field<min, max>(std::get<I>(*this),
+                                                         line) !=
+               reactions::database::conversion_status::failed;
+    }
+
+    template <std::size_t... I>
+    bool read_line(std::string const &line, std::index_sequence<I...>) {
+      return (read_field<I>(line) && ...);
+    }
+
+    bool operator<<(std::string const &line) {
+      return read_line(line, std::make_index_sequence<nfields>());
+    }
   };
-
-  /// Implementation of the way to read a PDG element from a file
-  template <size_t... I>
-  std::ifstream &read_stream_impl(std::index_sequence<I...>,
-                                  std::ifstream &file, element &el) {
-    ((file >> std::get<I>(el)), ...);
-    return file;
-  }
-
-  /// Read the element from a file
-  std::ifstream &operator>>(std::ifstream &file, element &el) {
-    return read_stream_impl(std::make_index_sequence<element::nfields>(), file,
-                            el);
-  }
 
   /*! \brief Database of elements following the PDG convention
    *
@@ -154,9 +277,12 @@ namespace reactions::database_pdg {
         return;
 
       auto file = open_database();
-      while (!file.eof()) {
+
+      std::string line;
+
+      while (std::getline(file, line)) {
         m_cache.emplace_back();
-        read_element(m_cache.back(), file);
+        read_element(m_cache.back(), line);
       }
       file.close();
     }
@@ -212,41 +338,26 @@ namespace reactions::database_pdg {
         throw reactions::exceptions::database_error(
             "Unable to access the database");
 
+      // skip comments
+      char c;
+      while (true) {
+        file.get(c);
+        if (c == '*')
+          file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        else
+          break;
+      }
+      file.unget();
+
       return file;
     }
 
-    /// Read the database file and advance to the next non-commented line
-    bool read_advance(std::ifstream &file) const {
-
-      // skip whitespaces
-      char c;
-      do {
-        file.get(c);
-      } while (c == ' ');
-
-      if (c == '#') {
-        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        return false; // commented line
-      } else if (c == '\n')
-        return false; // empty line
-
-      // move one position backwards since we are already reading an element
-      file.unget();
-
-      return true;
-    }
-
     /// Advance to the next element in the file and read it
-    bool read_element(element &el, std::ifstream &file) const {
+    void read_element(element &el, std::string const &line) const {
 
-      if (!read_advance(file))
-        return false;
-
-      if (!(file >> el))
+      if (!(el << line))
         throw reactions::exceptions::database_error(
             "Error reading PDG database; data format not understood");
-
-      return true; // succeded
     }
 
     /// Access an element using the field accessor
@@ -257,11 +368,15 @@ namespace reactions::database_pdg {
           if (el.get<E>() == v)
             return el;
       } else {
+
         auto file = open_database();
 
-        while (!file.eof()) {
+        std::string line;
+
+        while (std::getline(file, line)) {
           element el;
-          if (read_element(el, file) && el.get<E>() == v) {
+          read_element(el, line);
+          if (el.get<E>() == v) {
             file.close();
             return el;
           }

@@ -81,24 +81,34 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
     // the instance is built from the input values
     database_pdg::element::base_type tup;
 
-    if (args != NULL && PyTuple_Size(args) == 9) {
-      if (!PyArg_ParseTuple(args, "siifffsif", &std::get<0>(tup),
-                            &std::get<1>(tup), &std::get<2>(tup),
-                            &std::get<3>(tup), &std::get<4>(tup),
-                            &std::get<5>(tup), &std::get<6>(tup),
-                            &std::get<7>(tup), &std::get<8>(tup)))
+    if (args != NULL && PyTuple_Size(args) == database_pdg::element::nfields) {
+      if (!PyArg_ParseTuple(
+              args, "siiffffffp", &std::get<0>(tup), &std::get<1>(tup),
+              &std::get<2>(tup), &std::get<3>(tup), &std::get<4>(tup),
+              &std::get<5>(tup), &std::get<6>(tup), &std::get<7>(tup),
+              &std::get<8>(tup), &std::get<9>(tup)))
         return -1;
-    } else if (kwargs != NULL && PyDict_Size(kwargs) == 9) {
+    } else if (kwargs != NULL &&
+               PyDict_Size(kwargs) == database_pdg::element::nfields) {
       // the instance is built from the keyword arguments
-      static const char *kwds[] = {
-          "name", "geant_id",    "pdg_id",    "charge",    "mass",
-          "tau",  "evtgen_name", "pythia_id", "max_width", NULL};
+      static const char *kwds[] = {"name",
+                                   "pdg_id",
+                                   "three_charge",
+                                   "mass",
+                                   "mass_error_lower",
+                                   "mass_error_upper",
+                                   "width",
+                                   "width_error_lower",
+                                   "width_error_upper",
+                                   "is_self_cc",
+                                   NULL};
 
       if (!PyArg_ParseTupleAndKeywords(
-              args, kwargs, "|$siifffsif", const_cast<char **>(kwds),
+              args, kwargs, "|$siiffffffp", const_cast<char **>(kwds),
               &std::get<0>(tup), &std::get<1>(tup), &std::get<2>(tup),
               &std::get<3>(tup), &std::get<4>(tup), &std::get<5>(tup),
-              &std::get<6>(tup), &std::get<7>(tup), &std::get<8>(tup)))
+              &std::get<6>(tup), &std::get<7>(tup), &std::get<8>(tup),
+              &std::get<9>(tup)))
         return -1;
     } else
       // Invalid arguments

@@ -22,10 +22,9 @@ def test_pdg_element():
     assert reactions.node_type(el) == 'element'
 
     # create a custom element
-    reactions.pdg_element('gamma', 1, 22, 0.0, 0.00000000,
-                          1.000000e+16, 'gamma', 22, 0.00000000)
-    reactions.pdg_element(name='gamma', geant_id=1, pdg_id=22, charge=0.0, mass=0.00000000,
-                          tau=1.000000e+16, evtgen_name='gamma', pythia_id=22, max_width=0.00000000)
+    reactions.pdg_element('gamma', 1, 0, 0., 0., 0., 1.e+16, 0., 0., True)
+    reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0, mass=0., mass_error_lower=0.,
+                          mass_error_upper=0., width=0., width_error_lower=0., width_error_upper=0., is_self_cc=True)
 
     # all these constructors must fail
     with pytest.raises(TypeError):

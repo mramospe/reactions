@@ -84,6 +84,38 @@ namespace reactions::pow_enum {
  * - enum_type: type of the enumeration
  * - size: number of elements defined
  * - list: elements as an array
+ */
+#define REACTIONS_POW_ENUM(enum_name, ...)                                     \
+  enum enum_name : int { __VA_ARGS__ };                                        \
+                                                                               \
+  struct enum_name##_properties {                                              \
+                                                                               \
+    static constexpr std::size_t size =                                        \
+        std::initializer_list{__VA_ARGS__}.size();                             \
+                                                                               \
+    static constexpr enum_name list[size] = {__VA_ARGS__};                     \
+                                                                               \
+    template <enum_name E, std::size_t I = 0>                                  \
+    static constexpr auto index_impl() {                                       \
+      static_assert(I < size);                                                 \
+      if constexpr (list[I] == E)                                              \
+        return I;                                                              \
+      else                                                                     \
+        return index_impl<E, I + 1>();                                         \
+    }                                                                          \
+                                                                               \
+    template <enum_name E> static constexpr auto index() {                     \
+      return index_impl<E>();                                                  \
+    }                                                                          \
+  }
+// must use a comma
+
+/*!
+ * This macro defines a new class with the given name, which itself defines an
+ * enum and a series of elements to facilitate operations with them.
+ * - enum_type: type of the enumeration
+ * - size: number of elements defined
+ * - list: elements as an array
  * - from_string: get the element associated to the given string (return unknown
  if not found)
  * - to_string: represent an element as a string
