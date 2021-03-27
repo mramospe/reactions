@@ -16,7 +16,7 @@ from urllib import request
 ONLINE_PDG_TABLE = 'https://pdg.lbl.gov/2020/mcdata/mass_width_2020.mcd'
 
 # These values correspond to how the data is written in the PDG table
-PID_FIELDS = [slice(i * 8, (i + 1) * 8) for i in range(4)] # -, 0, +, ++
+PID_FIELDS = [slice(i * 8, (i + 1) * 8) for i in range(4)]  # -, 0, +, ++
 MASS_FIELD = slice(33, 51)
 MASS_ERROR_UPPER_FIELD = slice(52, 60)
 MASS_ERROR_LOWER_FIELD = slice(61, 69)
@@ -27,15 +27,16 @@ NAME_CHARGE_FIELD = slice(107, 128)
 
 # Size of the fields for the output table. They have been modified with respect to
 # the PDG table in order to fit decrease the file size and boost the reading.
-NAME_SIZE = 16 # size reserved for strings
-ID_SIZE = 10 # size reserved for the particle ID
-THREE_CHARGE_SIZE = 2 # size reserved for three times the charge
-VALUE_SIZE = 16 # size reserved for values
-ERROR_SIZE = 10 # size reserved for errors
-IS_SELF_CC_SIZE = 1 # size for the self-conjugate flag
+NAME_SIZE = 16  # size reserved for strings
+ID_SIZE = 10  # size reserved for the particle ID
+THREE_CHARGE_SIZE = 2  # size reserved for three times the charge
+VALUE_SIZE = 16  # size reserved for values
+ERROR_SIZE = 9  # size reserved for errors
+IS_SELF_CC_SIZE = 1  # size for the self-conjugate flag
 
 # Lengths of the data fields
-LENGTHS = (NAME_SIZE, ID_SIZE, THREE_CHARGE_SIZE, VALUE_SIZE, ERROR_SIZE, ERROR_SIZE, VALUE_SIZE, ERROR_SIZE, ERROR_SIZE, IS_SELF_CC_SIZE)
+LENGTHS = (NAME_SIZE, ID_SIZE, THREE_CHARGE_SIZE, VALUE_SIZE, ERROR_SIZE,
+           ERROR_SIZE, VALUE_SIZE, ERROR_SIZE, ERROR_SIZE, IS_SELF_CC_SIZE)
 
 
 def format_name(n):
@@ -89,8 +90,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output_table', type=str, help='Output table')
-    parser.add_argument('--input-table', '-i', type=str, default=None, help='PDG database table. If it is not provided the table is downloaded form the internet')
-    parser.add_argument('--overwrite', '-w', action='store_true', help='If set, overwrite the output file, if existing')
+    parser.add_argument('--input-table', '-i', type=str, default=None,
+                        help='PDG database table. If it is not provided the table is downloaded form the internet')
+    parser.add_argument('--overwrite', '-w', action='store_true',
+                        help='If set, overwrite the output file, if existing')
     args = parser.parse_args()
 
     # order of the fields in the output table, together with the size reserved for them
@@ -127,9 +130,11 @@ if __name__ == '__main__':
 
     if not args.overwrite and os.path.exists(args.output_table):
         if os.path.isfile(args.output_table):
-            raise OSError(f'Path "{args.output_table}" already refers to a file. Provide "--overwrite" or "-w" to overwrite the file.')
+            raise OSError(
+                f'Path "{args.output_table}" already refers to a file. Provide "--overwrite" or "-w" to overwrite the file.')
         else:
-            raise OSError(f'Path "{args.output_table}" already exists and is not a file')
+            raise OSError(
+                f'Path "{args.output_table}" already exists and is not a file')
 
     if args.input_table is None:
         tmpdir = tempfile.TemporaryDirectory()
@@ -142,40 +147,42 @@ if __name__ == '__main__':
     pdg_particle_names = []
     with open(input_table) as input_file:
         for line in filter(lambda s: not commented_line.match(s), input_file):
-            pdg_particle_names.append(line[NAME_CHARGE_FIELD].split()[0].strip())
+            pdg_particle_names.append(
+                line[NAME_CHARGE_FIELD].split()[0].strip())
 
-    new_particle_names = [] # to check that there are unique names
+    new_particle_names = []  # to check that there are unique names
     with open(input_table) as input_file, open(args.output_table, 'wt') as output_file:
 
-        output_file.write(f'''* Reactions particle table for PDG elements, generated on {datetime.datetime.today().date()}
+        output_file.write(f'''*
+* Reactions particle table for PDG elements, generated on {datetime.datetime.today().date()}
 *
 * This table has been generated from the PDG table of masses and widths at https://pdg.lbl.gov/2020/html/computer_read.html,
-* where particles have been expanded by charge so they can be efficiently read by name. The first line indicates the format
-* of the fields (number of characters associated to each field).
+* where particles have been expanded by charge so they can be efficiently read by name.#
 *
 ''')
 
-        parse_int = lambda s: None if not s else int(s)
+        def parse_int(s): return None if not s else int(s)
 
         for line in filter(lambda s: not commented_line.match(s), input_file):
 
             # extract the information
-            pids = tuple(parse_int(line[s].strip()) for s in PID_FIELDS) # -, 0, +, ++
+            pids = tuple(parse_int(line[s].strip())
+                         for s in PID_FIELDS)  # -, 0, +, ++
 
             config = dict(
-                mass = line[MASS_FIELD],
-                mass_error_upper = line[MASS_ERROR_UPPER_FIELD],
-                mass_error_lower = line[MASS_ERROR_LOWER_FIELD],
-                width = line[WIDTH_FIELD],
-                width_error_upper = line[WIDTH_ERROR_LOWER_FIELD],
-                width_error_lower = line[WIDTH_ERROR_UPPER_FIELD],
+                mass=line[MASS_FIELD],
+                mass_error_upper=line[MASS_ERROR_UPPER_FIELD],
+                mass_error_lower=line[MASS_ERROR_LOWER_FIELD],
+                width=line[WIDTH_FIELD],
+                width_error_upper=line[WIDTH_ERROR_LOWER_FIELD],
+                width_error_lower=line[WIDTH_ERROR_UPPER_FIELD],
             )
             name, charge = (s.strip() for s in line[107:128].split())
 
             # determine the parts of the name
             base_name = re_base_name.match(name).group()
-            primes    = "'" * name.count("'")
-            excited   = '*' if '*' in name else ''
+            primes = "'" * name.count("'")
+            excited = '*' if '*' in name else ''
 
             sub_super_scripts = paranthesized.findall(name)
 
@@ -198,7 +205,8 @@ if __name__ == '__main__':
                 else:
                     extra = f'_{f}({s})'
             else:
-                raise RuntimeError('Can not process more than three paranthesized values')
+                raise RuntimeError(
+                    'Can not process more than three paranthesized values')
 
             core_name = f'{base_name}{primes}{extra}{excited}'
 
@@ -210,7 +218,8 @@ if __name__ == '__main__':
                 config['name'] = name
                 config['three_charge'] = f'{three_charge:+d}'
                 config['id'] = pid
-                output_file.write(' '.join(f(config[s]) for s, f in FIELDS) + os.linesep)
+                output_file.write(
+                    ' '.join(f(config[s]) for s, f in FIELDS) + os.linesep)
                 new_particle_names.append(config['name'])
 
             def write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format, antiparticle_format):
@@ -221,7 +230,8 @@ if __name__ == '__main__':
                         charge = 0
                     else:
                         charge = abs(c) * '+' if c > 0 else abs(c) * '-'
-                    write_element_(config, f.format(core_name=core_name, charge=charge), t, p)
+                    write_element_(config, f.format(
+                        core_name=core_name, charge=charge), t, p)
 
             def category_from_pid_(pid):
                 """"""
@@ -247,75 +257,97 @@ if __name__ == '__main__':
 
                 category = category_from_pid_(pid)
 
-                config['is_self_cc'] = (three_charge == 0) # change latter for baryons
+                # change latter for baryons
+                config['is_self_cc'] = (three_charge == 0)
 
                 # particle
-                if abs(three_charge) in (1, 2): # is a quark
-                    write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format='{core_name}', antiparticle_format='{core_name}~')
-                elif three_charge != 0: # charged
+                if abs(three_charge) in (1, 2):  # is a quark
+                    write_particle_and_antiparticle_(
+                        config, core_name, pid, three_charge, particle_format='{core_name}', antiparticle_format='{core_name}~')
+                elif three_charge != 0:  # charged
                     if category == 'baryon':
-                        write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
-                    else: # meson or fundamental
-                        write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}{charge}')
-                else: # neutral
+                        write_particle_and_antiparticle_(
+                            config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
+                    else:  # meson or fundamental
+                        write_particle_and_antiparticle_(
+                            config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}{charge}')
+                else:  # neutral
                     if category == 'baryon':
 
                         config['is_self_cc'] = False
 
-                        write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
+                        write_particle_and_antiparticle_(
+                            config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
 
                     elif category == 'meson':
 
-                        if re_uppercase_string.match(base_name): # KS0, KL0, ...
+                        # KS0, KL0, ...
+                        if re_uppercase_string.match(base_name):
                             config['is_self_cc'] = True
                         else:
                             config['is_self_cc'] = is_self_cc_meson(pid)
 
-                        if re_uppercase_character.match(base_name): # K, D, B, ...
-                            write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
-                        elif pdg_particle_names.count(base_name) > 1 or re_uppercase_string.match(base_name): # pi, KS, KL, ...
-                            write_element_(config, f'{core_name}{charge}', three_charge, pid)
-                        else: # eta, phi, ...
-                            write_element_(config, core_name, three_charge, pid)
+                        # K, D, B, ...
+                        if re_uppercase_character.match(base_name):
+                            write_particle_and_antiparticle_(
+                                config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
+                        # pi, KS, KL, ...
+                        elif pdg_particle_names.count(base_name) > 1 or re_uppercase_string.match(base_name):
+                            write_element_(
+                                config, f'{core_name}{charge}', three_charge, pid)
+                        else:  # eta, phi, ...
+                            write_element_(config, core_name,
+                                           three_charge, pid)
 
-                    else: # fundamental
+                    else:  # fundamental
 
-                        if re_uppercase_character.match(base_name): # H0, Z0, ...
-                            write_element_(config, f'{core_name}{charge}', three_charge, pid)
-                        elif re_neutrino.match(base_name): # nu_e, nu_mu, nu_tau
+                        # H0, Z0, ...
+                        if re_uppercase_character.match(base_name):
+                            write_element_(
+                                config, f'{core_name}{charge}', three_charge, pid)
+                        elif re_neutrino.match(base_name):  # nu_e, nu_mu, nu_tau
                             config['is_self_cc'] = False
-                            write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format=core_name, antiparticle_format='{core_name}~')
-                        else: # g, gamma, ...
-                            write_element_(config, core_name, three_charge, pid)
+                            write_particle_and_antiparticle_(
+                                config, core_name, pid, three_charge, particle_format=core_name, antiparticle_format='{core_name}~')
+                        else:  # g, gamma, ...
+                            write_element_(config, core_name,
+                                           three_charge, pid)
 
             else:
                 for charge, pid in zip(charges, pids):
 
-                    three_charge = int(round(3 * CHARGE_FROM_PDG_CHARGE[charge]))
+                    three_charge = int(
+                        round(3 * CHARGE_FROM_PDG_CHARGE[charge]))
 
                     if category == 'baryon':
 
                         config['is_self_cc'] = False
-                        write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
+                        write_particle_and_antiparticle_(
+                            config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
 
                     elif category == 'meson':
 
                         config['is_self_cc'] = is_self_cc_meson(pid)
 
                         if three_charge == 0:
-                            write_element_(config, f'{core_name}{charge}', three_charge, pid)
+                            write_element_(
+                                config, f'{core_name}{charge}', three_charge, pid)
                         else:
-                            write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}{charge}')
+                            write_particle_and_antiparticle_(
+                                config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}{charge}')
                     else:
-                        raise RuntimeError('Unable to process fundamental particles with several associated PIDs')
+                        raise RuntimeError(
+                            'Unable to process fundamental particles with several associated PIDs')
 
     # check that particles are unique
     if len(new_particle_names) != len(set(new_particle_names)):
-        repeated = [p.strip() for p in set(new_particle_names) if new_particle_names.count(p) > 1]
-        raise RuntimeError(f'Particles do not have unique names: {repeated}. Output table is invalid.')
+        repeated = [p.strip() for p in set(new_particle_names)
+                    if new_particle_names.count(p) > 1]
+        raise RuntimeError(
+            f'Particles do not have unique names: {repeated}. Output table is invalid.')
 
     # reopen the table we just created to verify the length of the strings written in it
-    line_size = len(LENGTHS) + sum(LENGTHS) # account for the additional \n
+    line_size = len(LENGTHS) + sum(LENGTHS)  # account for the additional \n
     with open(args.output_table) as table:
         for line in filter(lambda s: not commented_line.match(s), table):
             assert len(line) == line_size

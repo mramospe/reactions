@@ -1,8 +1,8 @@
+*
 * Reactions particle table for PDG elements, generated on 2021-03-27
 *
 * This table has been generated from the PDG table of masses and widths at https://pdg.lbl.gov/2020/html/computer_read.html,
-* where particles have been expanded by charge so they can be efficiently read by name. The first line indicates the format
-* of the fields (number of characters associated to each field).
+* where particles have been expanded by charge so they can be efficiently read by name.#
 *
                g         21 +0  0.000000000e+00  0.00e+00 -0.00e+00  0.000000000e+00 -0.00e+00  0.00e+00 1
            gamma         22 +0  0.000000000e+00  0.00e+00 -0.00e+00  0.000000000e+00 -0.00e+00  0.00e+00 1

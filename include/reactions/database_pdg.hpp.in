@@ -116,8 +116,14 @@ namespace reactions::database_pdg {
     /// Number of data fields
     static const size_t nfields = std::tuple_size_v<base_type>;
 
-    /// Inherit constructors
-    using base_type::base_type;
+    element() = delete;
+    element(element const &) = default;
+    element(element &&) = default;
+    element &operator=(element const &) = default;
+    element &operator=(element &&) = default;
+
+    /// Construct the element from the contents
+    element(base_type &&tuple) : base_type{std::move(tuple)} {}
 
     /// Assign the element from a tuple with the data fields
     element &operator=(base_type &&tup) {
@@ -223,37 +229,6 @@ namespace reactions::database_pdg {
 
       return std::sqrt(el * el + eu * eu);
     }
-
-    template <std::size_t I> bool read_field(std::string const &line) {
-
-      static constexpr auto field = pdg_element_field_properties::list[I];
-      static constexpr auto min = bounds_for_field<field>::min;
-      static constexpr auto max = bounds_for_field<field>::max;
-
-      if constexpr (detail::is_optional_field_v<field>) {
-
-        typename std::tuple_element_t<I, base_type>::value_type value;
-
-        auto sc = reactions::database::read_field<min, max>(value, line);
-
-        if (sc == reactions::database::conversion_status::success)
-          std::get<I>(*this).emplace(value);
-
-        return sc != reactions::database::conversion_status::failed;
-      } else
-        return reactions::database::read_field<min, max>(std::get<I>(*this),
-                                                         line) !=
-               reactions::database::conversion_status::failed;
-    }
-
-    template <std::size_t... I>
-    bool read_line(std::string const &line, std::index_sequence<I...>) {
-      return (read_field<I>(line) && ...);
-    }
-
-    bool operator<<(std::string const &line) {
-      return read_line(line, std::make_index_sequence<nfields>());
-    }
   };
 
   /*! \brief Database of elements following the PDG convention
@@ -280,11 +255,19 @@ namespace reactions::database_pdg {
 
       std::string line;
 
-      while (std::getline(file, line)) {
-        m_cache.emplace_back();
-        read_element(m_cache.back(), line);
-      }
+      while (std::getline(file, line))
+        m_cache.emplace_back(read_element(line));
+
       file.close();
+    }
+
+    /// Return the charge-conjugate of an element
+    element cc(element const &el) const {
+
+      if (el.is_self_cc())
+        return el;
+      else
+        return operator()(-el.pdg_id());
     }
 
     /// Get the only instance of this class
@@ -352,12 +335,53 @@ namespace reactions::database_pdg {
       return file;
     }
 
-    /// Advance to the next element in the file and read it
-    void read_element(element &el, std::string const &line) const {
+    /// Read a field with the given index from a line
+    template <std::size_t I>
+    bool read_field(element::base_type &tuple, std::string const &line) const {
 
-      if (!(el << line))
+      static constexpr auto field = pdg_element_field_properties::list[I];
+      static constexpr auto min = bounds_for_field<field>::min;
+      static constexpr auto max = bounds_for_field<field>::max;
+
+      if constexpr (detail::is_optional_field_v<field>) {
+
+        typename std::tuple_element_t<I, element::base_type>::value_type value;
+
+        auto sc = reactions::database::read_field<min, max>(value, line);
+
+        if (sc == reactions::database::conversion_status::success)
+          std::get<I>(tuple).emplace(value);
+
+        return sc != reactions::database::conversion_status::failed;
+      } else
+        return reactions::database::read_field<min, max>(std::get<I>(tuple),
+                                                         line) !=
+               reactions::database::conversion_status::failed;
+    }
+
+    /// Read all the fields from a line
+    template <std::size_t... I>
+    bool read_line(element::base_type &tuple, std::string const &line,
+                   std::index_sequence<I...>) const {
+      return (read_field<I>(tuple, line) && ...);
+    }
+
+    /// Read all the fields from a line
+    bool read_line(element::base_type &tuple, std::string const &line) const {
+      return read_line(tuple, line,
+                       std::make_index_sequence<element::nfields>());
+    }
+
+    /// Advance to the next element in the file and read it
+    element read_element(std::string const &line) const {
+
+      element::base_type tuple;
+
+      if (!read_line(tuple, line))
         throw reactions::exceptions::database_error(
             "Error reading PDG database; data format not understood");
+
+      return tuple;
     }
 
     /// Access an element using the field accessor
@@ -374,8 +398,9 @@ namespace reactions::database_pdg {
         std::string line;
 
         while (std::getline(file, line)) {
-          element el;
-          read_element(el, line);
+
+          element el = read_element(line);
+
           if (el.get<E>() == v) {
             file.close();
             return el;

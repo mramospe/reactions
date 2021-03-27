@@ -129,7 +129,11 @@ class ApplyFormatCommand(DirectoryWorker):
             c_proc = None if not c_files else subprocess.Popen(
                 ['clang-format', '-i'] + c_files)
 
-            def killall(): return python_proc.kill() and c_proc.kill()
+            def killall():
+                if python_proc is not None:
+                    python_proc.kill()
+                if c_proc is not None:
+                    c_proc.kill()
 
             # Wait for the processes to finish
             if python_proc is not None and python_proc.wait() != 0:
