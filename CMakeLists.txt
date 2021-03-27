@@ -41,7 +41,7 @@ file(GLOB_RECURSE HEADER_FILES_TO_CONFIG ${PROJECT_SOURCE_DIR}/include/reactions
 install(FILES ${HEADER_FILES} DESTINATION include/reactions)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/python/reactions/data DESTINATION ${PROJECT_BINARY_DIR})
-set(PDG_TABLE ${PROJECT_BINARY_DIR}/data/pdg_mass_width_2020.mcd)
+set(PDG_TABLE ${PROJECT_BINARY_DIR}/data/pdg_mass_width_2020.txt)
 foreach(include_file ${HEADER_FILES_TO_CONFIG})
   string(REPLACE ".in" "" file_name ${include_file})
   configure_file(${include_file} ${file_name})
