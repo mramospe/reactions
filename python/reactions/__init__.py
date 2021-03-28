@@ -7,7 +7,9 @@ try:
         # types
         reaction, decay, string_element, pdg_element, pdg_database,
         # functions
-        is_element, node_type, get_pdg_database, set_pdg_database
+        is_element, node_type, get_pdg_database, set_pdg_database,
+        # errors
+        DatabaseError, LookupError, SyntaxError
     )
 
     # Set the path to the database(s)
@@ -18,7 +20,8 @@ try:
 
     # Variables exported
     __all__ = ['reaction', 'decay', 'string_element', 'pdg_element', 'pdg_database',
-               'is_element', 'node_type', 'get_pdg_database', 'set_pdg_database']
+               'is_element', 'node_type', 'get_pdg_database', 'set_pdg_database',
+               'DatabaseError', 'LookupError', 'SyntaxError']
 
 except ModuleNotFoundError:
     # To allow setup.py to get the version

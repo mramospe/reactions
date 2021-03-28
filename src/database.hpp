@@ -96,14 +96,14 @@ static PyObject *DatabasePDG_set_database(DatabasePDG *self, PyObject *args) {
 // Methods of the DatabasePDG class
 static PyMethodDef DatabasePDG_methods[] = {
     {"disable_cache", (PyCFunction)DatabasePDG_disable_cache, METH_NOARGS,
-     "Enable the internal cache"},
+     "Disable the internal cache"},
     {"enable_cache", (PyCFunction)DatabasePDG_enable_cache, METH_NOARGS,
-     "Enable the internal cache"},
+     "Enable the internal cache. All the elements will be loaded in memory."},
     {"get_database", (PyCFunction)DatabasePDG_get_database, METH_NOARGS,
      "Get the path to the database file"},
     {"set_database", (PyCFunction)DatabasePDG_set_database, METH_VARARGS,
      "Set the path to the database file. If the cache is enabled, reloads the "
-     "data."},
+     "data. If the cache is enabled, elements are reloaded in memory."},
     {NULL, NULL, 0, NULL}};
 
 // Definition of the DatabasePDG type
@@ -112,39 +112,43 @@ static PyTypeObject DatabasePDGType = {
     sizeof(DatabasePDG),                                     /* tp_basicsize */
     0,                                                       /* tp_itemsize */
     0,                                                       /* tp_dealloc */
-    0,                          /* tp_vectorcall_offset */
-    0,                          /* tp_getattr */
-    0,                          /* tp_setattr */
-    0,                          /* tp_as_async */
-    0,                          /* tp_repr */
-    0,                          /* tp_as_number */
-    0,                          /* tp_as_sequence */
-    0,                          /* tp_as_mapping */
-    0,                          /* tp_hash */
-    0,                          /* tp_call */
-    0,                          /* tp_str */
-    0,                          /* tp_getattro */
-    0,                          /* tp_setattro */
-    0,                          /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,         /* tp_flags */
-    "pdg_database object",      /* tp_doc */
-    0,                          /* tp_traverse */
-    0,                          /* tp_clear */
-    0,                          /* tp_richcompare */
-    0,                          /* tp_weaklistoffset */
-    0,                          /* tp_iter */
-    0,                          /* tp_iternext */
-    DatabasePDG_methods,        /* tp_methods */
-    0,                          /* tp_members */
-    0,                          /* tp_getset */
-    0,                          /* tp_base */
-    0,                          /* tp_dict */
-    0,                          /* tp_descr_get */
-    0,                          /* tp_descr_set */
-    0,                          /* tp_dictoffset */
-    (initproc)DatabasePDG_init, /* tp_init */
-    0,                          /* tp_alloc */
-    DatabasePDG_new,            /* tp_new */
+    0,                               /* tp_vectorcall_offset */
+    0,                               /* tp_getattr */
+    0,                               /* tp_setattr */
+    0,                               /* tp_as_async */
+    0,                               /* tp_repr */
+    0,                               /* tp_as_number */
+    0,                               /* tp_as_sequence */
+    0,                               /* tp_as_mapping */
+    0,                               /* tp_hash */
+    0,                               /* tp_call */
+    0,                               /* tp_str */
+    0,                               /* tp_getattro */
+    0,                               /* tp_setattro */
+    0,                               /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,              /* tp_flags */
+    R"(Object to serve as an interface with the PDG database. This object is declared
+as a singleton, using a single database file that can be modified using the
+:func:`set_pdg_database` function. This ensures that reactions are composed of PDG
+elements from the same file. The database can make use of an internal cache to avoid
+reading from the file many times.)", /* tp_doc */
+    0,                               /* tp_traverse */
+    0,                               /* tp_clear */
+    0,                               /* tp_richcompare */
+    0,                               /* tp_weaklistoffset */
+    0,                               /* tp_iter */
+    0,                               /* tp_iternext */
+    DatabasePDG_methods,             /* tp_methods */
+    0,                               /* tp_members */
+    0,                               /* tp_getset */
+    0,                               /* tp_base */
+    0,                               /* tp_dict */
+    0,                               /* tp_descr_get */
+    0,                               /* tp_descr_set */
+    0,                               /* tp_dictoffset */
+    (initproc)DatabasePDG_init,      /* tp_init */
+    0,                               /* tp_alloc */
+    DatabasePDG_new,                 /* tp_new */
 };
 
 // Create a new node

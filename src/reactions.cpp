@@ -112,6 +112,12 @@ static PyModuleDef reactions_module = {PyModuleDef_HEAD_INIT,
     return NULL;                                                               \
   }
 
+#define REACTIONS_PYTHON_REGISTER_ERROR(module, name)                          \
+  if (PyModule_AddObject(module, #name, name) < 0) {                           \
+    Py_DECREF(module);                                                         \
+    return NULL;                                                               \
+  }
+
 // Initialize the module
 PyMODINIT_FUNC PyInit_reactions(void) {
 
@@ -135,6 +141,11 @@ PyMODINIT_FUNC PyInit_reactions(void) {
   REACTIONS_PYTHON_REGISTER_CLASS(m, "reaction", ReactionType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "decay", DecayType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_database", DatabasePDGType);
+
+  // Add errors
+  REACTIONS_PYTHON_REGISTER_ERROR(m, DatabaseError);
+  REACTIONS_PYTHON_REGISTER_ERROR(m, LookupError);
+  REACTIONS_PYTHON_REGISTER_ERROR(m, SyntaxError);
 
   return m;
 }

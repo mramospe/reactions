@@ -71,11 +71,8 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
             "Argument must be either a string (name) or an integer (PDG ID)");
         return -1;
       }
-    } catch (exceptions::database_error &e) {
-
-      PyErr_SetString(DatabaseError, e.what());
-      return -1;
     }
+    REACTIONS_PYTHON_CATCH_ERRORS()
   } else {
 
     // the instance is built from the input values
@@ -83,7 +80,7 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
 
     if (args != NULL && PyTuple_Size(args) == database_pdg::element::nfields) {
       if (!PyArg_ParseTuple(
-              args, "siiffffffp", &std::get<0>(tup), &std::get<1>(tup),
+              args, "siiddddddp", &std::get<0>(tup), &std::get<1>(tup),
               &std::get<2>(tup), &std::get<3>(tup), &std::get<4>(tup),
               &std::get<5>(tup), &std::get<6>(tup), &std::get<7>(tup),
               &std::get<8>(tup), &std::get<9>(tup)))
@@ -104,7 +101,7 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
                                    NULL};
 
       if (!PyArg_ParseTupleAndKeywords(
-              args, kwargs, "|$siiffffffp", const_cast<char **>(kwds),
+              args, kwargs, "|$siiddddddp", const_cast<char **>(kwds),
               &std::get<0>(tup), &std::get<1>(tup), &std::get<2>(tup),
               &std::get<3>(tup), &std::get<4>(tup), &std::get<5>(tup),
               &std::get<6>(tup), &std::get<7>(tup), &std::get<8>(tup),
@@ -145,7 +142,18 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to evaluate a member function of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(name, converter)              \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    return converter(self->element.name());                                    \
+    try {                                                                      \
+      return converter(self->element.name());                                  \
+    } catch (exceptions::missing_fields_error &) {                             \
+      Py_RETURN_NONE;                                                          \
+    } catch (...) {                                                            \
+      PyErr_SetString(                                                         \
+          PyExc_RuntimeError,                                                  \
+          (std::string{"Unable to access \""} + #name +                        \
+           std::string{"\" (internal error); please report the bug"})          \
+              .c_str());                                                       \
+      return NULL;                                                             \
+    }                                                                          \
   }
 
 /// Convert a std::string to a python unicode string
@@ -175,27 +183,29 @@ REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(width_error, PyFloat_FromDouble)
 
 /// Properties of the ElementPDG class
 static PyGetSetDef ElementPDG_getsetters[] = {
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(name, "Get the name"),
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(pdg_id, "Get the PDG ID"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(name, "Name of the element"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(pdg_id, "PDG ID"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(three_charge,
+                                            "Three times the charge"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        three_charge, "Get the value of three times the charge"),
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(mass, "Get the value of the mass"),
+        mass, "Mass value (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        mass_error_lower, "Get the value of the lower mass error"),
+        mass_error_lower, "Lower mass error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        mass_error_upper, "Get the value of the upper mass error"),
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(width,
-                                            "Get the value of the width"),
+        mass_error_upper, "Upper mass error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        width_error_lower, "Get the value of the lower width error"),
+        width, "Width value (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        width_error_upper, "Get the value of the upper width error"),
+        width_error_lower, "Lower width error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        is_self_cc, "Return whether this element is self charge-conjugate"),
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(charge,
-                                            "Get the value of the charge"),
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(mass_error, "Get the mass error"),
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(width_error, "Get the width error"),
+        width_error_upper, "Upper width error (:py:obj:`None` if missing)"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        is_self_cc, "Whether this element is self charge-conjugate"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(charge, "Value of the charge"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        mass_error, "Mass error (:py:obj:`None` if missing)"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        width_error, "Width error (:py:obj:`None` if missing)"),
 };
 
 /// Type declaration
@@ -219,24 +229,27 @@ static PyTypeObject ElementPDGType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "ElementPDG object",                      /* tp_doc */
-    0,                                        /* tp_traverse */
-    0,                                        /* tp_clear */
-    ElementPDG_richcompare,                   /* tp_richcompare */
-    0,                                        /* tp_weaklistoffset */
-    0,                                        /* tp_iter */
-    0,                                        /* tp_iternext */
-    ElementPDG_methods,                       /* tp_methods */
-    0,                                        /* tp_members */
-    ElementPDG_getsetters,                    /* tp_getset */
-    &NodeType,                                /* tp_base */
-    0,                                        /* tp_dict */
-    0,                                        /* tp_descr_get */
-    0,                                        /* tp_descr_set */
-    0,                                        /* tp_dictoffset */
-    (initproc)ElementPDG_init,                /* tp_init */
-    0,                                        /* tp_alloc */
-    ElementPDG_new,                           /* tp_new */
+    R"(Store information about a PDG element. The values that are accessible
+can be consulted below. The values of the mass and the width (and their
+corresponding errors) can be missing for certain elements. Having defined the
+mass or the width means that the errors for this magnitude are also defined.)", /* tp_doc */
+    0,                         /* tp_traverse */
+    0,                         /* tp_clear */
+    ElementPDG_richcompare,    /* tp_richcompare */
+    0,                         /* tp_weaklistoffset */
+    0,                         /* tp_iter */
+    0,                         /* tp_iternext */
+    ElementPDG_methods,        /* tp_methods */
+    0,                         /* tp_members */
+    ElementPDG_getsetters,     /* tp_getset */
+    &NodeType,                 /* tp_base */
+    0,                         /* tp_dict */
+    0,                         /* tp_descr_get */
+    0,                         /* tp_descr_set */
+    0,                         /* tp_dictoffset */
+    (initproc)ElementPDG_init, /* tp_init */
+    0,                         /* tp_alloc */
+    ElementPDG_new,            /* tp_new */
 };
 
 static PyObject *ElementPDG_richcompare(PyObject *obj1, PyObject *obj2,

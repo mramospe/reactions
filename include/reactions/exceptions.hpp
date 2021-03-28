@@ -37,6 +37,13 @@ namespace reactions::exceptions {
     const char *what() const noexcept { return std::runtime_error::what(); }
   };
 
+  class missing_fields_error : std::runtime_error {
+  public:
+    missing_fields_error(const char *msg) : std::runtime_error{msg} {};
+
+    const char *what() const noexcept { return std::runtime_error::what(); }
+  };
+
   class syntax_error : std::runtime_error {
   public:
     syntax_error(const char *msg) : std::runtime_error{msg} {};

@@ -26,6 +26,9 @@ def test_pdg_element():
 
     # check that empty values in C++ correspond to None in python
     assert reactions.pdg_element('H0').width is None
+    assert reactions.pdg_element('H0').width_error_lower is None
+    assert reactions.pdg_element('H0').width_error_upper is None
+    assert reactions.pdg_element('H0').width_error is None
 
     # create a custom element
     reactions.pdg_element('gamma', 1, 0, 0., 0., 0., 1.e+16, 0., 0., True)
@@ -54,6 +57,10 @@ def test_pdg_element():
     assert reactions.pdg_element('pi+') == reactions.pdg_element(+211)
     assert reactions.pdg_element('pi+') != reactions.pdg_element('pi-')
     assert reactions.pdg_element(+211) != reactions.pdg_element(-211)
+
+    # errors accessing elements
+    with pytest.raises(reactions.LookupError):
+        reactions.pdg_element('mu')
 
 
 def test_string_element():

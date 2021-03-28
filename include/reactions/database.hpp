@@ -9,8 +9,9 @@
 
 namespace reactions::database {
 
-  /// Optional for float values
+  /// Aliases for optional values
   using float_opt = std::optional<float>;
+  using double_opt = std::optional<double>;
 
   /// Check if a type represents an optional
   template <class> struct is_optional : std::false_type {};
@@ -89,17 +90,7 @@ namespace reactions::database {
     /// Convert a range of characters to string
     conversion_status string_to_type(std::string &out, std::string const &s) {
 
-      auto const size = s.size();
-
-      std::size_t begin = 0;
-      for (; begin != size && s[begin] == ' '; ++begin)
-        ;
-
-      std::size_t end = size - 1;
-      for (; end != 0 && s[end] == ' '; --end)
-        ;
-
-      out = s.substr(begin, end + 1 - begin);
+      out = s;
 
       if (out.size() == 0)
         return empty;
@@ -113,11 +104,14 @@ namespace reactions::database {
   conversion_status read_field(T &out, std::string const &s) {
     // std::from_chars is not correctly implemented in GCC, and
     // we can not work with std::string_view objects
-    if (std::all_of(s.cbegin() + Begin, s.cbegin() + End,
-                    [](char c) { return c == ' '; }))
+    auto b = s.find_first_not_of(' ', Begin);
+
+    if (b >= End)
       return empty;
 
-    return detail::string_to_type(out, s.substr(Begin, End - Begin));
+    auto e = s.find_last_not_of(' ', End) + 1;
+
+    return detail::string_to_type(out, s.substr(b, e - b));
   }
 } // namespace reactions::database
 

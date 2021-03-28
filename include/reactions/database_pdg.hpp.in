@@ -27,12 +27,12 @@ namespace reactions::database_pdg {
  */
 namespace reactions::database_pdg {
 
-  using float_opt = reactions::database::float_opt;
+  using double_opt = reactions::database::double_opt;
 
   /// Base class of a PDG particle
   using base_element =
-      std::tuple<std::string, int, int, float_opt, float_opt, float_opt,
-                 float_opt, float_opt, float_opt, bool>;
+      std::tuple<std::string, int, int, double_opt, double_opt, double_opt,
+                 double_opt, double_opt, double_opt, bool>;
 
   /// Enumeration to access the PDG element fields
   REACTIONS_POW_ENUM_WITH_UNKNOWN(pdg_element_field, name, pdg_id, three_charge,
@@ -169,8 +169,10 @@ namespace reactions::database_pdg {
       return get<pdg_element_field::three_charge>();
     }
 
-    /// Charge as a floating point number
-    float charge() const { return get<pdg_element_field::three_charge>() / 3.; }
+    /// Charge as a doubleing point number
+    double charge() const {
+      return get<pdg_element_field::three_charge>() / 3.;
+    }
 
     /// Whether the element is its own charge-conjugate
     bool const &is_self_cc() const {
@@ -178,53 +180,60 @@ namespace reactions::database_pdg {
     }
 
     /// Mass
-    float const &mass() const { return get<pdg_element_field::mass>(); }
+    double const &mass() const { return get<pdg_element_field::mass>(); }
 
     /// Lower mass error
-    float const &mass_error_lower() const {
+    double const &mass_error_lower() const {
       return get<pdg_element_field::mass_error_lower>();
     }
 
     /// Upper mass error
-    float const &mass_error_upper() const {
+    double const &mass_error_upper() const {
       return get<pdg_element_field::mass_error_upper>();
     }
 
     /// Mass error
-    float mass_error() const {
+    double mass_error() const {
 
-      auto const el = has<pdg_element_field::mass_error_lower>()
-                          ? get<pdg_element_field::mass_error_lower>()
-                          : 0.f;
-      auto const eu = has<pdg_element_field::mass_error_upper>()
-                          ? get<pdg_element_field::mass_error_upper>()
-                          : 0.f;
+      if (!has<pdg_element_field::mass_error_lower>() ||
+          !has<pdg_element_field::mass_error_upper>())
+        throw reactions::exceptions::missing_fields_error(
+            ("Unable to access mass errors; mass is not defined for particle" +
+             name())
+                .c_str());
+
+      auto const el = get<pdg_element_field::mass_error_lower>();
+      auto const eu = get<pdg_element_field::mass_error_upper>();
 
       return std::sqrt(el * el + eu * eu);
     }
 
     /// Width
-    float const &width() const { return get<pdg_element_field::width>(); }
+    double const &width() const { return get<pdg_element_field::width>(); }
 
     /// Lower width error
-    float const &width_error_lower() const {
+    double const &width_error_lower() const {
       return get<pdg_element_field::width_error_lower>();
     }
 
     /// Upper width error
-    float const &width_error_upper() const {
+    double const &width_error_upper() const {
       return get<pdg_element_field::width_error_upper>();
     }
 
     /// Width error
-    float width_error() const {
+    double width_error() const {
 
-      auto const el = has<pdg_element_field::width_error_lower>()
-                          ? get<pdg_element_field::width_error_lower>()
-                          : 0.f;
-      auto const eu = has<pdg_element_field::width_error_upper>()
-                          ? get<pdg_element_field::width_error_upper>()
-                          : 0.f;
+      if (!has<pdg_element_field::width_error_lower>() ||
+          !has<pdg_element_field::width_error_upper>())
+        throw reactions::exceptions::missing_fields_error(
+            ("Unable to access width errors; width is not defined for "
+             "particle" +
+             name())
+                .c_str());
+
+      auto const el = get<pdg_element_field::width_error_lower>();
+      auto const eu = get<pdg_element_field::width_error_upper>();
 
       return std::sqrt(el * el + eu * eu);
     }
@@ -401,9 +410,19 @@ namespace reactions::database_pdg {
 
         while (std::getline(file, line)) {
 
-          element el = read_element(line);
+          // read only the important part
+          static constexpr auto idx = pdg_element_field_properties::index<E>();
+          static constexpr auto min = bounds_for_field<E>::min;
+          static constexpr auto max = bounds_for_field<E>::max;
+          std::tuple_element_t<idx, element::base_type> ref;
+          auto sc = reactions::database::read_field<min, max>(ref, line);
 
-          if (el.get<E>() == v) {
+          if (sc == reactions::database::failed)
+            throw reactions::exceptions::database_error(
+                "Error reading PDG database; data format not understood");
+
+          if (ref == v) {
+            element el = read_element(line);
             file.close();
             return el;
           }
