@@ -2,6 +2,7 @@
 Test the properties of the database objects
 """
 import os
+import pytest
 import reactions
 
 import helpers
@@ -23,6 +24,10 @@ def test_pdg_getter_setter():
     first.set_database('another_path')
     assert first.get_database() == reactions.get_pdg_database()
     assert first.get_database() == second.get_database()
+
+    # try to use a non-existing database
+    with pytest.raises(reactions.DatabaseError):
+        reactions.pdg_element('mu+')
 
 
 @helpers.restore_pdg_database
