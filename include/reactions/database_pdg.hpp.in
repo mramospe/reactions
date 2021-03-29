@@ -29,7 +29,7 @@ namespace reactions::database_pdg {
 
   using double_opt = reactions::database::double_opt;
 
-  /// Base class of a PDG particle
+  /// Base class of a PDG element
   using base_element =
       std::tuple<std::string, int, int, double_opt, double_opt, double_opt,
                  double_opt, double_opt, double_opt, bool>;
@@ -80,26 +80,32 @@ namespace reactions::database_pdg {
   /// Definitions for internal use only
   namespace detail {
 
+    /// Type of the given field
     template <pdg_element_field E>
     using field_t =
         std::tuple_element_t<pdg_element_field_properties::index<E>(),
                              base_element>;
 
+    /// Contain the information whether a field is optional or not
     template <pdg_element_field E, class Enable = void>
     struct is_optional_field : std::false_type {};
 
+    /// Contain the information whether a field is optional or not
     template <pdg_element_field E>
     struct is_optional_field<
         E, std::enable_if_t<reactions::database::is_optional_v<field_t<E>>>>
         : std::true_type {};
 
+    /// Whether a field is optional or not
     template <pdg_element_field E>
     constexpr auto is_optional_field_v = is_optional_field<E>::value;
 
+    /// Convert the given object to a string
     template <class T> std::string to_string(T const &v) {
       return std::to_string(v);
     }
 
+    /// Convert the given object to a string
     template <> std::string to_string(std::string const &v) { return v; }
   } // namespace detail
 
@@ -140,7 +146,14 @@ namespace reactions::database_pdg {
       return pdg_id() != other.pdg_id();
     }
 
-    /// Get an element using an accessor
+    /*! Get an element using an accessor.
+     *
+     * For fields of \ref std::optional type, the validity of the content
+     * must be checked before calling this function using the
+     * \ref element::has member function. Otherwise the
+     * \ref reactions::exception::missing_fields_error exception is thrown,
+     * if missing.
+     */
     template <pdg_element_field E> auto const &get() const {
       if constexpr (detail::is_optional_field_v<E>)
         return std::get<pdg_element_field_properties::index<E>()>(*this)
@@ -149,7 +162,7 @@ namespace reactions::database_pdg {
         return std::get<pdg_element_field_properties::index<E>()>(*this);
     }
 
-    /// Check whether
+    /// Check whether the given field information is missing or not
     template <pdg_element_field E> constexpr bool has() const {
       if constexpr (detail::is_optional_field_v<E>)
         return std::get<pdg_element_field_properties::index<E>()>(*this)
@@ -179,21 +192,52 @@ namespace reactions::database_pdg {
       return get<pdg_element_field::is_self_cc>();
     }
 
-    /// Mass
+    /*! Get the mass of the element
+     *
+     * You must check whether the mass is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
     double const &mass() const { return get<pdg_element_field::mass>(); }
 
-    /// Lower mass error
+    /// Whether the mass and its errors are defined or not
+    bool has_mass() const { return has<pdg_element_field::mass>(); }
+
+    /*! \brief Lower mass error
+     *
+     * You must check whether the mass is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
     double const &mass_error_lower() const {
       return get<pdg_element_field::mass_error_lower>();
     }
 
-    /// Upper mass error
+    /*! \brief Upper mass error
+     *
+     * You must check whether the mass is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
     double const &mass_error_upper() const {
       return get<pdg_element_field::mass_error_upper>();
     }
 
-    /// Mass error
-    double mass_error() const {
+    /* \brief Calculate the mass error
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
+    double mass_error() const { return std::sqrt(mass_error_squared()); }
+
+    /* \brief Calculate the mass error squared
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
+    double mass_error_squared() const {
 
       if (!has<pdg_element_field::mass_error_lower>() ||
           !has<pdg_element_field::mass_error_upper>())
@@ -205,24 +249,55 @@ namespace reactions::database_pdg {
       auto const el = get<pdg_element_field::mass_error_lower>();
       auto const eu = get<pdg_element_field::mass_error_upper>();
 
-      return std::sqrt(el * el + eu * eu);
+      return el * el + eu * eu;
     }
 
-    /// Width
+    /*! \brief Get the width of the element.
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
     double const &width() const { return get<pdg_element_field::width>(); }
 
-    /// Lower width error
+    /// Whether the width and its errors are defined or not
+    bool has_width() const { return has<pdg_element_field::width>(); }
+
+    /*! \brief Get the lower width error
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
     double const &width_error_lower() const {
       return get<pdg_element_field::width_error_lower>();
     }
 
-    /// Upper width error
+    /*! \brief Get the upper width error
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
     double const &width_error_upper() const {
       return get<pdg_element_field::width_error_upper>();
     }
 
-    /// Width error
-    double width_error() const {
+    /*! Calculate the width error
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
+    double width_error() const { return std::sqrt(width_error_squared()); }
+
+    /*! Calculate the width error squared
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::exceptions::missing_fields_error is thrown.
+     */
+    double width_error_squared() const {
 
       if (!has<pdg_element_field::width_error_lower>() ||
           !has<pdg_element_field::width_error_upper>())
@@ -235,7 +310,7 @@ namespace reactions::database_pdg {
       auto const el = get<pdg_element_field::width_error_lower>();
       auto const eu = get<pdg_element_field::width_error_upper>();
 
-      return std::sqrt(el * el + eu * eu);
+      return el * el + eu * eu;
     }
   };
 
@@ -360,7 +435,7 @@ namespace reactions::database_pdg {
 
       if constexpr (detail::is_optional_field_v<field>) {
 
-        typename std::tuple_element_t<I, element::base_type>::value_type value;
+        typename detail::field_t<field>::value_type value;
 
         auto sc = reactions::database::read_field<min, max>(value, line);
 
@@ -445,7 +520,8 @@ namespace reactions::database_pdg {
     database() {}
     database(database &&) = delete;
     database(database const &) = delete;
-    void operator=(database const &other) = delete;
+    void operator=(database &&) = delete;
+    void operator=(database const &) = delete;
   };
 } // namespace reactions::database_pdg
 
