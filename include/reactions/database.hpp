@@ -6,21 +6,28 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <type_traits>
 
 namespace reactions::database {
 
   template <class T, class Enable = void> struct value_and_errors;
 
+  /// Simple structure composed by a value and the lower and upper errors
   template <class T>
   struct value_and_errors<T,
                           std::enable_if_t<std::is_floating_point_v<T>, void>> {
+    /// Value
     T value;
+    /// Lower error
     T error_lower;
+    /// Upper error
     T error_upper;
+    /// Calculate the squared error from the lower and upper errors
     T error_squared() const {
       return error_lower * error_lower + error_upper * error_upper;
     };
+    /// Calculate the error from the lower and upper errors
     T error() const { return std::sqrt(error_squared()); }
   };
 
