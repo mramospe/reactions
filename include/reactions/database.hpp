@@ -2,6 +2,7 @@
 #define REACTIONS_DATABASE_HPP
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -9,9 +10,25 @@
 
 namespace reactions::database {
 
+  template <class T, class Enable = void> struct value_and_errors;
+
+  template <class T>
+  struct value_and_errors<T,
+                          std::enable_if_t<std::is_floating_point_v<T>, void>> {
+    T value;
+    T error_lower;
+    T error_upper;
+    T error_squared() const {
+      return error_lower * error_lower + error_upper * error_upper;
+    };
+    T error() const { return std::sqrt(error_squared()); }
+  };
+
   /// Aliases for optional values
   using float_opt = std::optional<float>;
   using double_opt = std::optional<double>;
+  using ve_float_opt = std::optional<value_and_errors<float>>;
+  using ve_double_opt = std::optional<value_and_errors<double>>;
 
   /// Check if a type represents an optional
   template <class> struct is_optional : std::false_type {};
@@ -21,6 +38,11 @@ namespace reactions::database {
 
   /// Alias to check if a type represents an optional
   template <class T> constexpr auto is_optional_v = is_optional<T>::value;
+
+  /// Define a range with minimum and maximum indices
+  template <std::size_t Min, std::size_t Max> struct range {
+    static constexpr auto min = Min, max = Max;
+  };
 
   /// Status code of a conversion to an arithmetic type
   enum conversion_status : int { success, empty, failed };
@@ -100,18 +122,49 @@ namespace reactions::database {
   } // namespace detail
 
   /// Read a field in a line from a file
-  template <std::size_t Begin, std::size_t End, class T>
+  template <class Range, class T>
   conversion_status read_field(T &out, std::string const &s) {
     // std::from_chars is not correctly implemented in GCC, and
     // we can not work with std::string_view objects
-    auto b = s.find_first_not_of(' ', Begin);
+    auto b = s.find_first_not_of(' ', Range::min);
 
-    if (b >= End)
+    if (b >= Range::max)
       return empty;
 
-    auto e = s.find_last_not_of(' ', End) + 1;
+    auto e = s.find_last_not_of(' ', Range::max) + 1;
 
     return detail::string_to_type(out, s.substr(b, e - b));
+  }
+
+  /// Read a field composed by value and errors in a line from a file
+  template <class Ranges, class T>
+  conversion_status read_field(value_and_errors<T> &out, std::string const &s) {
+    // std::from_chars is not correctly implemented in GCC, and
+    // we can not work with std::string_view objects
+    static_assert(std::tuple_size_v<Ranges> == 3);
+
+    auto b = s.find_first_not_of(' ', std::tuple_element_t<0, Ranges>::min);
+
+    if (b >= std::tuple_element_t<2, Ranges>::max)
+      return empty;
+
+    auto value_sc = detail::string_to_type(
+        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
+                            std::tuple_element_t<0, Ranges>::max));
+    auto error_lower_sc = detail::string_to_type(
+        out.error_lower, s.substr(std::tuple_element_t<1, Ranges>::min,
+                                  std::tuple_element_t<1, Ranges>::max));
+    auto error_upper_sc = detail::string_to_type(
+        out.error_upper, s.substr(std::tuple_element_t<2, Ranges>::min,
+                                  std::tuple_element_t<2, Ranges>::max));
+
+    if (value_sc == empty || error_lower_sc == empty || error_upper_sc == empty)
+      return failed; // either all are defined or none
+    else if (value_sc == failed || error_lower_sc == failed ||
+             error_upper_sc == failed)
+      return failed;
+    else
+      return success;
   }
 } // namespace reactions::database
 

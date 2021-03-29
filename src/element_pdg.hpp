@@ -78,38 +78,73 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
     // the instance is built from the input values
     database_pdg::element::base_type tup;
 
+    PyObject *mass = nullptr, *width = nullptr;
+
     if (args != NULL && PyTuple_Size(args) == database_pdg::element::nfields) {
-      if (!PyArg_ParseTuple(
-              args, "siiddddddp", &std::get<0>(tup), &std::get<1>(tup),
-              &std::get<2>(tup), &std::get<3>(tup), &std::get<4>(tup),
-              &std::get<5>(tup), &std::get<6>(tup), &std::get<7>(tup),
-              &std::get<8>(tup), &std::get<9>(tup)))
-        return -1;
+      if (!PyArg_ParseTuple(args, "siiOOp", &std::get<0>(tup),
+                            &std::get<1>(tup), &std::get<2>(tup), &mass, &width,
+                            &std::get<5>(tup)))
+        REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
     } else if (kwargs != NULL &&
                PyDict_Size(kwargs) == database_pdg::element::nfields) {
       // the instance is built from the keyword arguments
       static const char *kwds[] = {"name",
                                    "pdg_id",
                                    "three_charge",
-                                   "mass",
-                                   "mass_error_lower",
-                                   "mass_error_upper",
-                                   "width",
-                                   "width_error_lower",
-                                   "width_error_upper",
+                                   "mass_and_errors",
+                                   "width_and_errors",
                                    "is_self_cc",
                                    NULL};
 
       if (!PyArg_ParseTupleAndKeywords(
-              args, kwargs, "|$siiddddddp", const_cast<char **>(kwds),
-              &std::get<0>(tup), &std::get<1>(tup), &std::get<2>(tup),
-              &std::get<3>(tup), &std::get<4>(tup), &std::get<5>(tup),
-              &std::get<6>(tup), &std::get<7>(tup), &std::get<8>(tup),
-              &std::get<9>(tup)))
-        return -1;
+              args, kwargs, "|$siiOOp", const_cast<char **>(kwds),
+              &std::get<0>(tup), &std::get<1>(tup), &std::get<2>(tup), &mass,
+              &width, &std::get<5>(tup)))
+        REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
     } else
       // Invalid arguments
       REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
+
+    if (mass && mass != Py_None) {
+
+      auto length = PySequence_Length(mass);
+
+      if (length < 1 || length > 3) {
+        PyErr_SetString(PyExc_ValueError,
+                        "Mass argument must be a sequence of three values");
+        return -1;
+      }
+
+      double value, error_lower, error_upper;
+      if (!PyArg_ParseTuple(mass, "ddd", &value, &error_lower, &error_upper)) {
+        PyErr_SetString(
+            PyExc_ValueError,
+            "Mass argument must be a sequence of three floating point objects");
+        return -1;
+      }
+
+      std::get<3>(tup) = {value, error_lower, error_upper};
+    }
+
+    if (width && width != Py_None) {
+
+      auto length = PySequence_Length(width);
+
+      if (length < 1 || length > 3) {
+        PyErr_SetString(PyExc_ValueError, "Width argument must be a sequence "
+                                          "of three floating point objects");
+        return -1;
+      }
+
+      double value, error_lower, error_upper;
+      if (!PyArg_ParseTuple(width, "ddd", &value, &error_lower, &error_upper)) {
+        PyErr_SetString(PyExc_ValueError, "Width argument must be a sequence "
+                                          "of three floating point objects");
+        return -1;
+      }
+
+      std::get<4>(tup) = {value, error_lower, error_upper};
+    }
 
     python_node_fill_element(self, std::move(tup));
   }
@@ -128,32 +163,27 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to get access to an attribute of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(name, converter)                \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    using ef = reactions::database_pdg::pdg_element_field;                     \
-    if constexpr (reactions::database_pdg::detail::is_optional_field_v<        \
-                      ef::name>)                                               \
-      if (!self->element.has<ef::name>())                                      \
+    namespace pdg_detail = reactions::database_pdg::detail;                    \
+    if constexpr (pdg_detail::is_optional_field_v<pdg_detail::name>)           \
+      if (!self->element.has<pdg_detail::name>())                              \
         Py_RETURN_NONE;                                                        \
       else                                                                     \
-        return converter(self->element.get<ef::name>());                       \
+        return converter(self->element.name());                                \
     else                                                                       \
-      return converter(self->element.get<ef::name>());                         \
+      return converter(self->element.name());                                  \
   }
 
-/// Define a function to evaluate a member function of a PDG element
-#define REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(name, converter)              \
+/// Define a function to get access to an attribute of a PDG element
+#define REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(name, check, converter)   \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    try {                                                                      \
+    namespace pdg_detail = reactions::database_pdg::detail;                    \
+    if constexpr (pdg_detail::is_optional_field_v<pdg_detail::check>)          \
+      if (!self->element.has<pdg_detail::check>())                             \
+        Py_RETURN_NONE;                                                        \
+      else                                                                     \
+        return converter(self->element.name());                                \
+    else                                                                       \
       return converter(self->element.name());                                  \
-    } catch (exceptions::missing_fields_error &) {                             \
-      Py_RETURN_NONE;                                                          \
-    } catch (...) {                                                            \
-      PyErr_SetString(                                                         \
-          PyExc_RuntimeError,                                                  \
-          (std::string{"Unable to access \""} + #name +                        \
-           std::string{"\" (internal error); please report the bug"})          \
-              .c_str());                                                       \
-      return NULL;                                                             \
-    }                                                                          \
   }
 
 /// Convert a std::string to a python unicode string
@@ -164,18 +194,25 @@ static PyMethodDef ElementPDG_methods[] = {
 REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(name, REACTIONS_PYTHON_CPP_STRING_TOPY)
 REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(pdg_id, PyLong_FromLong)
 REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(three_charge, PyLong_FromLong)
-REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(mass, PyFloat_FromDouble)
-REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(mass_error_lower, PyFloat_FromDouble)
-REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(mass_error_upper, PyFloat_FromDouble)
-REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(width, PyFloat_FromDouble)
-REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(width_error_lower, PyFloat_FromDouble)
-REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(width_error_upper, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(mass, mass, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(mass_error_lower, mass,
+                                             PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(mass_error_upper, mass,
+                                             PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(width, width, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(width_error_lower, width,
+                                             PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(width_error_upper, width,
+                                             PyFloat_FromDouble)
 REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(is_self_cc, PyBool_FromLong)
 
 // Define the functions (used later also to define "getters")
-REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(charge, PyFloat_FromDouble)
-REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(mass_error, PyFloat_FromDouble)
-REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(width_error, PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(charge, three_charge,
+                                             PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(mass_error, mass,
+                                             PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(width_error, width,
+                                             PyFloat_FromDouble)
 
 /// Provide the data needed to define a "getter" function
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(name, description)             \

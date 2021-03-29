@@ -27,78 +27,100 @@ namespace reactions::database_pdg {
  */
 namespace reactions::database_pdg {
 
-  using double_opt = reactions::database::double_opt;
+  using ve_double_opt = reactions::database::ve_double_opt;
 
-  /// Base class of a PDG element
-  using base_element =
-      std::tuple<std::string, int, int, double_opt, double_opt, double_opt,
-                 double_opt, double_opt, double_opt, bool>;
-
-  /// Enumeration to access the PDG element fields
-  REACTIONS_POW_ENUM_WITH_UNKNOWN(pdg_element_field, name, pdg_id, three_charge,
-                                  mass, mass_error_lower, mass_error_upper,
-                                  width, width_error_lower, width_error_upper,
-                                  is_self_cc);
-
-  /// Return the bounds defining a field in a line from the database file
-  template <pdg_element_field E> struct bounds_for_field;
-  template <> struct bounds_for_field<name> {
-    static constexpr auto min = 0, max = 16;
-  };
-  template <> struct bounds_for_field<pdg_id> {
-    static constexpr auto min = 17, max = 27;
-  };
-  template <> struct bounds_for_field<three_charge> {
-    static constexpr auto min = 28, max = 30;
-  };
-  template <> struct bounds_for_field<mass> {
-    static constexpr auto min = 31, max = 47;
-  };
-  template <> struct bounds_for_field<mass_error_lower> {
-    static constexpr auto min = 48, max = 57;
-  };
-  template <> struct bounds_for_field<mass_error_upper> {
-    static constexpr auto min = 58, max = 67;
-  };
-  template <> struct bounds_for_field<width> {
-    static constexpr auto min = 68, max = 84;
-  };
-  template <> struct bounds_for_field<width_error_lower> {
-    static constexpr auto min = 85, max = 94;
-  };
-  template <> struct bounds_for_field<width_error_upper> {
-    static constexpr auto min = 95, max = 104;
-  };
-  template <> struct bounds_for_field<is_self_cc> {
-    static constexpr auto min = 105, max = 106;
-  };
-
-  // Check that the number of fields and accessors are the same
-  static_assert(pdg_element_field_properties::size ==
-                std::tuple_size_v<base_element>);
-
-  /// Definitions for internal use only
+  /// Define short structures that represent the fields of a \ref
+  /// reactions::database_pdg::element object
   namespace detail {
 
-    /// Type of the given field
-    template <pdg_element_field E>
-    using field_t =
-        std::tuple_element_t<pdg_element_field_properties::index<E>(),
-                             base_element>;
+    template <std::size_t Min, std::size_t Max>
+    using range = reactions::database::range<Min, Max>;
+
+    struct name {
+      static constexpr const char *title = "name";
+      using value_type = std::string;
+      using range_type = range<0, 16>;
+    };
+    struct pdg_id {
+      static constexpr const char *title = "pdg_id";
+      using value_type = int;
+      using range_type = range<17, 27>;
+    };
+    struct three_charge {
+      static constexpr const char *title = "three_charge";
+      using value_type = int;
+      using range_type = range<28, 30>;
+    };
+    struct mass {
+      static constexpr const char *title = "mass";
+      using value_type = ve_double_opt;
+      using range_type =
+          std::tuple<range<31, 47>, range<48, 57>, range<58, 67>>;
+    };
+    struct width {
+      static constexpr const char *title = "width";
+      using value_type = ve_double_opt;
+      using range_type =
+          std::tuple<range<68, 84>, range<85, 94>, range<95, 104>>;
+    };
+    struct is_self_cc {
+      static constexpr const char *title = "is_self_cc";
+      using value_type = bool;
+      using range_type = range<105, 106>;
+    };
+
+    /// Define a \ref std::tuple with the types of the fields provided
+    template <class Tuple> struct underlying_types;
+
+    template <class... F> struct underlying_types<std::tuple<F...>> {
+      using type = std::tuple<typename F::value_type...>;
+    };
+
+    /// Base class of a PDG element
+    struct base_element {
+      using fields =
+          std::tuple<name, pdg_id, three_charge, mass, width, is_self_cc>;
+      using type = typename underlying_types<fields>::type;
+
+      template <std::size_t I> using field_t = std::tuple_element_t<I, fields>;
+
+      template <std::size_t I>
+      using field_underlying_type_t = std::tuple_element_t<I, type>;
+
+      template <std::size_t I, class F0, class F1> struct field_index_impl {
+        static constexpr auto value = field_index_impl<
+            I + 1, F0,
+            std::tuple_element_t<I + 1, base_element::fields>>::value;
+      };
+
+      template <std::size_t I, class F> struct field_index_impl<I, F, F> {
+        static constexpr auto value = I;
+      };
+
+      /// Get the index of a given field
+      template <class F> struct field_index {
+        static constexpr auto value = field_index_impl<
+            0, F, std::tuple_element_t<0, base_element::fields>>::value;
+      };
+
+      template <class F>
+      static constexpr auto field_index_v = field_index<F>::value;
+    };
 
     /// Contain the information whether a field is optional or not
-    template <pdg_element_field E, class Enable = void>
+    template <class F, class Enable = void>
     struct is_optional_field : std::false_type {};
 
     /// Contain the information whether a field is optional or not
-    template <pdg_element_field E>
+    template <class F>
     struct is_optional_field<
-        E, std::enable_if_t<reactions::database::is_optional_v<field_t<E>>>>
+        F, std::enable_if_t<
+               reactions::database::is_optional_v<typename F::value_type>>>
         : std::true_type {};
 
     /// Whether a field is optional or not
-    template <pdg_element_field E>
-    constexpr auto is_optional_field_v = is_optional_field<E>::value;
+    template <class F>
+    constexpr auto is_optional_field_v = is_optional_field<F>::value;
 
     /// Convert the given object to a string
     template <class T> std::string to_string(T const &v) {
@@ -112,11 +134,11 @@ namespace reactions::database_pdg {
   /*! \brief A PDG particle, based on the fields of a particle in the PDG
    * database.
    */
-  class element : protected base_element {
+  class element : protected detail::base_element::type {
 
   public:
     /// Base class
-    using base_type = base_element;
+    using base_type = detail::base_element::type;
 
     /// Number of data fields
     static const size_t nfields = std::tuple_size_v<base_type>;
@@ -154,43 +176,36 @@ namespace reactions::database_pdg {
      * \ref reactions::exception::missing_fields_error exception is thrown,
      * if missing.
      */
-    template <pdg_element_field E> auto const &get() const {
-      if constexpr (detail::is_optional_field_v<E>)
-        return std::get<pdg_element_field_properties::index<E>()>(*this)
-            .value();
+    template <class F> auto const &get() const {
+      if constexpr (detail::is_optional_field_v<F>)
+        return std::get<detail::base_element::field_index_v<F>>(*this).value();
       else
-        return std::get<pdg_element_field_properties::index<E>()>(*this);
+        return std::get<detail::base_element::field_index_v<F>>(*this);
     }
 
     /// Check whether the given field information is missing or not
-    template <pdg_element_field E> constexpr bool has() const {
-      if constexpr (detail::is_optional_field_v<E>)
-        return std::get<pdg_element_field_properties::index<E>()>(*this)
+    template <class F> constexpr bool has() const {
+      if constexpr (detail::is_optional_field_v<F>)
+        return std::get<detail::base_element::field_index_v<F>>(*this)
             .has_value();
       else
         return true;
     }
 
     /// Name of the particle
-    std::string const &name() const { return get<pdg_element_field::name>(); }
+    std::string const &name() const { return get<detail::name>(); }
 
     /// PDG ID
-    int const &pdg_id() const { return get<pdg_element_field::pdg_id>(); }
+    int const &pdg_id() const { return get<detail::pdg_id>(); }
 
     /// Three times the charge, as an integer
-    int const &three_charge() const {
-      return get<pdg_element_field::three_charge>();
-    }
+    int const &three_charge() const { return get<detail::three_charge>(); }
 
     /// Charge as a doubleing point number
-    double charge() const {
-      return get<pdg_element_field::three_charge>() / 3.;
-    }
+    double charge() const { return get<detail::three_charge>() / 3.; }
 
     /// Whether the element is its own charge-conjugate
-    bool const &is_self_cc() const {
-      return get<pdg_element_field::is_self_cc>();
-    }
+    bool const &is_self_cc() const { return get<detail::is_self_cc>(); }
 
     /*! Get the mass of the element
      *
@@ -198,10 +213,10 @@ namespace reactions::database_pdg {
      * member function, otherwise a \ref
      * reactions::exceptions::missing_fields_error is thrown.
      */
-    double const &mass() const { return get<pdg_element_field::mass>(); }
+    double const &mass() const { return get<detail::mass>().value; }
 
     /// Whether the mass and its errors are defined or not
-    bool has_mass() const { return has<pdg_element_field::mass>(); }
+    bool has_mass() const { return has<detail::mass>(); }
 
     /*! \brief Lower mass error
      *
@@ -210,7 +225,7 @@ namespace reactions::database_pdg {
      * reactions::exceptions::missing_fields_error is thrown.
      */
     double const &mass_error_lower() const {
-      return get<pdg_element_field::mass_error_lower>();
+      return get<detail::mass>().error_lower;
     }
 
     /*! \brief Upper mass error
@@ -220,7 +235,7 @@ namespace reactions::database_pdg {
      * reactions::exceptions::missing_fields_error is thrown.
      */
     double const &mass_error_upper() const {
-      return get<pdg_element_field::mass_error_upper>();
+      return get<detail::mass>().error_upper;
     }
 
     /* \brief Calculate the mass error
@@ -239,15 +254,14 @@ namespace reactions::database_pdg {
      */
     double mass_error_squared() const {
 
-      if (!has<pdg_element_field::mass_error_lower>() ||
-          !has<pdg_element_field::mass_error_upper>())
+      if (!has<detail::mass>())
         throw reactions::exceptions::missing_fields_error(
             ("Unable to access mass errors; mass is not defined for particle" +
              name())
                 .c_str());
 
-      auto const el = get<pdg_element_field::mass_error_lower>();
-      auto const eu = get<pdg_element_field::mass_error_upper>();
+      auto const el = mass_error_lower();
+      auto const eu = mass_error_upper();
 
       return el * el + eu * eu;
     }
@@ -258,10 +272,10 @@ namespace reactions::database_pdg {
      * member function, otherwise a \ref
      * reactions::exceptions::missing_fields_error is thrown.
      */
-    double const &width() const { return get<pdg_element_field::width>(); }
+    double const &width() const { return get<detail::width>().value; }
 
     /// Whether the width and its errors are defined or not
-    bool has_width() const { return has<pdg_element_field::width>(); }
+    bool has_width() const { return has<detail::width>(); }
 
     /*! \brief Get the lower width error
      *
@@ -270,7 +284,7 @@ namespace reactions::database_pdg {
      * reactions::exceptions::missing_fields_error is thrown.
      */
     double const &width_error_lower() const {
-      return get<pdg_element_field::width_error_lower>();
+      return get<detail::width>().error_lower;
     }
 
     /*! \brief Get the upper width error
@@ -280,7 +294,7 @@ namespace reactions::database_pdg {
      * reactions::exceptions::missing_fields_error is thrown.
      */
     double const &width_error_upper() const {
-      return get<pdg_element_field::width_error_upper>();
+      return get<detail::width>().error_upper;
     }
 
     /*! Calculate the width error
@@ -299,16 +313,15 @@ namespace reactions::database_pdg {
      */
     double width_error_squared() const {
 
-      if (!has<pdg_element_field::width_error_lower>() ||
-          !has<pdg_element_field::width_error_upper>())
+      if (!has<detail::width>())
         throw reactions::exceptions::missing_fields_error(
             ("Unable to access width errors; width is not defined for "
              "particle" +
              name())
                 .c_str());
 
-      auto const el = get<pdg_element_field::width_error_lower>();
-      auto const eu = get<pdg_element_field::width_error_upper>();
+      auto const el = width_error_lower();
+      auto const eu = width_error_upper();
 
       return el * el + eu * eu;
     }
@@ -375,13 +388,11 @@ namespace reactions::database_pdg {
     }
 
     /// Create an element accessing by ID
-    element operator()(int id) const {
-      return access<pdg_element_field::pdg_id>(id);
-    }
+    element operator()(int id) const { return access<detail::pdg_id>(id); }
 
     /// Create an element accessing by name
     element operator()(std::string const &str) const {
-      return access<pdg_element_field::name>(str);
+      return access<detail::name>(str);
     }
 
   private:
@@ -429,23 +440,22 @@ namespace reactions::database_pdg {
     template <std::size_t I>
     bool read_field(element::base_type &tuple, std::string const &line) const {
 
-      static constexpr auto field = pdg_element_field_properties::list[I];
-      static constexpr auto min = bounds_for_field<field>::min;
-      static constexpr auto max = bounds_for_field<field>::max;
+      using field = detail::base_element::field_t<I>;
 
       if constexpr (detail::is_optional_field_v<field>) {
 
-        typename detail::field_t<field>::value_type value;
+        typename field::value_type::value_type value;
 
-        auto sc = reactions::database::read_field<min, max>(value, line);
+        auto sc = reactions::database::read_field<typename field::range_type>(
+            value, line);
 
         if (sc == reactions::database::conversion_status::success)
           std::get<I>(tuple).emplace(value);
 
         return sc != reactions::database::conversion_status::failed;
       } else
-        return reactions::database::read_field<min, max>(std::get<I>(tuple),
-                                                         line) !=
+        return reactions::database::read_field<typename field::range_type>(
+                   std::get<I>(tuple), line) !=
                reactions::database::conversion_status::failed;
     }
 
@@ -475,11 +485,11 @@ namespace reactions::database_pdg {
     }
 
     /// Access an element using the field accessor
-    template <pdg_element_field E, class T> element access(T const &v) const {
+    template <class F, class T> element access(T const &v) const {
 
       if (m_cache.size()) {
         for (auto const &el : m_cache)
-          if (el.get<E>() == v)
+          if (el.get<F>() == v)
             return el;
       } else {
 
@@ -489,12 +499,9 @@ namespace reactions::database_pdg {
 
         while (std::getline(file, line)) {
 
-          // read only the important part
-          static constexpr auto idx = pdg_element_field_properties::index<E>();
-          static constexpr auto min = bounds_for_field<E>::min;
-          static constexpr auto max = bounds_for_field<E>::max;
-          std::tuple_element_t<idx, element::base_type> ref;
-          auto sc = reactions::database::read_field<min, max>(ref, line);
+          typename F::value_type ref;
+          auto sc = reactions::database::read_field<typename F::range_type>(
+              ref, line);
 
           if (sc == reactions::database::failed)
             throw reactions::exceptions::database_error(
@@ -511,8 +518,7 @@ namespace reactions::database_pdg {
       }
 
       throw reactions::exceptions::lookup_error(
-          (std::string{"Unable to find element with "} +
-           pdg_element_field_properties::to_string(E) + " \"" +
+          (std::string{"Unable to find element with "} + F::title + " \"" +
            detail::to_string(v) + '"')
               .c_str());
     }

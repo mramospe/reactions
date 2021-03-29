@@ -31,9 +31,15 @@ def test_pdg_element():
     assert reactions.pdg_element('H0').width_error is None
 
     # create a custom element
-    reactions.pdg_element('gamma', 1, 0, 0., 0., 0., 1.e+16, 0., 0., True)
-    reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0, mass=0., mass_error_lower=0.,
-                          mass_error_upper=0., width=0., width_error_lower=0., width_error_upper=0., is_self_cc=True)
+    reactions.pdg_element('gamma', 1, 0, (0., 0., 0.), (0., 1.e+16, 0.), True)
+    reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0, mass_and_errors=(
+        0., 0., 0.), width_and_errors=(0., 0., 0.), is_self_cc=True)
+    reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0,
+                          mass_and_errors=None, width_and_errors=(0., 0., 0.), is_self_cc=True)
+    reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0, mass_and_errors=(
+        0., 0., 0.), width_and_errors=None, is_self_cc=True)
+    reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0,
+                          mass_and_errors=None, width_and_errors=None, is_self_cc=True)
 
     # all these constructors must fail
     with pytest.raises(TypeError):
