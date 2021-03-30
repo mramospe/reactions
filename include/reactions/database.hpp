@@ -9,6 +9,24 @@
 #include <tuple>
 #include <type_traits>
 
+namespace reactions {
+
+  /*! \brief Small structure to define fields without explicitely knowing its
+   * name
+   *
+   * This class serves as an interface, forwarding its contents. Any class which
+   * represents a field must define a constructor from this type
+   */
+  template <class... Args> struct fill : std::tuple<Args...> {
+    /// Build the class from the contents
+    using base_type = std::tuple<Args...>;
+    constexpr fill(Args &&... args) : base_type{std::forward<Args>(args)...} {}
+  };
+
+  /// Static object that defines a missing field within an object
+  static constexpr auto missing = std::nullopt;
+} // namespace reactions
+
 namespace reactions::database {
 
   template <class T, class Enable = void> struct value_and_errors;
@@ -17,6 +35,18 @@ namespace reactions::database {
   template <class T>
   struct value_and_errors<T,
                           std::enable_if_t<std::is_floating_point_v<T>, void>> {
+    /// Empty constructor
+    value_and_errors() = default;
+    /// Build the class with forwarded arguments
+    template <class Value, class ErrorLower, class ErrorUpper>
+    value_and_errors(Value &&value_, ErrorLower &&error_lower_,
+                     ErrorUpper &&error_upper_)
+        : value(value_), error_lower(error_lower_), error_upper(error_upper_) {}
+    /// Build the class from a field constant expression
+    template <class Value, class ErrorLower, class ErrorUpper>
+    value_and_errors(fill<Value, ErrorLower, ErrorUpper> &&f)
+        : value(std::get<0>(f)), error_lower(std::get<1>(f)),
+          error_upper(std::get<2>(f)) {}
     /// Value
     T value;
     /// Lower error

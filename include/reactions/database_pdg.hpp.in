@@ -149,6 +149,10 @@ namespace reactions::database_pdg {
     element &operator=(element const &) = default;
     element &operator=(element &&) = default;
 
+    /// Construct the element from an initializer list
+    template <class... Args>
+    element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
+
     /// Construct the element from the contents
     element(base_type &&tuple) : base_type{std::move(tuple)} {}
 

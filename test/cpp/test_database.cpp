@@ -36,6 +36,18 @@ int main() {
       if (db("pi+").pdg_id() != db(+211).pdg_id())
         errors.push_back(
             "Accessors by string and PDG ID do not retrieve the same elements");
+
+      database_pdg::element c1 = {
+          "c1", 0, 0, reactions::missing, reactions::missing, false};
+      database_pdg::element c2 = {
+          "c2", 0, 0, reactions::fill{0., 0., 0.}, reactions::missing, false};
+      database_pdg::element c3 = {
+          "c3", 0, 0, reactions::fill{0., 0., 0.}, reactions::fill{0., 0., 0.},
+          false};
+
+      if (c1.has_mass() || c1.has_width() || !c2.has_mass() || c2.has_width() ||
+          !c3.has_mass() || !c3.has_width())
+        errors.push_back("Problems found building custom PDG elements");
     }
     REACTIONS_TEST_UTILS_CATCH_EXCEPTIONS(errors);
 
