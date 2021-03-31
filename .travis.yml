@@ -46,7 +46,9 @@ jobs:
     - name: format
       python: 3.7
       install: " "
-      script: python setup.py check_format --regex '(include|python|test|src|doc|scripts)'
+      script:
+      - python setup.py check_format --regex '(include|python|test|src|doc|scripts)'
+      - python setup.py check_pyflakes --regex '(python|test|scripts)'
     - name: python 3.7
       python: 3.7
       install: pip install .
