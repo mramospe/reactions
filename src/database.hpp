@@ -1,50 +1,22 @@
 #ifndef REACTIONS_PYTHON_DATABASE_HPP
 #define REACTIONS_PYTHON_DATABASE_HPP
 
+#include "element_pdg.hpp"
+#include "errors.hpp"
+
 #include "reactions/database_pdg.hpp"
+#include "reactions/exceptions.hpp"
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
 #define REACTIONS_INSTANCE_ACCESSOR "__instance"
 
-#define REACTIONS_PYTHON_UPDATE_DATABASE_TYPE(type, self)                      \
-  if (PyDict_SetItemString(type->tp_dict, REACTIONS_INSTANCE_ACCESSOR,         \
-                           (PyObject *)self) != 0) {                           \
-    Py_DecRef((PyObject *)self);                                               \
-    PyErr_SetString(PyExc_RuntimeError,                                        \
-                    "Unable to define the database as a singleton ("           \
-                    "internal error); please report the bug");                 \
-    return NULL;                                                               \
-  }                                                                            \
-  PyType_Modified(type);
-
 #define REACTIONS_PYTHON_CHECK_DATABASE(database)                              \
   if (!database) {                                                             \
     PyErr_SetString(PyExc_RuntimeError,                                        \
                     "Unable to access the database instance (internal "        \
                     "error); please report the bug");                          \
-    return -1;                                                                 \
-  }
-
-#define REACTIONS_PYTHON_CATCH_ERRORS(...)                                     \
-  catch (exceptions::syntax_error & e) {                                       \
-    PyErr_SetString(SyntaxError, e.what());                                    \
-    __VA_ARGS__;                                                               \
-    return -1;                                                                 \
-  }                                                                            \
-  catch (exceptions::database_error & e) {                                     \
-    PyErr_SetString(DatabaseError, e.what());                                  \
-    __VA_ARGS__;                                                               \
-    return -1;                                                                 \
-  }                                                                            \
-  catch (exceptions::lookup_error & e) {                                       \
-    PyErr_SetString(LookupError, e.what());                                    \
-    __VA_ARGS__;                                                               \
-    return -1;                                                                 \
-  }                                                                            \
-  catch (...) {                                                                \
-    __VA_ARGS__;                                                               \
     return -1;                                                                 \
   }
 
@@ -57,10 +29,16 @@ typedef struct {
 static PyObject *DatabasePDG_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
                                  PyObject *Py_UNUSED(kwargs));
 
-// This is an abstract class; do nothing
+// Initialize the database
 static int DatabasePDG_init(DatabasePDG *self, PyObject *Py_UNUSED(args),
                             PyObject *Py_UNUSED(kwds)) {
   return 0;
+}
+
+// Clear the internal cache
+static PyObject *DatabasePDG_clear_cache(DatabasePDG *self) {
+  self->database->clear_cache();
+  Py_RETURN_NONE;
 }
 
 // Disable the internal cache
@@ -81,6 +59,44 @@ static PyObject *DatabasePDG_get_database(DatabasePDG *self) {
   return PyUnicode_FromString(self->database->get_database_path().c_str());
 }
 
+// Register a new element
+static PyObject *DatabasePDG_register_element(DatabasePDG *self, PyObject *args,
+                                              PyObject *kwargs) {
+
+  PyObject *obj = NULL;
+
+  if (args != NULL && PyTuple_Size(args) == 1 && kwargs == NULL) {
+
+    if (!PyArg_ParseTuple(args, "O", &obj))
+      return NULL;
+
+    if (!PyObject_IsInstance(obj, (PyObject *)&ElementPDGType)) {
+      PyErr_SetString(PyExc_ValueError,
+                      "If only one argument is provided it must be a "
+                      "reactions.pdg_element object");
+      return NULL;
+    }
+  } else if (args != NULL || kwargs != NULL) {
+
+    obj = ElementPDGType.tp_new((PyTypeObject *)&ElementPDGType, NULL, NULL);
+    if (ElementPDGType.tp_init(obj, args, kwargs) < 0) {
+      PyErr_SetString(PyExc_ValueError,
+                      "Invalid arguments to reactions.pdg_element");
+      return NULL;
+    }
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Invalid arguments");
+    return NULL;
+  }
+
+  try {
+    self->database->register_element(((ElementPDG *)obj)->element);
+  }
+  REACTIONS_PYTHON_CATCH_ERRORS(NULL);
+
+  Py_RETURN_NONE;
+}
+
 // Set the location of the PDG database
 static PyObject *DatabasePDG_set_database(DatabasePDG *self, PyObject *args) {
 
@@ -95,12 +111,16 @@ static PyObject *DatabasePDG_set_database(DatabasePDG *self, PyObject *args) {
 
 // Methods of the DatabasePDG class
 static PyMethodDef DatabasePDG_methods[] = {
+    {"clear_cache", (PyCFunction)DatabasePDG_clear_cache, METH_NOARGS,
+     "Clear the internal cache, removing also user-registered elements"},
     {"disable_cache", (PyCFunction)DatabasePDG_disable_cache, METH_NOARGS,
      "Disable the internal cache"},
     {"enable_cache", (PyCFunction)DatabasePDG_enable_cache, METH_NOARGS,
      "Enable the internal cache. All the elements will be loaded in memory."},
     {"get_database", (PyCFunction)DatabasePDG_get_database, METH_NOARGS,
      "Get the path to the database file"},
+    {"register_element", (PyCFunction)DatabasePDG_register_element,
+     METH_VARARGS | METH_KEYWORDS, "Register a new element in the database"},
     {"set_database", (PyCFunction)DatabasePDG_set_database, METH_VARARGS,
      "Set the path to the database file. If the cache is enabled, reloads the "
      "data. If the cache is enabled, elements are reloaded in memory."},
@@ -166,7 +186,15 @@ static PyObject *DatabasePDG_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
 
     self->database = &reactions::database_pdg::database::instance();
 
-    REACTIONS_PYTHON_UPDATE_DATABASE_TYPE(type, self);
+    if (PyDict_SetItemString(type->tp_dict, REACTIONS_INSTANCE_ACCESSOR,
+                             (PyObject *)self) != 0) {
+      Py_DecRef((PyObject *)self);
+      PyErr_SetString(PyExc_RuntimeError,
+                      "Unable to define the database as a singleton ("
+                      "internal error); please report the bug");
+      return NULL;
+    }
+    PyType_Modified(type);
 
   } else
     // we are not calling "tp_alloc"

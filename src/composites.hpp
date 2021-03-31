@@ -1,11 +1,11 @@
 #ifndef REACTIONS_PYTHON_COMPOSITES_HPP
 #define REACTIONS_PYTHON_COMPOSITES_HPP
 
-#include "database.hpp"
 #include "element.hpp"
 #include "errors.hpp"
 #include "node.hpp"
 
+#include "reactions/database_pdg.hpp"
 #include "reactions/element_traits.hpp"
 
 #define PY_SSIZE_T_CLEAN
@@ -129,18 +129,14 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
 
   case (element_kind::pdg): {
 
-    DatabasePDG *pdg_instance =
-        (DatabasePDG *)DatabasePDGType.tp_new(&DatabasePDGType, NULL, NULL);
-
     try {
-      auto reac = make_reaction_for<element>(
-          str, [&pdg_instance](std::string const &s) -> element {
-            return pdg_instance->database->operator()(s);
+      auto reac =
+          make_reaction_for<element>(str, [](std::string const &s) -> element {
+            return database_pdg::database::instance()(s);
           });
       python_node_fill_reaction(self, reac);
     }
-    REACTIONS_PYTHON_CATCH_ERRORS(
-        Py_DecRef((PyObject *)pdg_instance)) // delete database on error
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
     break;
   }
@@ -151,7 +147,7 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
       python_node_fill_reaction(self, reac);
       break;
     }
-    REACTIONS_PYTHON_CATCH_ERRORS()
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
   }
   case (element_kind::unknown):
 
@@ -293,7 +289,7 @@ inline void python_node_fill_reaction(Reaction *self,
 
     if (obj.is_element()) {
       object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      python_node_fill_element(e, *(obj.ptr_as_element()));
+      e->element = *(obj.ptr_as_element());
       PyList_SetItem(self->reactants, i, (PyObject *)e); // steals the reference
     } else {
       Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
@@ -309,7 +305,7 @@ inline void python_node_fill_reaction(Reaction *self,
 
     if (obj.is_element()) {
       object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      python_node_fill_element(e, *(obj.ptr_as_element()));
+      e->element = *(obj.ptr_as_element());
       PyList_SetItem(self->products, i, (PyObject *)e); // steals the reference
     } else {
       Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
@@ -380,18 +376,14 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
   case (element_kind::pdg): {
 
-    DatabasePDG *pdg_instance =
-        (DatabasePDG *)DatabasePDGType.tp_new(&DatabasePDGType, NULL, NULL);
-
     try {
-      auto reac = make_decay_for<element>(
-          str, [&pdg_instance](std::string const &s) -> element {
-            return pdg_instance->database->operator()(s);
+      auto reac =
+          make_decay_for<element>(str, [](std::string const &s) -> element {
+            return database_pdg::database::instance()(s);
           });
       python_node_fill_decay(self, reac);
     }
-    REACTIONS_PYTHON_CATCH_ERRORS(
-        Py_DecRef((PyObject *)pdg_instance)) // delete database on error
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
     break;
   }
@@ -401,7 +393,7 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
       auto reac = make_decay<element_kind::string>(str);
       python_node_fill_decay(self, reac);
     }
-    REACTIONS_PYTHON_CATCH_ERRORS()
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
     break;
   }
@@ -550,7 +542,7 @@ inline void python_node_fill_decay(Decay *self, decay<Element> const &reac) {
   // will be re-assigned
   Py_DecRef(self->head);
   self->head = (PyObject *)type_ptr->tp_new(type_ptr, NULL, NULL);
-  python_node_fill_element((object *)self->head, reac.head());
+  ((object *)self->head)->element = reac.head();
 
   Py_DecRef(self->products);
   self->products = PyList_New(reac.products().size());
@@ -562,7 +554,7 @@ inline void python_node_fill_decay(Decay *self, decay<Element> const &reac) {
 
     if (obj.is_element()) {
       object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      python_node_fill_element(e, *(obj.ptr_as_element()));
+      e->element = *(obj.ptr_as_element());
       PyList_SetItem(self->products, i, (PyObject *)e); // steals the reference
     } else {
       Decay *r = (Decay *)DecayType.tp_new(&DecayType, NULL, NULL);

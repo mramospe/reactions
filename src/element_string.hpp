@@ -10,14 +10,8 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  std::string name;
+  std::string element;
 } ElementString;
-
-/// Way to fill an element name-based
-inline void python_node_fill_element(ElementString *pyel,
-                                     std::string const &el) {
-  pyel->name = el;
-}
 
 // Allocate a new ElementString
 static PyObject *ElementString_new(PyTypeObject *type,
@@ -47,14 +41,14 @@ static int ElementString_init(ElementString *self, PyObject *args,
     return -1;
 
   // no database for this class
-  python_node_fill_element(self, str);
+  self->element = str;
 
   return 0;
 }
 
 /// Access the name
 static PyObject *ElementString_get_name(ElementString *self, void *) {
-  return PyUnicode_FromString(self->name.c_str());
+  return PyUnicode_FromString(self->element.c_str());
 }
 
 /// Properties of the Reaction class
@@ -125,10 +119,12 @@ static PyObject *ElementString_richcompare(PyObject *obj1, PyObject *obj2,
   bool result;
   switch (op) {
   case Py_EQ:
-    result = ((ElementString *)obj1)->name == ((ElementString *)obj2)->name;
+    result =
+        ((ElementString *)obj1)->element == ((ElementString *)obj2)->element;
     break;
   case Py_NE:
-    result = ((ElementString *)obj1)->name != ((ElementString *)obj2)->name;
+    result =
+        ((ElementString *)obj1)->element != ((ElementString *)obj2)->element;
     break;
   default:
     PyErr_SetString(PyExc_NotImplementedError,

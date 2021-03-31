@@ -18,8 +18,6 @@
 #include <tuple>
 #include <vector>
 
-#include <iostream>
-
 namespace reactions::database_pdg {
   /// Forward declaration of the database type
   class database;
@@ -162,23 +160,17 @@ namespace reactions::database_pdg {
     static const size_t nfields = std::tuple_size_v<base_type>;
 
     element() = delete;
-    element(element const &) = default;
-    element(element &&) = default;
+    explicit element(element const &) = default;
+    explicit element(element &&) = default;
     element &operator=(element const &) = default;
-    element &operator=(element &&) = default;
 
     /// Construct the element from an initializer list
     template <class... Args>
     element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
 
     /// Construct the element from the contents
-    element(base_type &&tuple) : base_type{std::move(tuple)} {}
-
-    /// Assign the element from a tuple with the data fields
-    element &operator=(base_type &&tup) {
-      base_type::operator=(std::move(tup));
-      return *this;
-    }
+    explicit element(base_type &&tuple)
+        : base_type{std::forward<base_type>(tuple)} {}
 
     /// Compare the ID of the two particles
     bool operator==(element const &other) const {
@@ -420,8 +412,7 @@ namespace reactions::database_pdg {
      */
     template <class... Args> void register_element(Args &&... args) {
 
-      auto const &new_element =
-          m_cache.add_user_element(std::forward<Args>(args)...);
+      element new_element{std::forward<Args>(args)...};
 
       // If the cache is enabled, the checks are done within the cache object,
       // otherwise we must check the database
@@ -458,6 +449,10 @@ namespace reactions::database_pdg {
                 "element in the database");
         }
       }
+
+      // this must be done after the checks are done to prevent leaving
+      // the cache in an invalid state
+      m_cache.add_user_element(std::move(new_element));
     }
 
     /* \brief Set the path to the database file.
@@ -500,12 +495,14 @@ namespace reactions::database_pdg {
       /// Clear the cache
       void clear() {
         m_vector.clear();
+        m_vector.shrink_to_fit();
         m_separator = 0;
       }
 
       /// Clear the cache
       void clear_database_elements() {
         m_vector.erase(database_cbegin(), database_cend());
+        m_vector.shrink_to_fit();
         m_separator = 0;
       }
 
@@ -597,21 +594,18 @@ namespace reactions::database_pdg {
       /// Add a new element (by the user)
       template <class... Args>
       element const &add_user_element(Args &&... args) {
-        m_vector.emplace_back(std::forward<Args>(args)...);
-        auto const &new_element = m_vector.back();
-        auto e = end() - 1;
-        if (std::find_if(begin(), e, [&new_element](element const &el) {
+        element new_element{std::forward<Args>(args)...};
+        auto e = end();
+        if (std::find_if(begin(), e, [this, &new_element](element const &el) {
               return (el.name() == new_element.name() ||
                       el.pdg_id() == new_element.pdg_id());
             }) != e) {
-          m_vector
-              .pop_back(); // remove the element so the cache can still be used
           throw reactions::exceptions::database_error(
-              (std::string{
-                   "User-defined element clashes with database element: \""} +
+              (std::string{"User-registered element clashes: \""} +
                new_element.name() + "\"")
                   .c_str());
         }
+        m_vector.emplace_back(std::move(new_element));
         return m_vector.back();
       }
 

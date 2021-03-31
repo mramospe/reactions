@@ -1,7 +1,6 @@
 """
 Test the properties of the database objects
 """
-import os
 import pytest
 import reactions
 
@@ -36,3 +35,23 @@ def test_pdg_database_cache():
     path = db.get_database()
     db.enable_cache()
     db.set_database(path)
+
+
+@helpers.restore_pdg_database
+def test_pdg_user_register():
+
+    for db in helpers.toggle_database_cache_status(clear_user_cache=True):
+
+        z = reactions.pdg_element(name="Z0'", pdg_id=9999999, three_charge=0,
+                                  mass_and_errors=None, width_and_errors=None, is_self_cc=True)
+        db.register_element(z)
+
+        db.register_element(name="Z0''", pdg_id=9999998, three_charge=0,
+                            mass_and_errors=None, width_and_errors=None, is_self_cc=True)
+        db.register_element("Z0'''", 99999997, 0, None, None, True)
+
+        with pytest.raises(reactions.DatabaseError):  # existing name
+            db.register_element("Z0", 99999996, 0, None, None, True)
+
+        with pytest.raises(reactions.DatabaseError):  # existing PDG ID
+            db.register_element("Z0''''", 1, 0, None, None, True)

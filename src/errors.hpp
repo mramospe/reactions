@@ -1,6 +1,8 @@
 #ifndef REACTIONS_PYTHON_ERRORS_HPP
 #define REACTIONS_PYTHON_ERRORS_HPP
 
+#include "reactions/exceptions.hpp"
+
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
@@ -28,6 +30,27 @@ static PyObject *SyntaxError =
   {                                                                            \
     PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");                  \
     return -1;                                                                 \
+  }
+
+#define REACTIONS_PYTHON_CATCH_ERRORS(returncode, ...)                         \
+  catch (reactions::exceptions::syntax_error & e) {                            \
+    PyErr_SetString(SyntaxError, e.what());                                    \
+    __VA_ARGS__;                                                               \
+    return returncode;                                                         \
+  }                                                                            \
+  catch (reactions::exceptions::database_error & e) {                          \
+    PyErr_SetString(DatabaseError, e.what());                                  \
+    __VA_ARGS__;                                                               \
+    return returncode;                                                         \
+  }                                                                            \
+  catch (reactions::exceptions::lookup_error & e) {                            \
+    PyErr_SetString(LookupError, e.what());                                    \
+    __VA_ARGS__;                                                               \
+    return returncode;                                                         \
+  }                                                                            \
+  catch (...) {                                                                \
+    __VA_ARGS__;                                                               \
+    return returncode;                                                         \
   }
 
 #endif

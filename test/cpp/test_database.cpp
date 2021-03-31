@@ -37,6 +37,14 @@ int main() {
         errors.push_back(
             "Accessors by string and PDG ID do not retrieve the same elements");
 
+      database_pdg::element::base_type ta = {
+          "a", 0, 0, reactions::missing, reactions::missing, false};
+      database_pdg::element a = std::move(ta);
+
+      database_pdg::element::base_type tb = {
+          "b", 0, 0, reactions::missing, reactions::missing, false};
+      database_pdg::element b{std::move(tb)};
+
       database_pdg::element c1 = {
           "c1", 0, 0, reactions::missing, reactions::missing, false};
       database_pdg::element c2 = {

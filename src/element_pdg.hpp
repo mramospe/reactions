@@ -1,9 +1,10 @@
 #ifndef REACTIONS_PYTHON_ELEMENTPDG_HPP
 #define REACTIONS_PYTHON_ELEMENTPDG_HPP
 
-#include "database.hpp"
 #include "errors.hpp"
 #include "node.hpp"
+
+#include "reactions/database_pdg.hpp"
 
 // Wrapper for a PDG element
 typedef struct {
@@ -12,18 +13,6 @@ typedef struct {
   // attributes (same as pdg::pdg_element)
   reactions::database_pdg::element element;
 } ElementPDG;
-
-/// Way to fill an element of the PDG database
-inline void python_node_fill_element(ElementPDG *pyel,
-                                     database_pdg::element const &el) {
-  pyel->element = el;
-}
-
-/// Way to fill an element of the PDG database from the base type
-inline void python_node_fill_element(ElementPDG *pyel,
-                                     database_pdg::element::base_type &&el) {
-  pyel->element = std::move(el);
-}
 
 // Allocate a new ElementPDG
 static PyObject *ElementPDG_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
@@ -53,18 +42,15 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
     if (!PyArg_ParseTuple(args, "O", &obj))
       return -1;
 
-    DatabasePDG *pdg_instance =
-        (DatabasePDG *)DatabasePDGType.tp_new(&DatabasePDGType, NULL, NULL);
-
-    REACTIONS_PYTHON_CHECK_DATABASE(pdg_instance);
-
     try {
+      auto const &pdg_instance = database_pdg::database::instance();
+
       if (PyObject_IsInstance(obj, (PyObject *)&PyUnicode_Type)) {
         const char *str = PyUnicode_AsUTF8(obj);
-        python_node_fill_element(self, pdg_instance->database->operator()(str));
+        self->element = pdg_instance(str);
       } else if (PyObject_IsInstance(obj, (PyObject *)&PyLong_Type)) {
         int id = PyLong_AsLong(obj);
-        python_node_fill_element(self, pdg_instance->database->operator()(id));
+        self->element = pdg_instance(id);
       } else {
         PyErr_SetString(
             PyExc_TypeError,
@@ -72,7 +58,7 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
         return -1;
       }
     }
-    REACTIONS_PYTHON_CATCH_ERRORS()
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
   } else {
 
     // the instance is built from the input values
@@ -81,10 +67,15 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
     PyObject *mass = nullptr, *width = nullptr;
 
     if (args != NULL && PyTuple_Size(args) == database_pdg::element::nfields) {
-      if (!PyArg_ParseTuple(args, "siiOOp", &std::get<0>(tup),
-                            &std::get<1>(tup), &std::get<2>(tup), &mass, &width,
+
+      const char *name;
+      if (!PyArg_ParseTuple(args, "siiOOp", &name, &std::get<1>(tup),
+                            &std::get<2>(tup), &mass, &width,
                             &std::get<5>(tup)))
         REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
+
+      std::get<0>(tup) = name; // we must use const char*
+
     } else if (kwargs != NULL &&
                PyDict_Size(kwargs) == database_pdg::element::nfields) {
       // the instance is built from the keyword arguments
@@ -96,11 +87,15 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
                                    "is_self_cc",
                                    NULL};
 
-      if (!PyArg_ParseTupleAndKeywords(
-              args, kwargs, "|$siiOOp", const_cast<char **>(kwds),
-              &std::get<0>(tup), &std::get<1>(tup), &std::get<2>(tup), &mass,
-              &width, &std::get<5>(tup)))
+      const char *name;
+      if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|$siiOOp",
+                                       const_cast<char **>(kwds), &name,
+                                       &std::get<1>(tup), &std::get<2>(tup),
+                                       &mass, &width, &std::get<5>(tup)))
         REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
+
+      std::get<0>(tup) = name; // we must use const char*
+
     } else
       // Invalid arguments
       REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
@@ -146,7 +141,7 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
       std::get<4>(tup) = {value, error_lower, error_upper};
     }
 
-    python_node_fill_element(self, std::move(tup));
+    self->element = std::move(tup);
   }
 
   return 0;
