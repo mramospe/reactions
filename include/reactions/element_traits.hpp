@@ -14,7 +14,7 @@ namespace reactions {
   using string_element = std::string;
 } // namespace reactions
 
-/*! \brief Kinds of elements
+/*! \brief Handle the properties of elements
  */
 namespace reactions::element_traits {
 

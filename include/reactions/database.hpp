@@ -14,10 +14,10 @@
 namespace reactions {
 
   /*! \brief Small structure to define fields without explicitely knowing its
-   * name
+   * type
    *
    * This class serves as an interface, forwarding its contents. Any class which
-   * represents a field must define a constructor from this type
+   * represents a field must define a constructor from this type.
    */
   template <class... Args> struct fill : std::tuple<Args...> {
     /// Build the class from the contents
@@ -29,6 +29,7 @@ namespace reactions {
   static constexpr auto missing = std::nullopt;
 } // namespace reactions
 
+/// Utilities to handle database objects and their elements
 namespace reactions::database {
 
   template <class T, class Enable = void> struct value_and_errors;
@@ -63,10 +64,13 @@ namespace reactions::database {
     T error() const { return std::sqrt(error_squared()); }
   };
 
-  /// Aliases for optional values
+  /// Optional for \ref float type
   using float_opt = std::optional<float>;
+  /// Optional for \ref double type
   using double_opt = std::optional<double>;
+  /// Optional \ref value_and_errors for single-precision floating-point type
   using ve_float_opt = std::optional<value_and_errors<float>>;
+  /// Optional \ref value_and_errors for double-precision floating-point type
   using ve_double_opt = std::optional<value_and_errors<double>>;
 
   /// Check if a type represents an optional
@@ -107,6 +111,7 @@ namespace reactions::database {
     failed   ///<  the conversion failed
   };
 
+  /// Internal utilitites for the \ref reactions::database namespace
   namespace detail {
 
     /// Convert a range of characters to an integral

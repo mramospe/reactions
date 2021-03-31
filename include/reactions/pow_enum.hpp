@@ -28,7 +28,7 @@ namespace reactions::pow_enum {
     };
   };
 
-  /// Functions to transform a template of characters into a string
+  /// Transform a template of characters into a string
   template <std::size_t count, template <std::size_t...> class meta_functor,
             std::size_t... indices>
   struct apply_range {
@@ -36,6 +36,7 @@ namespace reactions::pow_enum {
                                  indices...>::result result;
   };
 
+  /// \copydoc apply_range
   template <template <std::size_t...> class meta_functor,
             std::size_t... indices>
   struct apply_range<0, meta_functor, indices...> {

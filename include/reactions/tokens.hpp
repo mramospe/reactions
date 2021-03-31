@@ -25,13 +25,14 @@ namespace reactions::tokens {
   /// Defines the end of a reaction
   using right_bra = token<'}'>;
 
+  /// Check if the iterator at the current position matches the token
   template <char... C, std::size_t... I>
   bool match_token_impl(token<C...>, std::index_sequence<I...>,
                         std::string::const_iterator const &it) {
     return ((*(it + I) == C) && ...);
   }
 
-  /// Check if the iterator at the current position matches the token
+  /// \copydoc match_token_impl
   template <class Token>
   bool match_token(std::string::const_iterator const &it) {
     return match_token_impl(Token{}, std::make_index_sequence<Token::size>(),

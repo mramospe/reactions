@@ -72,6 +72,7 @@ namespace reactions {
     /// Define a \ref std::tuple with the types of the fields provided
     template <class Tuple> struct underlying_types;
 
+    /// \copydoc underlying_types
     template <class... F> struct underlying_types<std::tuple<F...>> {
       using type = std::tuple<typename F::value_type...>;
     };
@@ -92,27 +93,29 @@ namespace reactions {
       /// Field type at the given index
       template <std::size_t I> using field_t = std::tuple_element_t<I, fields>;
 
-      /// Field type at the given index
+      /// Underlying type of a field
       template <std::size_t I>
       using field_underlying_type_t = std::tuple_element_t<I, type>;
 
+      /// Index corresponding to a given field
       template <std::size_t I, class F0, class F1> struct field_index_impl {
         static constexpr auto value = field_index_impl<
             I + 1, F0,
             std::tuple_element_t<I + 1, base_element::fields>>::value;
       };
 
+      /// \copydoc field_index_impl
       template <std::size_t I, class F> struct field_index_impl<I, F, F> {
         static constexpr auto value = I;
       };
 
-      /// Index corresponding to a given field
+      /// \copydoc field_index_impl
       template <class F> struct field_index {
         static constexpr auto value = field_index_impl<
             0, F, std::tuple_element_t<0, base_element::fields>>::value;
       };
 
-      /// Index corresponding to a given field
+      /// \copydoc field_index
       template <class F>
       static constexpr auto field_index_v = field_index<F>::value;
 
@@ -125,14 +128,14 @@ namespace reactions {
     template <class F, class Enable = void>
     struct is_optional_field : std::false_type {};
 
-    /// Contain the information whether a field is optional or not
+    /// \copydoc is_optional_field
     template <class F>
     struct is_optional_field<
         F, std::enable_if_t<
                reactions::database::is_optional_v<typename F::value_type>>>
         : std::true_type {};
 
-    /// Whether a field is optional or not
+    /// \copydoc is_optional_field
     template <class F>
     constexpr auto is_optional_field_v = is_optional_field<F>::value;
 
@@ -141,7 +144,7 @@ namespace reactions {
       return std::to_string(v);
     }
 
-    /// Convert the given object to a string
+    /// \copydoc to_string
     template <> std::string to_string(std::string const &v) { return v; }
   } // namespace pdg
 
@@ -185,7 +188,7 @@ namespace reactions {
      * For fields of \ref std::optional type, the validity of the content
      * must be checked before calling this function using the
      * \ref pdg_element::has member function. Otherwise the
-     * \ref reactions::exception::missing_fields_error exception is thrown,
+     * \ref reactions::missing_fields_error exception is thrown,
      * if missing.
      */
     template <class F> auto const &get() const {
