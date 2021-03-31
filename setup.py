@@ -2,15 +2,13 @@
 Setup script for the "reactions" package
 """
 
-import importlib
-import inspect
 import os
 import re
 import subprocess
 import tempfile
 import warnings
 
-from setuptools import Command, Extension, setup, find_packages
+from setuptools import Command, Extension, setup
 
 PWD = os.path.abspath(os.path.dirname(__file__))
 
