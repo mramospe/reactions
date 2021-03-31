@@ -1,8 +1,7 @@
 /*! \file
  * \brief Common operations on databases
  */
-#ifndef REACTIONS_DATABASE_HPP
-#define REACTIONS_DATABASE_HPP
+#pragma once
 
 #include <algorithm>
 #include <cmath>
@@ -228,5 +227,3 @@ namespace reactions::database {
       return success;
   }
 } // namespace reactions::database
-
-#endif // REACTIONS_DATABASE_HPP

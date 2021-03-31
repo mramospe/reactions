@@ -2,8 +2,7 @@
   \brief Exceptions that can be thrown when running the functions of the
   package.
  */
-#ifndef REACTIONS_EXCEPTIONS_HPP
-#define REACTIONS_EXCEPTIONS_HPP
+#pragma once
 
 #include <cstring>
 #include <exception>
@@ -86,5 +85,3 @@ namespace reactions {
     const char *what() const noexcept { return std::runtime_error::what(); }
   };
 } // namespace reactions
-
-#endif // REACTIONS_EXCEPTIONS_HPP

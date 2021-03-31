@@ -1,5 +1,4 @@
-#ifndef REACTIONS_PYTHON_ERRORS_HPP
-#define REACTIONS_PYTHON_ERRORS_HPP
+#pragma once
 
 #include "reactions/exceptions.hpp"
 
@@ -52,5 +51,3 @@ static PyObject *SyntaxError =
     __VA_ARGS__;                                                               \
     return returncode;                                                         \
   }
-
-#endif

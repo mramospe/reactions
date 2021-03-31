@@ -1,8 +1,7 @@
 /*! \file
   \brief Utilities to work with element types
  */
-#ifndef REACTIONS_ELEMENT_TYPES_HPP
-#define REACTIONS_ELEMENT_TYPES_HPP
+#pragma once
 
 #include "reactions/pdg.hpp"
 #include "reactions/pow_enum.hpp"
@@ -49,5 +48,3 @@ namespace reactions::element_traits {
   template <class T>
   using builder_tpl_t = std::function<T(std::string const &)> const &;
 } // namespace reactions::element_traits
-
-#endif // REACTIONS_ELEMENT_TYPES_HPP

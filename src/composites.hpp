@@ -1,5 +1,4 @@
-#ifndef REACTIONS_PYTHON_COMPOSITES_HPP
-#define REACTIONS_PYTHON_COMPOSITES_HPP
+#pragma once
 
 #include "element.hpp"
 #include "errors.hpp"
@@ -563,5 +562,3 @@ inline void python_node_fill_decay(Decay *self,
     }
   }
 }
-
-#endif // REACTIONS_PYTHON_COMPOSITES_HPP

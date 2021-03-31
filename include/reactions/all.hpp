@@ -1,9 +1,9 @@
 /*! \file
   \brief File exposing the interface functions of the package.
 */
-#ifndef REACTIONS_ALL_HPP
-#define REACTIONS_ALL_HPP
+#pragma once
 
+#include "reactions/database.hpp"
 #include "reactions/element_traits.hpp"
 #include "reactions/exceptions.hpp"
 #include "reactions/pdg.hpp"
@@ -18,5 +18,3 @@
  * \ref all.hpp file.
  */
 namespace reactions {} // namespace reactions
-
-#endif // REACTIONS_ALL_HPP

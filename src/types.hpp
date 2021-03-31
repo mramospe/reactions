@@ -1,8 +1,7 @@
 /*! \file
  * \brief Conversion of C++ types to python types
  */
-#ifndef REACTIONS_PYTHON_TYPES_HPP
-#define REACTIONS_PYTHON_TYPES_HPP
+#pragma once
 
 #include <optional>
 #include <string>
@@ -64,5 +63,3 @@ template <class T> using cpp_to_py_type_t = typename cpp_to_py_type<T>::type;
 /// Alias for a python descriptor associated to a C++ type
 template <class T>
 static constexpr auto cpp_to_py_type_d = cpp_to_py_type<T>::descriptor;
-
-#endif

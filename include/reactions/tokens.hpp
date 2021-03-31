@@ -1,8 +1,7 @@
 /*! \file
   \brief Tokens allowed in a reaction or decay.
  */
-#ifndef REACTIONS_TOKENS_HPP
-#define REACTIONS_TOKENS_HPP
+#pragma once
 
 #include <cstdlib>
 #include <string>
@@ -39,5 +38,3 @@ namespace reactions::tokens {
                             it);
   }
 } // namespace reactions::tokens
-
-#endif // REACTIONS_TOKENS_HPP

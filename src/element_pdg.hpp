@@ -1,5 +1,4 @@
-#ifndef REACTIONS_PYTHON_ELEMENTPDG_HPP
-#define REACTIONS_PYTHON_ELEMENTPDG_HPP
+#pragma once
 
 #include "errors.hpp"
 #include "node.hpp"
@@ -311,5 +310,3 @@ static PyObject *ElementPDG_richcompare(PyObject *obj1, PyObject *obj2,
   else
     Py_RETURN_FALSE;
 }
-
-#endif // REACTIONS_PYTHON_PDGELEMENT_HPP

@@ -2,8 +2,7 @@
   \brief Classes and functions to work with elements from the Particle Database
   Group (PDG) and manage the database service.
 */
-#ifndef REACTIONS_PDG_HPP
-#define REACTIONS_PDG_HPP
+#pragma once
 
 #include "reactions/database.hpp"
 #include "reactions/exceptions.hpp"
@@ -768,5 +767,3 @@ namespace reactions {
     void operator=(pdg_database const &) = delete;
   };
 } // namespace reactions
-
-#endif // REACTIONS_PDG_HPP

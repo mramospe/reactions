@@ -1,5 +1,4 @@
-#ifndef REACTIONS_PYTHON_DATABASE_HPP
-#define REACTIONS_PYTHON_DATABASE_HPP
+#pragma once
 
 #include "element_pdg.hpp"
 #include "errors.hpp"
@@ -202,5 +201,3 @@ static PyObject *DatabasePDG_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
 
   return (PyObject *)self;
 }
-
-#endif // REACTIONS_PYTHON_DATABASE_HPP

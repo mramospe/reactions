@@ -1,5 +1,4 @@
-#ifndef REACTIONS_PYTHON_ELEMENT_HPP
-#define REACTIONS_PYTHON_ELEMENT_HPP
+#pragma once
 
 #include "element_pdg.hpp"
 #include "element_string.hpp"
@@ -57,5 +56,3 @@ int object_is_element(PyObject *obj) {
 
   return dec;
 }
-
-#endif // REACTIONS_PYTHON_ELEMENT_HPP

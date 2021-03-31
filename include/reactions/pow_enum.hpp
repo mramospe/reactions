@@ -6,8 +6,7 @@
   constant objects to iterate over the enumeration values and convert/parse
   them to/from strings.
 */
-#ifndef REACTIONS_POWENUM_HPP
-#define REACTIONS_POWENUM_HPP
+#pragma once
 
 #include <cstdlib>
 #include <string>
@@ -189,5 +188,3 @@ namespace reactions::pow_enum {
     static std::string to_string(enum_name e) { return to_c_string(e); }       \
   }
 // must use a comma
-
-#endif // REACTIONS_POWENUM_HPP

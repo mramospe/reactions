@@ -1,5 +1,4 @@
-#ifndef REACTIONS_PYTHON_ELEMENTSTRING_HPP
-#define REACTIONS_PYTHON_ELEMENTSTRING_HPP
+#pragma once
 
 #include "reactions/processes.hpp"
 
@@ -137,5 +136,3 @@ static PyObject *ElementString_richcompare(PyObject *obj1, PyObject *obj2,
   else
     Py_RETURN_FALSE;
 }
-
-#endif // REACTIONS_PYTHON_ELEMENTSTRING_HPP

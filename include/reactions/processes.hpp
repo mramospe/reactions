@@ -2,8 +2,7 @@
   \brief Define the nodes of a reaction or a decay, as well as the way to build
   them.
  */
-#ifndef REACTIONS_PROCESSES_HPP
-#define REACTIONS_PROCESSES_HPP
+#pragma once
 
 #include "reactions/element_traits.hpp"
 #include "reactions/exceptions.hpp"
@@ -628,5 +627,3 @@ namespace reactions {
     return make_decay_for<Element>(str, element_traits::builder<Element>);
   }
 } // namespace reactions
-
-#endif // REACTIONS_PROCESSES_HPP

@@ -1,5 +1,4 @@
-#ifndef REACTIONS_PYTHON_NODE_HPP
-#define REACTIONS_PYTHON_NODE_HPP
+#pragma once
 
 #include "reactions/processes.hpp"
 
@@ -86,5 +85,3 @@ bool is_node(PyObject *obj) {
 
   return PyObject_IsInstance(obj, (PyObject *)&NodeType);
 }
-
-#endif // REACTIONS_PYTHON_NODE_HPP
