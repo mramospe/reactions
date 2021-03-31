@@ -54,7 +54,7 @@ static PyObject *DatabasePDG_enable_cache(DatabasePDG *self) {
 }
 
 // Set the location of the PDG database
-static PyObject *DatabasePDG_get_database(DatabasePDG *self) {
+static PyObject *DatabasePDG_get_database_path(DatabasePDG *self) {
 
   return PyUnicode_FromString(self->database->get_database_path().c_str());
 }
@@ -98,7 +98,8 @@ static PyObject *DatabasePDG_register_element(DatabasePDG *self, PyObject *args,
 }
 
 // Set the location of the PDG database
-static PyObject *DatabasePDG_set_database(DatabasePDG *self, PyObject *args) {
+static PyObject *DatabasePDG_set_database_path(DatabasePDG *self,
+                                               PyObject *args) {
 
   const char *str = nullptr;
   if (!PyArg_ParseTuple(args, "s", &str))
@@ -117,11 +118,12 @@ static PyMethodDef DatabasePDG_methods[] = {
      "Disable the internal cache"},
     {"enable_cache", (PyCFunction)DatabasePDG_enable_cache, METH_NOARGS,
      "Enable the internal cache. All the elements will be loaded in memory."},
-    {"get_database", (PyCFunction)DatabasePDG_get_database, METH_NOARGS,
-     "Get the path to the database file"},
+    {"get_database_path", (PyCFunction)DatabasePDG_get_database_path,
+     METH_NOARGS, "Get the path to the database file"},
     {"register_element", (PyCFunction)DatabasePDG_register_element,
      METH_VARARGS | METH_KEYWORDS, "Register a new element in the database"},
-    {"set_database", (PyCFunction)DatabasePDG_set_database, METH_VARARGS,
+    {"set_database_path", (PyCFunction)DatabasePDG_set_database_path,
+     METH_VARARGS,
      "Set the path to the database file. If the cache is enabled, reloads the "
      "data. If the cache is enabled, elements are reloaded in memory."},
     {NULL, NULL, 0, NULL}};

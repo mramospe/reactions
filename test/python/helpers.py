@@ -12,10 +12,12 @@ def restore_pdg_database(function):
     """
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
-        db = reactions.get_pdg_database()
-        output = function(*args, **kwargs)
-        reactions.set_pdg_database(db)
-        reactions.pdg_database().clear_cache()
+        db = reactions.get_pdg_database_path()
+        try:
+            output = function(*args, **kwargs)
+        finally:  # if the function fails we keep having a valid database
+            reactions.set_pdg_database_path(db)
+            reactions.pdg_database().clear_cache()
         return output
     return wrapper
 

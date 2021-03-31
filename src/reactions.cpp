@@ -25,19 +25,10 @@ PyObject *is_element(PyObject *module, PyObject *args) {
 }
 
 // Global function to get the path to the PDG database
-PyObject *get_pdg_database(PyObject *module) {
-
-  DatabasePDG *pdg_instance =
-      (DatabasePDG *)DatabasePDGType.tp_new(&DatabasePDGType, NULL, NULL);
-
-  if (!pdg_instance)
-    return NULL;
-
-  auto output = DatabasePDG_get_database(pdg_instance);
-
-  Py_DecRef((PyObject *)pdg_instance);
-
-  return output;
+PyObject *get_pdg_database_path(PyObject *module) {
+  return PyUnicode_FromString(reactions::database_pdg::database::instance()
+                                  .get_database_path()
+                                  .c_str());
 }
 
 // Get the type of the node as a string
@@ -60,30 +51,26 @@ PyObject *node_type(PyObject *module, PyObject *args) {
 }
 
 // Global function to set the path to the PDG database
-PyObject *set_pdg_database(PyObject *module, PyObject *args) {
+PyObject *set_pdg_database_path(PyObject *module, PyObject *args) {
 
-  DatabasePDG *pdg_instance =
-      (DatabasePDG *)DatabasePDGType.tp_new(&DatabasePDGType, NULL, NULL);
-
-  if (!pdg_instance)
+  const char *str = nullptr;
+  if (!PyArg_ParseTuple(args, "s", &str))
     return NULL;
 
-  auto output = DatabasePDG_set_database(pdg_instance, args);
+  reactions::database_pdg::database::instance().set_database_path(str);
 
-  Py_DecRef((PyObject *)pdg_instance);
-
-  return output;
+  Py_RETURN_NONE;
 }
 
 // Module global functions
 static PyMethodDef reactions_methods[] = {
     {"is_element", (PyCFunction)is_element, METH_VARARGS,
      "Check if an object is of element type"},
-    {"get_pdg_database", (PyCFunction)get_pdg_database, METH_NOARGS,
+    {"get_pdg_database_path", (PyCFunction)get_pdg_database_path, METH_NOARGS,
      "Get the path to the PDG database"},
     {"node_type", (PyCFunction)node_type, METH_VARARGS,
      "Get the node type as a string"},
-    {"set_pdg_database", (PyCFunction)set_pdg_database, METH_VARARGS,
+    {"set_pdg_database_path", (PyCFunction)set_pdg_database_path, METH_VARARGS,
      "Set the path to the PDG database"},
     {NULL, NULL, 0, NULL}};
 

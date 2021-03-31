@@ -17,12 +17,12 @@ def test_pdg_database():
 def test_pdg_getter_setter():
     first = reactions.pdg_database()
     second = reactions.pdg_database()
-    reactions.set_pdg_database('some_path')
-    assert first.get_database() == reactions.get_pdg_database()
-    assert first.get_database() == second.get_database()
-    first.set_database('another_path')
-    assert first.get_database() == reactions.get_pdg_database()
-    assert first.get_database() == second.get_database()
+    reactions.set_pdg_database_path('some_path')
+    assert first.get_database_path() == reactions.get_pdg_database_path()
+    assert first.get_database_path() == second.get_database_path()
+    first.set_database_path('another_path')
+    assert first.get_database_path() == reactions.get_pdg_database_path()
+    assert first.get_database_path() == second.get_database_path()
 
     # try to use a non-existing database
     with pytest.raises(reactions.DatabaseError):
@@ -32,9 +32,9 @@ def test_pdg_getter_setter():
 @helpers.restore_pdg_database
 def test_pdg_database_cache():
     db = reactions.pdg_database()
-    path = db.get_database()
+    path = db.get_database_path()
     db.enable_cache()
-    db.set_database(path)
+    db.set_database_path(path)
 
 
 @helpers.restore_pdg_database
