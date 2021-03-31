@@ -18,6 +18,8 @@
 #include <tuple>
 #include <vector>
 
+#include <iostream>
+
 namespace reactions::database_pdg {
   /// Forward declaration of the database type
   class database;
@@ -35,6 +37,9 @@ namespace reactions::database_pdg {
 
     template <std::size_t Min, std::size_t Max>
     using range = reactions::database::range<Min, Max>;
+
+    template <class... R>
+    using range_collection = reactions::database::range_collection<R...>;
 
     struct name {
       static constexpr const char *title = "name";
@@ -55,19 +60,26 @@ namespace reactions::database_pdg {
       static constexpr const char *title = "mass";
       using value_type = ve_double_opt;
       using range_type =
-          std::tuple<range<31, 47>, range<48, 57>, range<58, 67>>;
+          range_collection<range<31, 47>, range<48, 57>, range<58, 67>>;
     };
     struct width {
       static constexpr const char *title = "width";
       using value_type = ve_double_opt;
       using range_type =
-          std::tuple<range<68, 84>, range<85, 94>, range<95, 104>>;
+          range_collection<range<68, 84>, range<85, 94>, range<95, 104>>;
     };
     struct is_self_cc {
       static constexpr const char *title = "is_self_cc";
       using value_type = bool;
       using range_type = range<105, 106>;
     };
+
+    template <class F> struct field_overall_range {
+      using type = reactions::database::overall_range_t<typename F::range_type>;
+    };
+
+    template <class F>
+    using field_overall_range_t = typename field_overall_range<F>::type;
 
     /// Define a \ref std::tuple with the types of the fields provided
     template <class Tuple> struct underlying_types;
@@ -81,6 +93,8 @@ namespace reactions::database_pdg {
       using fields =
           std::tuple<name, pdg_id, three_charge, mass, width, is_self_cc>;
       using type = typename underlying_types<fields>::type;
+
+      static constexpr auto size = std::tuple_size_v<fields>;
 
       template <std::size_t I> using field_t = std::tuple_element_t<I, fields>;
 
@@ -105,6 +119,10 @@ namespace reactions::database_pdg {
 
       template <class F>
       static constexpr auto field_index_v = field_index<F>::value;
+
+      /// Size of the line (in characters) associated to this class
+      static constexpr auto line_size =
+          field_overall_range_t<field_t<size - 1>>::max;
     };
 
     /// Contain the information whether a field is optional or not
@@ -337,8 +355,11 @@ namespace reactions::database_pdg {
   class database {
 
   public:
+    /// Clear the cache, removing also user-registered elements
+    void clear_cache() { m_cache.clear(); }
+
     /// Disable the cache
-    void disable_cache() { m_cache.clear(); }
+    void disable_cache() { m_cache.clear_database_elements(); }
 
     /* \brief Enable the internal cache.
      *
@@ -348,16 +369,29 @@ namespace reactions::database_pdg {
      */
     void enable_cache() {
 
-      if (m_cache.size())
+      if (m_cache.status() == cache::full)
         return;
 
+      // open the database to count the number of lines
       auto file = open_database();
 
+      auto start = skip_commented_lines(file);
+
+      std::size_t count = 0;
+      while (file.ignore(detail::base_element::line_size +
+                         1)) // include end-of-line
+        ++count;
+
+      file.clear(); // we reached the end of the file
+
+      // go back to the start of the table and read the elements
+      file.seekg(start);
+
       std::string line;
-
-      while (std::getline(file, line))
-        m_cache.emplace_back(read_element(line));
-
+      m_cache.add_database_elements(count, [this, &file, &line]() -> element {
+        std::getline(file, line);
+        return read_element(line);
+      });
       file.close();
     }
 
@@ -379,13 +413,60 @@ namespace reactions::database_pdg {
     /// Get the path to the database file
     std::string const &get_database_path() const { return m_db; }
 
+    /*! \brief Register a new PDG element
+     *
+     * The new element must have a name and a PDG ID that does not clash with
+     * any of the database used.
+     */
+    template <class... Args> void register_element(Args &&... args) {
+
+      auto const &new_element =
+          m_cache.add_user_element(std::forward<Args>(args)...);
+
+      // If the cache is enabled, the checks are done within the cache object,
+      // otherwise we must check the database
+      if (m_cache.status() != cache::full) {
+
+        auto file = open_database();
+
+        skip_commented_lines(file);
+
+        std::string line;
+
+        while (std::getline(file, line)) {
+
+          detail::name::value_type name;
+          if (reactions::database::read_field<detail::name::range_type>(
+                  name, line) == reactions::database::failed)
+            throw reactions::exceptions::database_error(
+                "Error reading PDG database; data format not understood");
+
+          if (new_element.name() == name)
+            throw reactions::exceptions::database_error(
+                "Attempt to register an element with similar name to an "
+                "element in the database");
+
+          detail::pdg_id::value_type pdg_id;
+          if (reactions::database::read_field<detail::pdg_id::range_type>(
+                  pdg_id, line) == reactions::database::failed)
+            throw reactions::exceptions::database_error(
+                "Error reading PDG database; data format not understood");
+
+          if (new_element.pdg_id() == pdg_id)
+            throw reactions::exceptions::database_error(
+                "Attempt to register an element with similar PDG ID to an "
+                "element in the database");
+        }
+      }
+    }
+
     /* \brief Set the path to the database file.
      *
      * If the cache is enabled, reloads the content using the new path.
      */
     void set_database_path(std::string const &s) {
       m_db = s;
-      if (m_cache.size()) {
+      if (m_cache.status() == cache::full) {
         disable_cache();
         enable_cache();
       }
@@ -403,8 +484,147 @@ namespace reactions::database_pdg {
     /// Path to the database file
     std::string m_db = "@PDG_TABLE@";
 
-    /// Possible cache for the elements
-    std::vector<element> m_cache;
+    /// \brief Cache of PDG elements
+    class cache {
+
+    public:
+      /// Code to define the status of the cache
+      enum cache_status { empty, user, full };
+
+      using cache_type = std::vector<element>;
+      using const_iterator_type = cache_type::const_iterator;
+      using size_type = cache_type::size_type;
+
+      cache() = default;
+
+      /// Clear the cache
+      void clear() {
+        m_vector.clear();
+        m_separator = 0;
+      }
+
+      /// Clear the cache
+      void clear_database_elements() {
+        m_vector.erase(database_cbegin(), database_cend());
+        m_separator = 0;
+      }
+
+      /// Status of the cache
+      cache_status status() const {
+        if (m_vector.size()) {
+          if (m_separator == 0)
+            return cache_status::user;
+          else
+            return cache_status::full;
+        } else
+          return cache_status::empty;
+      }
+
+      /// Begining of the cache
+      const_iterator_type begin() const { return m_vector.cbegin(); }
+
+      /// End of the cache
+      const_iterator_type end() const { return m_vector.cend(); }
+
+      /// Begining of the database elements
+      const_iterator_type database_cbegin() const { return m_vector.cbegin(); }
+
+      /// End of the database elements
+      const_iterator_type database_cend() const {
+        return m_vector.cbegin() + m_separator;
+      }
+
+      /// Begining of the user-registered elements
+      const_iterator_type user_registered_cbegin() const {
+        return database_cend();
+      }
+
+      /// End of the user-registered elements
+      const_iterator_type user_registered_cend() const {
+        return m_vector.cend();
+      }
+
+      /// Number of elements associated to the database
+      size_type database_size() const { return m_separator; }
+
+      /// Number of user-registered elements
+      size_type user_registered_size() const {
+        return m_vector.size() - m_separator;
+      }
+
+      /// Number of cached elements
+      size_type size() const { return m_vector.size(); }
+
+      /// Add elements from a database by calling the given function several
+      /// times
+      template <class ElementReader>
+      void add_database_elements(size_type n, ElementReader func) {
+
+        cache_type new_cache;
+        new_cache.reserve(n + user_registered_size());
+
+        for (auto i = 0u; i < n; ++i) {
+
+          new_cache.emplace_back(func());
+
+          auto const &new_element = new_cache.back();
+
+          // check that we do not repeat any entry
+          if (user_registered_size() != 0) {
+            auto cend = user_registered_cend();
+            if (std::find_if(user_registered_cbegin(), cend,
+                             [&new_element](element const &el) {
+                               return (el.name() == new_element.name() ||
+                                       el.pdg_id() == new_element.pdg_id());
+                             }) != cend)
+              throw reactions::exceptions::database_error(
+                  (std::string{"User-defined element clashes with database "
+                               "element: \""} +
+                   new_cache.back().name() + "\"")
+                      .c_str());
+          }
+        }
+
+        // insert the elements and assign the separator to the number of
+        // database elements
+        new_cache.insert(new_cache.end(),
+                         std::make_move_iterator(user_registered_cbegin()),
+                         std::make_move_iterator(user_registered_cend()));
+        m_separator = n;
+        m_vector = std::move(new_cache);
+      }
+
+      /// Add a new element (by the user)
+      template <class... Args>
+      element const &add_user_element(Args &&... args) {
+        m_vector.emplace_back(std::forward<Args>(args)...);
+        auto const &new_element = m_vector.back();
+        auto e = end() - 1;
+        if (std::find_if(begin(), e, [&new_element](element const &el) {
+              return (el.name() == new_element.name() ||
+                      el.pdg_id() == new_element.pdg_id());
+            }) != e) {
+          m_vector
+              .pop_back(); // remove the element so the cache can still be used
+          throw reactions::exceptions::database_error(
+              (std::string{
+                   "User-defined element clashes with database element: \""} +
+               new_element.name() + "\"")
+                  .c_str());
+        }
+        return m_vector.back();
+      }
+
+    protected:
+      /// Collection of elements
+      cache_type m_vector;
+
+      /// Index that defines elements registered by the user and those read from
+      /// the database
+      size_type m_separator = 0;
+
+    } m_cache; /// Cache for elements loaded from the database or registered by
+               /// the user
 
     /// Open the database
     std::ifstream open_database() const {
@@ -426,7 +646,12 @@ namespace reactions::database_pdg {
         throw reactions::exceptions::database_error(
             "Unable to access the database");
 
-      // skip comments
+      return file;
+    }
+
+    /// Skip lines with comments (preceeded by *)
+    std::streampos skip_commented_lines(std::ifstream &file) const {
+
       char c;
       while (true) {
         file.get(c);
@@ -437,7 +662,7 @@ namespace reactions::database_pdg {
       }
       file.unget();
 
-      return file;
+      return file.tellg();
     }
 
     /// Read a field with the given index from a line
@@ -491,13 +716,28 @@ namespace reactions::database_pdg {
     /// Access an element using the field accessor
     template <class F, class T> element access(T const &v) const {
 
-      if (m_cache.size()) {
+      switch (m_cache.status()) {
+      case (cache::full): // the full database is loaded
+
         for (auto const &el : m_cache)
           if (el.get<F>() == v)
             return el;
-      } else {
+
+        break; // throws an exception
+
+      case (cache::user): // only user-registered entries exist
+
+        for (auto const &el : m_cache)
+          if (el.get<F>() == v)
+            return el;
+
+        [[fallthrough]]; // continue as if we had no cache
+
+      case (cache::empty): // the cache is empty
 
         auto file = open_database();
+
+        skip_commented_lines(file);
 
         std::string line;
 

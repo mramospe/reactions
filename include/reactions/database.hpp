@@ -81,6 +81,21 @@ namespace reactions::database {
     static constexpr auto min = Min, max = Max;
   };
 
+  /// Define a collection of ranges (a single variable with subvariables)
+  template <class... R> using range_collection = std::tuple<R...>;
+
+  /// Get the overall range for a range with/without subranges
+  template <class R> struct overall_range {
+    using type = range<R::min, R::max>;
+  };
+
+  template <class R0, class... R, class Rn>
+  struct overall_range<range_collection<R0, R..., Rn>> {
+    using type = range<R0::min, Rn::max>;
+  };
+
+  template <class R> using overall_range_t = typename overall_range<R>::type;
+
   /// Status code of a conversion to an arithmetic type
   enum conversion_status : int { success, empty, failed };
 

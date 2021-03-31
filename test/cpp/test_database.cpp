@@ -74,6 +74,67 @@ int main() {
 
     return errors;
   });
+  pdg_database_coll.add_test_function(
+      "test user elements", []() -> test::errors {
+        test::errors errors;
+
+        auto &db = database_pdg::database::instance();
+
+        try {
+
+          db.register_element("Z'0", 99999999, 0,
+                              reactions::fill{100.f, 10.f, 10.f},
+                              reactions::missing, true);
+          db.enable_cache();
+          db.register_element("Z''0", 99999998, 0, reactions::missing,
+                              reactions::missing, true);
+        }
+        REACTIONS_TEST_UTILS_CATCH_EXCEPTIONS(errors);
+
+        auto toggle_cache_on_off = [&errors, &db]() -> void {
+          try {
+            db.register_element("custom", 99999998, 0, reactions::missing,
+                                reactions::missing, true);
+            errors.push_back("Should have thrown an error when registering an "
+                             "element with the same PDG ID twice");
+          } catch (...) {
+          };
+
+          try {
+            db.register_element("Z''0", 99999997, 0, reactions::missing,
+                                reactions::missing, true);
+            errors.push_back("Should have thrown an error when registering an "
+                             "element with the same name twice");
+          } catch (...) {
+          };
+
+          try {
+            db.register_element("Z0", 99999997, 0, reactions::missing,
+                                reactions::missing, true);
+            errors.push_back(
+                "Should have thrown an error when registering an element with "
+                "the same name as one in the database");
+          } catch (...) {
+          };
+
+          try {
+            db.register_element("custom", 1, 0, reactions::missing,
+                                reactions::missing, true);
+            errors.push_back(
+                "Should have thrown an error when registering an element with "
+                "the same PDG ID as one in the database");
+          } catch (...) {
+          };
+        };
+
+        // cache is already enabled
+        toggle_cache_on_off();
+        // disable cache and run again
+        db.disable_cache();
+        toggle_cache_on_off();
+
+        return errors;
+      });
 
   return !pdg_database_coll.run();
 }
