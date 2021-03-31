@@ -1,5 +1,5 @@
 /*! \file
-  \brief Define the tokens allowed in a reaction or decay.
+  \brief Tokens allowed in a reaction or decay.
  */
 #ifndef REACTIONS_TOKENS_HPP
 #define REACTIONS_TOKENS_HPP

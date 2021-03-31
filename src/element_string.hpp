@@ -10,7 +10,7 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  std::string element;
+  reactions::string_element element;
 } ElementString;
 
 // Allocate a new ElementString
@@ -24,7 +24,7 @@ static PyObject *ElementString_new(PyTypeObject *type,
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = processes::detail::node_kind::element;
+  self->node.c_type = reactions::processes::node_kind::element;
 
   return (PyObject *)self;
 }

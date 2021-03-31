@@ -18,18 +18,15 @@
 #include <vector>
 
 namespace reactions {
+
   // Forward declarations
   template <class Element> class element_wrapper;
   template <class Element> class reaction;
   template <class Element> class decay;
-} // namespace reactions
 
-/*! \brief Processes among elements (reactions and decays)
- */
-namespace reactions::processes {
-
-  /// Definitions for internal use only
-  namespace detail {
+  /*! \brief Processes among elements (reactions and decays)
+   */
+  namespace processes {
     /// Node types
     REACTIONS_POW_ENUM_WITH_UNKNOWN(node_kind, element, reaction, decay);
 
@@ -57,7 +54,7 @@ namespace reactions::processes {
         ++sit; // remove leading spaces
 
       if (tokens::match_token<tokens::left_bra>(sit))
-        throw exceptions::__syntax_error(
+        throw reactions::exceptions::__syntax_error(
             "Expression starts with another expression", end - sit);
 
       auto start = sit; // keep track of the beginning of an expression
@@ -85,8 +82,8 @@ namespace reactions::processes {
             fill_expression();
 
             if (!tokens::match_token<tokens::right_bra>(sit))
-              throw exceptions::__syntax_error("Expected closing braces",
-                                               end - sit);
+              throw reactions::exceptions::__syntax_error(
+                  "Expected closing braces", end - sit);
 
             start = (sit += tokens::right_bra::size);
 
@@ -141,18 +138,20 @@ namespace reactions::processes {
 
         if (sit != send) {
           if (tokens::match_token<tokens::right_bra>(sit))
-            throw exceptions::__syntax_error("Mismatching braces", send - sit);
+            throw reactions::exceptions::__syntax_error("Mismatching braces",
+                                                        send - sit);
           else
-            throw exceptions::__syntax_error("Invalid syntax", send - sit);
+            throw reactions::exceptions::__syntax_error("Invalid syntax",
+                                                        send - sit);
         }
 
         return p;
 
-      } catch (exceptions::__syntax_error &e) {
+      } catch (reactions::exceptions::__syntax_error &e) {
         throw e.update(str);
       }
     }
-  } // namespace detail
+  } // namespace processes
 
   /*! \brief Base class for types referred to a node
    *
@@ -180,16 +179,18 @@ namespace reactions::processes {
 
     /// Constructor from an element
     node(std::unique_ptr<element_type> &&ptr)
-        : m_type{std::move(detail::node_kind::element)}, m_ptr{ptr.release()} {}
+        : m_type{std::move(processes::node_kind::element)},
+          m_ptr{ptr.release()} {}
 
     /// Constructor from a reaction
     node(std::unique_ptr<reaction_type> &&ptr)
-        : m_type{std::move(detail::node_kind::reaction)}, m_ptr{ptr.release()} {
-    }
+        : m_type{std::move(processes::node_kind::reaction)},
+          m_ptr{ptr.release()} {}
 
     /// Construction from a decay
     node(std::unique_ptr<decay_type> &&ptr)
-        : m_type{std::move(detail::node_kind::decay)}, m_ptr{ptr.release()} {}
+        : m_type{std::move(processes::node_kind::decay)}, m_ptr{ptr.release()} {
+    }
 
     /// Move constructor
     node(node &&other) : m_type{other.m_type}, m_ptr{other.m_ptr} {
@@ -201,17 +202,17 @@ namespace reactions::processes {
 
       if (m_ptr) {
         switch (m_type) {
-        case (detail::node_kind::element):
+        case (processes::node_kind::element):
           delete ptr_as_element_wrapper();
           return;
-        case (detail::node_kind::reaction):
+        case (processes::node_kind::reaction):
           delete ptr_as_reaction();
           return;
-        case (detail::node_kind::decay):
+        case (processes::node_kind::decay):
           delete ptr_as_decay();
           return;
-        case (detail::node_kind::unknown):
-          throw exceptions::internal_error(
+        case (processes::node_kind::unknown):
+          throw reactions::internal_error(
               "A node type should always be set (internal error); please "
               "report the bug");
         }
@@ -223,16 +224,18 @@ namespace reactions::processes {
     node &operator=(node const &) = delete;
 
     /// Check if the underlying class is an element
-    bool is_element() const { return m_type == detail::node_kind::element; }
+    bool is_element() const { return m_type == processes::node_kind::element; }
 
     /// Check if the underlying class is a reaction
-    bool is_reaction() const { return m_type == detail::node_kind::reaction; }
+    bool is_reaction() const {
+      return m_type == processes::node_kind::reaction;
+    }
 
     /// Check if the underlying class is a decay
-    bool is_decay() const { return m_type == detail::node_kind::decay; }
+    bool is_decay() const { return m_type == processes::node_kind::decay; }
 
     /// Get the node type
-    detail::node_kind type() const { return m_type; }
+    processes::node_kind type() const { return m_type; }
 
     /// Get the pointer to the underlying object
     node_object const *object() const { return m_ptr; }
@@ -261,7 +264,7 @@ namespace reactions::processes {
 
   private:
     /// Node type
-    detail::node_kind m_type = detail::node_kind::unknown;
+    processes::node_kind m_type = processes::node_kind::unknown;
 
     /// Underlying object
     node_object *m_ptr = nullptr;
@@ -293,20 +296,20 @@ namespace reactions::processes {
           continue;
 
         switch (first[i].type()) {
-        case (detail::node_kind::element):
+        case (processes::node_kind::element):
           if (*(first[i].ptr_as_element()) == *(second[i].ptr_as_element()))
             mask[j] = true;
           break;
-        case (detail::node_kind::reaction):
+        case (processes::node_kind::reaction):
           if (*(first[i].ptr_as_reaction()) == *(second[i].ptr_as_reaction()))
             mask[j] = true;
           break;
-        case (detail::node_kind::decay):
+        case (processes::node_kind::decay):
           if (*(first[i].ptr_as_decay()) == *(second[i].ptr_as_decay()))
             mask[j] = true;
           break;
-        case (detail::node_kind::unknown):
-          throw exceptions::internal_error(
+        case (processes::node_kind::unknown):
+          throw reactions::internal_error(
               "A node can not be of unknown type (internal error); please "
               "report the bug");
           break;
@@ -319,7 +322,7 @@ namespace reactions::processes {
     // all of them have been matched
     return true;
   }
-} // namespace reactions::processes
+} // namespace reactions
 
 namespace reactions {
 
@@ -328,13 +331,11 @@ namespace reactions {
    * This class wraps the template argument type, which becomes accessible
    * through the * and -> operators.
    */
-  template <class Element>
-  class element_wrapper final : public processes::node_object {
+  template <class Element> class element_wrapper final : public node_object {
 
   public:
     /// Constructor given the underlying element
-    element_wrapper(Element &&e)
-        : processes::node_object{}, m_element{std::move(e)} {}
+    element_wrapper(Element &&e) : node_object{}, m_element{std::move(e)} {}
     /// Default destructor
     ~element_wrapper() override = default;
     /// Copy constructor
@@ -359,16 +360,14 @@ namespace reactions {
    *
    * Nested reactions must be expressed within parenteses.
    */
-  template <class Element>
-  class reaction final : public processes::node_object {
+  template <class Element> class reaction final : public node_object {
 
   public:
     using element_type = element_wrapper<Element>; /// Underlying element type
     using builder_type =
         element_traits::builder_tpl_t<Element>; /// Signature type of an element
                                                 /// builder
-    using nodes_type =
-        std::vector<processes::node<Element>>; /// Collection of elements
+    using nodes_type = std::vector<node<Element>>; /// Collection of elements
 
     /// Default move constructor
     reaction(reaction &&) = default;
@@ -417,13 +416,13 @@ namespace reactions {
 
     template <class Process>
     friend Process
-    reactions::processes::detail::make_process(std::string const &,
-                                               typename Process::builder_type);
+    reactions::processes::make_process(std::string const &,
+                                       typename Process::builder_type);
 
     /// Constructor from the string iterators
     reaction(std::string::const_iterator &sit,
              std::string::const_iterator const &end, builder_type builder)
-        : processes::node_object{} {
+        : node_object{} {
 
       nodes_type *current_set = &m_reactants;
 
@@ -437,22 +436,26 @@ namespace reactions {
       };
       auto arrow_switch = [&]() -> void {
         if (!m_reactants.size())
-          throw exceptions::__syntax_error("Missing reactants", end - sit);
+          throw reactions::exceptions::__syntax_error("Missing reactants",
+                                                      end - sit);
 
         if (current_set == &m_products)
-          throw exceptions::__syntax_error("Duplicated arrow", end - sit);
+          throw reactions::exceptions::__syntax_error("Duplicated arrow",
+                                                      end - sit);
 
         current_set = &m_products;
       };
 
-      processes::detail::process_expression(sit, end, fill_element,
-                                            fill_reaction, arrow_switch);
+      processes::process_expression(sit, end, fill_element, fill_reaction,
+                                    arrow_switch);
 
       if (!m_reactants.size())
-        throw exceptions::__syntax_error("Missing reactants", end - sit);
+        throw reactions::exceptions::__syntax_error("Missing reactants",
+                                                    end - sit);
 
       if (!m_products.size())
-        throw exceptions::__syntax_error("Missing products", end - sit);
+        throw reactions::exceptions::__syntax_error("Missing products",
+                                                    end - sit);
     }
 
     /// Reactants
@@ -467,12 +470,12 @@ namespace reactions {
    * This can be seen as a special reaction with only one reactant, and where
    * subsequent composite nodes are also decays.
    */
-  template <class Element> class decay final : public processes::node_object {
+  template <class Element> class decay final : public node_object {
 
   public:
     using element_type = element_wrapper<Element>;
     using builder_type = element_traits::builder_tpl_t<Element>;
-    using nodes_type = std::vector<processes::node<Element>>;
+    using nodes_type = std::vector<node<Element>>;
 
     /// Default move constructor
     decay(decay &&) = default;
@@ -519,13 +522,13 @@ namespace reactions {
 
     template <class Process>
     friend Process
-    reactions::processes::detail::make_process(std::string const &,
-                                               typename Process::builder_type);
+    reactions::processes::make_process(std::string const &,
+                                       typename Process::builder_type);
 
     /// Constructor from the string iterators
     decay(std::string::const_iterator &sit,
           std::string::const_iterator const &end, builder_type builder)
-        : processes::node_object{} {
+        : node_object{} {
 
       bool fill_products = false; // keep track of the elements we are adding
 
@@ -537,36 +540,42 @@ namespace reactions {
           this->m_products.emplace_back(
               std::make_unique<element_type>(builder(std::string{start, sit})));
         } else
-          throw exceptions::__syntax_error("Missing arrow", end - start);
+          throw reactions::exceptions::__syntax_error("Missing arrow",
+                                                      end - start);
       };
       auto fill_decay = [&] {
         if (!m_head) {
-          throw exceptions::__syntax_error("Missing head", end - sit);
+          throw reactions::exceptions::__syntax_error("Missing head",
+                                                      end - sit);
         } else if (fill_products) {
           this->m_products.push_back(
               std::make_unique<decay>(sit, end, builder));
         } else
-          throw exceptions::__syntax_error("Missing arrow", end - sit);
+          throw reactions::exceptions::__syntax_error("Missing arrow",
+                                                      end - sit);
       };
       auto arrow_switch = [&] {
         if (fill_products)
-          throw exceptions::__syntax_error("Duplicated arrow", end - sit);
+          throw reactions::exceptions::__syntax_error("Duplicated arrow",
+                                                      end - sit);
 
         else if (!m_head)
-          throw exceptions::__syntax_error("Missing head particle", end - sit);
+          throw reactions::exceptions::__syntax_error("Missing head particle",
+                                                      end - sit);
 
         fill_products = true;
       };
 
-      processes::detail::process_expression(sit, end, fill_element, fill_decay,
-                                            arrow_switch);
+      processes::process_expression(sit, end, fill_element, fill_decay,
+                                    arrow_switch);
 
       if (!m_head)
-        throw exceptions::__syntax_error("No elements have been parsed",
-                                         end - sit);
+        throw reactions::exceptions::__syntax_error(
+            "No elements have been parsed", end - sit);
 
       if (!m_products.size())
-        throw exceptions::__syntax_error("Expected products", end - sit);
+        throw reactions::exceptions::__syntax_error("Expected products",
+                                                    end - sit);
     }
 
     /// Head particle
@@ -585,7 +594,7 @@ namespace reactions {
   reaction<Element>
   make_reaction_for(std::string const &str,
                     typename reaction<Element>::builder_type builder) {
-    return processes::detail::make_process<reaction<Element>>(str, builder);
+    return processes::make_process<reaction<Element>>(str, builder);
   }
 
   /*! \brief Create a new reaction
@@ -593,10 +602,9 @@ namespace reactions {
    * Use the default constructor for the element type provided as a template
    * argument.
    */
-  template <element_kind K>
-  reaction<element_traits::element_t<K>> make_reaction(std::string const &str) {
-    return make_reaction_for<element_traits::element_t<K>>(
-        str, element_traits::builder<K>);
+  template <class Element>
+  reaction<Element> make_reaction(std::string const &str) {
+    return make_reaction_for<Element>(str, element_traits::builder<Element>);
   }
 
   /*! \brief Create a new decay with a custom builder
@@ -608,7 +616,7 @@ namespace reactions {
   template <class Element>
   decay<Element> make_decay_for(std::string const &str,
                                 typename decay<Element>::builder_type builder) {
-    return processes::detail::make_process<decay<Element>>(str, builder);
+    return processes::make_process<decay<Element>>(str, builder);
   }
 
   /*! \brief Create a new decay
@@ -616,10 +624,8 @@ namespace reactions {
    * Use the default constructor for the element type provided as a template
    * argument.
    */
-  template <element_kind K>
-  decay<element_traits::element_t<K>> make_decay(std::string const &str) {
-    return make_decay_for<element_traits::element_t<K>>(
-        str, element_traits::builder<K>);
+  template <class Element> decay<Element> make_decay(std::string const &str) {
+    return make_decay_for<Element>(str, element_traits::builder<Element>);
   }
 } // namespace reactions
 

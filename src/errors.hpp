@@ -26,24 +26,24 @@ static PyObject *SyntaxError =
     return -1;                                                                 \
   }
 
-#define REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS                              \
+#define REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(returncode)                  \
   {                                                                            \
     PyErr_SetString(PyExc_RuntimeError, "Invalid arguments");                  \
-    return -1;                                                                 \
+    return returncode;                                                         \
   }
 
 #define REACTIONS_PYTHON_CATCH_ERRORS(returncode, ...)                         \
-  catch (reactions::exceptions::syntax_error & e) {                            \
+  catch (reactions::syntax_error & e) {                                        \
     PyErr_SetString(SyntaxError, e.what());                                    \
     __VA_ARGS__;                                                               \
     return returncode;                                                         \
   }                                                                            \
-  catch (reactions::exceptions::database_error & e) {                          \
+  catch (reactions::database_error & e) {                                      \
     PyErr_SetString(DatabaseError, e.what());                                  \
     __VA_ARGS__;                                                               \
     return returncode;                                                         \
   }                                                                            \
-  catch (reactions::exceptions::lookup_error & e) {                            \
+  catch (reactions::lookup_error & e) {                                        \
     PyErr_SetString(LookupError, e.what());                                    \
     __VA_ARGS__;                                                               \
     return returncode;                                                         \

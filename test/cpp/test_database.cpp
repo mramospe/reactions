@@ -12,11 +12,10 @@ int main() {
 
     try {
 
-      if (&database_pdg::database::instance() !=
-          &database_pdg::database::instance())
+      if (&pdg_database::instance() != &pdg_database::instance())
         errors.push_back("The PDG database is not a singleton");
 
-      auto &db = database_pdg::database::instance();
+      auto &db = pdg_database::instance();
 
       if (db("pi+").pdg_id() != db(+211).pdg_id())
         errors.push_back(
@@ -31,25 +30,25 @@ int main() {
 
     try {
 
-      auto &db = database_pdg::database::instance();
+      auto &db = pdg_database::instance();
 
       if (db("pi+").pdg_id() != db(+211).pdg_id())
         errors.push_back(
             "Accessors by string and PDG ID do not retrieve the same elements");
 
-      database_pdg::element::base_type ta = {
+      pdg_element::base_type ta = {
           "a", 0, 0, reactions::missing, reactions::missing, false};
-      database_pdg::element a = std::move(ta);
+      pdg_element a = std::move(ta);
 
-      database_pdg::element::base_type tb = {
+      pdg_element::base_type tb = {
           "b", 0, 0, reactions::missing, reactions::missing, false};
-      database_pdg::element b{std::move(tb)};
+      pdg_element b{std::move(tb)};
 
-      database_pdg::element c1 = {
-          "c1", 0, 0, reactions::missing, reactions::missing, false};
-      database_pdg::element c2 = {
+      pdg_element c1 = {"c1", 0, 0, reactions::missing, reactions::missing,
+                        false};
+      pdg_element c2 = {
           "c2", 0, 0, reactions::fill{0., 0., 0.}, reactions::missing, false};
-      database_pdg::element c3 = {
+      pdg_element c3 = {
           "c3", 0, 0, reactions::fill{0., 0., 0.}, reactions::fill{0., 0., 0.},
           false};
 
@@ -66,7 +65,7 @@ int main() {
 
     try {
 
-      auto &db = database_pdg::database::instance();
+      auto &db = pdg_database::instance();
 
       auto path = db.get_database_path();
 
@@ -86,7 +85,7 @@ int main() {
       "test user elements", []() -> test::errors {
         test::errors errors;
 
-        auto &db = database_pdg::database::instance();
+        auto &db = pdg_database::instance();
 
         try {
 

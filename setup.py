@@ -242,7 +242,7 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
     os.mkdir(os.path.join(tmp_include_dir, 'reactions'))
 
     # modify headers that need to be configured
-    for input_filename in files_with_extension(os.path.join(PWD, 'include'), 'in'):
+    for input_filename in files_with_extension(os.path.join(PWD, 'include'), 'hpp.in'):
         output_filename = os.path.join(
             tmp_include_dir, 'reactions', os.path.basename(input_filename[:-3]))
         with open(input_filename) as input_file, open(output_filename, 'wt') as output_file:

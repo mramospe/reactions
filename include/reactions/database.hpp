@@ -1,3 +1,6 @@
+/*! \file
+ * \brief Common operations on databases
+ */
 #ifndef REACTIONS_DATABASE_HPP
 #define REACTIONS_DATABASE_HPP
 
@@ -89,15 +92,21 @@ namespace reactions::database {
     using type = range<R::min, R::max>;
   };
 
+  /// Overall range of a variable (that can be a composite)
   template <class R0, class... R, class Rn>
   struct overall_range<range_collection<R0, R..., Rn>> {
     using type = range<R0::min, Rn::max>;
   };
 
+  /// Overall range of a variable (that can be a composite)
   template <class R> using overall_range_t = typename overall_range<R>::type;
 
-  /// Status code of a conversion to an arithmetic type
-  enum conversion_status : int { success, empty, failed };
+  /// Status code of a conversion to an arithmetic or \ref std::optional type
+  enum conversion_status : int {
+    success, ///< the conversion succeeded
+    empty,   ///< the object is missing
+    failed   ///<  the conversion failed
+  };
 
   namespace detail {
 

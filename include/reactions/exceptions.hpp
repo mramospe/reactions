@@ -1,5 +1,5 @@
 /*! \file
-  \brief Define exceptions that can be thrown when running the functions of the
+  \brief Exceptions that can be thrown when running the functions of the
   package.
  */
 #ifndef REACTIONS_EXCEPTIONS_HPP
@@ -10,9 +10,7 @@
 #include <stdexcept>
 #include <string>
 
-/*! \brief Exceptions and errors
- */
-namespace reactions::exceptions {
+namespace reactions {
 
   std::string mark_error(std::string const &str, const char *msg,
                          std::size_t rpos) {
@@ -51,22 +49,26 @@ namespace reactions::exceptions {
     const char *what() const noexcept { return std::runtime_error::what(); }
   };
 
-  class __syntax_error {
+  /// Exceptions that are handled internally
+  namespace exceptions {
 
-  public:
-    __syntax_error(const char *msg, std::size_t rpos)
-        : m_msg{msg}, m_rpos{rpos} {}
+    class __syntax_error {
 
-    const char *what() const noexcept { return m_msg; }
+    public:
+      __syntax_error(const char *msg, std::size_t rpos)
+          : m_msg{msg}, m_rpos{rpos} {}
 
-    syntax_error update(std::string const &str) {
-      return {mark_error(str, m_msg, m_rpos).c_str()};
-    }
+      const char *what() const noexcept { return m_msg; }
 
-  private:
-    const char *m_msg;
-    std::size_t m_rpos;
-  };
+      syntax_error update(std::string const &str) {
+        return {mark_error(str, m_msg, m_rpos).c_str()};
+      }
+
+    private:
+      const char *m_msg;
+      std::size_t m_rpos;
+    };
+  } // namespace exceptions
 
   class lookup_error : std::runtime_error {
 
@@ -83,6 +85,6 @@ namespace reactions::exceptions {
 
     const char *what() const noexcept { return std::runtime_error::what(); }
   };
-} // namespace reactions::exceptions
+} // namespace reactions
 
 #endif // REACTIONS_EXCEPTIONS_HPP

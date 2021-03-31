@@ -81,13 +81,13 @@ namespace reactions::test {
   collector.add_test_function(#function, function);
 
 #define REACTIONS_TEST_UTILS_CATCH_EXCEPTIONS(errors)                          \
-  catch (exceptions::syntax_error & e) {                                       \
+  catch (syntax_error & e) {                                                   \
     errors.push_back(e.what());                                                \
   }                                                                            \
-  catch (exceptions::database_error & e) {                                     \
+  catch (database_error & e) {                                                 \
     errors.push_back(e.what());                                                \
   }                                                                            \
-  catch (exceptions::lookup_error & e) {                                       \
+  catch (lookup_error & e) {                                                   \
     errors.push_back(e.what());                                                \
   }                                                                            \
   catch (...) {                                                                \

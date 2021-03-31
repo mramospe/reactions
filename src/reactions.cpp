@@ -26,9 +26,8 @@ PyObject *is_element(PyObject *module, PyObject *args) {
 
 // Global function to get the path to the PDG database
 PyObject *get_pdg_database_path(PyObject *module) {
-  return PyUnicode_FromString(reactions::database_pdg::database::instance()
-                                  .get_database_path()
-                                  .c_str());
+  return PyUnicode_FromString(
+      reactions::pdg_database::instance().get_database_path().c_str());
 }
 
 // Get the type of the node as a string
@@ -46,7 +45,7 @@ PyObject *node_type(PyObject *module, PyObject *args) {
   REACTIONS_PYTHON_NODE_CHECK_UNKNOWN(((Node *)obj));
 
   return PyUnicode_FromString(
-      processes::detail::node_kind_properties::to_c_string(
+      reactions::processes::node_kind_properties::to_c_string(
           ((Node *)obj)->c_type));
 }
 
@@ -57,7 +56,7 @@ PyObject *set_pdg_database_path(PyObject *module, PyObject *args) {
   if (!PyArg_ParseTuple(args, "s", &str))
     return NULL;
 
-  reactions::database_pdg::database::instance().set_database_path(str);
+  reactions::pdg_database::instance().set_database_path(str);
 
   Py_RETURN_NONE;
 }

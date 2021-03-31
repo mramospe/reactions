@@ -6,18 +6,14 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
-namespace {
-  using namespace reactions;
-}
-
 // Wrapper for a node
 typedef struct {
-  PyObject_HEAD processes::detail::node_kind c_type =
-      processes::detail::node_kind::unknown;
+  PyObject_HEAD reactions::processes::node_kind c_type =
+      reactions::processes::node_kind::unknown;
 } Node;
 
 #define REACTIONS_PYTHON_NODE_CHECK_UNKNOWN(self)                              \
-  if (self->c_type == processes::detail::node_kind::unknown) {                 \
+  if (self->c_type == reactions::processes::node_kind::unknown) {              \
     PyErr_SetString(PyExc_RuntimeError,                                        \
                     "Node type is not defined (internal error); please "       \
                     "report the bug");                                         \
@@ -39,7 +35,7 @@ static PyObject *Node_new(PyTypeObject *type, PyObject *args,
   if (!self)
     return NULL;
 
-  self->c_type = processes::detail::node_kind::unknown;
+  self->c_type = reactions::processes::node_kind::unknown;
 
   return (PyObject *)self;
 }

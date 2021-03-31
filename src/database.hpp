@@ -4,8 +4,8 @@
 #include "element_pdg.hpp"
 #include "errors.hpp"
 
-#include "reactions/database_pdg.hpp"
 #include "reactions/exceptions.hpp"
+#include "reactions/pdg.hpp"
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
@@ -22,7 +22,7 @@
 
 /// Object for a PDG database
 typedef struct {
-  PyObject_HEAD reactions::database_pdg::database *database = nullptr;
+  PyObject_HEAD reactions::pdg_database *database = nullptr;
 } DatabasePDG;
 
 // Create a new node
@@ -79,11 +79,9 @@ static PyObject *DatabasePDG_register_element(DatabasePDG *self, PyObject *args,
   } else if (args != NULL || kwargs != NULL) {
 
     obj = ElementPDGType.tp_new((PyTypeObject *)&ElementPDGType, NULL, NULL);
-    if (ElementPDGType.tp_init(obj, args, kwargs) < 0) {
-      PyErr_SetString(PyExc_ValueError,
-                      "Invalid arguments to reactions.pdg_element");
-      return NULL;
-    }
+    if (ElementPDGType.tp_init(obj, args, kwargs) < 0)
+      REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(NULL);
+
   } else {
     PyErr_SetString(PyExc_ValueError, "Invalid arguments");
     return NULL;
@@ -186,7 +184,7 @@ static PyObject *DatabasePDG_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     if (!self)
       return NULL;
 
-    self->database = &reactions::database_pdg::database::instance();
+    self->database = &reactions::pdg_database::instance();
 
     if (PyDict_SetItemString(type->tp_dict, REACTIONS_INSTANCE_ACCESSOR,
                              (PyObject *)self) != 0) {

@@ -1,4 +1,6 @@
 /*! \file
+  \brief Contains macros to define smart enumeration types
+
   The macro \ref REACTIONS_POW_ENUM_WITH_UNKNOWN is provided in this file, which
   defines a class containing an enumeration type, and several functions and
   constant objects to iterate over the enumeration values and convert/parse

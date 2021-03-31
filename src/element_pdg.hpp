@@ -3,15 +3,16 @@
 
 #include "errors.hpp"
 #include "node.hpp"
+#include "types.hpp"
 
-#include "reactions/database_pdg.hpp"
+#include "reactions/pdg.hpp"
 
 // Wrapper for a PDG element
 typedef struct {
   // base class
   Node node;
   // attributes (same as pdg::pdg_element)
-  reactions::database_pdg::element element;
+  reactions::pdg_element element;
 } ElementPDG;
 
 // Allocate a new ElementPDG
@@ -24,7 +25,7 @@ static PyObject *ElementPDG_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = processes::detail::node_kind::element;
+  self->node.c_type = reactions::processes::node_kind::element;
 
   return (PyObject *)self;
 }
@@ -43,7 +44,7 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
       return -1;
 
     try {
-      auto const &pdg_instance = database_pdg::database::instance();
+      auto const &pdg_instance = reactions::pdg_database::instance();
 
       if (PyObject_IsInstance(obj, (PyObject *)&PyUnicode_Type)) {
         const char *str = PyUnicode_AsUTF8(obj);
@@ -61,23 +62,23 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
     REACTIONS_PYTHON_CATCH_ERRORS(-1)
   } else {
 
+    using parser_type = cpp_to_py_type<reactions::pdg_element::base_type>;
+
     // the instance is built from the input values
-    database_pdg::element::base_type tup;
+    typename parser_type::type tup;
 
     PyObject *mass = nullptr, *width = nullptr;
 
-    if (args != NULL && PyTuple_Size(args) == database_pdg::element::nfields) {
+    if (args != NULL && PyTuple_Size(args) == reactions::pdg_element::nfields) {
 
-      const char *name;
-      if (!PyArg_ParseTuple(args, "siiOOp", &name, &std::get<1>(tup),
+      if (!PyArg_ParseTuple(args, parser_type::descriptor_args,
+                            &std::get<0>(tup), &std::get<1>(tup),
                             &std::get<2>(tup), &mass, &width,
                             &std::get<5>(tup)))
-        REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
-
-      std::get<0>(tup) = name; // we must use const char*
+        REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(-1);
 
     } else if (kwargs != NULL &&
-               PyDict_Size(kwargs) == database_pdg::element::nfields) {
+               PyDict_Size(kwargs) == reactions::pdg_element::nfields) {
       // the instance is built from the keyword arguments
       static const char *kwds[] = {"name",
                                    "pdg_id",
@@ -87,18 +88,15 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
                                    "is_self_cc",
                                    NULL};
 
-      const char *name;
-      if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|$siiOOp",
-                                       const_cast<char **>(kwds), &name,
-                                       &std::get<1>(tup), &std::get<2>(tup),
-                                       &mass, &width, &std::get<5>(tup)))
-        REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
-
-      std::get<0>(tup) = name; // we must use const char*
+      if (!PyArg_ParseTupleAndKeywords(
+              args, kwargs, parser_type::descriptor_kwargs,
+              const_cast<char **>(kwds), &std::get<0>(tup), &std::get<1>(tup),
+              &std::get<2>(tup), &mass, &width, &std::get<5>(tup)))
+        REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(-1);
 
     } else
       // Invalid arguments
-      REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS;
+      REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(-1);
 
     if (mass && mass != Py_None) {
 
@@ -158,9 +156,9 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to get access to an attribute of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(name, converter)                \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    namespace pdg_detail = reactions::database_pdg::detail;                    \
-    if constexpr (pdg_detail::is_optional_field_v<pdg_detail::name>)           \
-      if (!self->element.has<pdg_detail::name>())                              \
+    namespace pdg = reactions::pdg;                                            \
+    if constexpr (pdg::is_optional_field_v<pdg::name>)                         \
+      if (!self->element.has<pdg::name>())                                     \
         Py_RETURN_NONE;                                                        \
       else                                                                     \
         return converter(self->element.name());                                \
@@ -171,9 +169,9 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to get access to an attribute of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(name, check, converter)   \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    namespace pdg_detail = reactions::database_pdg::detail;                    \
-    if constexpr (pdg_detail::is_optional_field_v<pdg_detail::check>)          \
-      if (!self->element.has<pdg_detail::check>())                             \
+    namespace pdg = reactions::pdg;                                            \
+    if constexpr (pdg::is_optional_field_v<pdg::check>)                        \
+      if (!self->element.has<pdg::check>())                                    \
         Py_RETURN_NONE;                                                        \
       else                                                                     \
         return converter(self->element.name());                                \

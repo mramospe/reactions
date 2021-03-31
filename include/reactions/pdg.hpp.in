@@ -1,6 +1,6 @@
 /*! \file
-  \brief Define elements to work with elements from the Particle Database Group
-  (PDG) and manage the database service.
+  \brief Classes and functions to work with elements from the Particle Database
+  Group (PDG) and manage the database service.
 */
 #ifndef REACTIONS_PDG_HPP
 #define REACTIONS_PDG_HPP
@@ -14,70 +14,61 @@
 #include <ios>
 #include <limits>
 #include <optional>
-#include <stdexcept>
 #include <tuple>
 #include <vector>
 
-namespace reactions::database_pdg {
-  /// Forward declaration of the database type
-  class database;
-} // namespace reactions::database_pdg
-
-/*! \brief PDG database and element
- */
-namespace reactions::database_pdg {
-
-  using ve_double_opt = reactions::database::ve_double_opt;
+namespace reactions {
 
   /// Define short structures that represent the fields of a \ref
-  /// reactions::database_pdg::element object
-  namespace detail {
+  /// reactions::pdg_element object
+  namespace pdg {
 
+    /// Range of a variable in a file
     template <std::size_t Min, std::size_t Max>
     using range = reactions::database::range<Min, Max>;
 
+    /// Range of a composite variable in a file
     template <class... R>
     using range_collection = reactions::database::range_collection<R...>;
 
+    /// Field for the name
     struct name {
       static constexpr const char *title = "name";
       using value_type = std::string;
       using range_type = range<0, 16>;
     };
+    /// Field for the PDG ID
     struct pdg_id {
       static constexpr const char *title = "pdg_id";
       using value_type = int;
       using range_type = range<17, 27>;
     };
+    /// Field the charge multiplied by three
     struct three_charge {
       static constexpr const char *title = "three_charge";
       using value_type = int;
       using range_type = range<28, 30>;
     };
+    /// Field for the mass
     struct mass {
       static constexpr const char *title = "mass";
-      using value_type = ve_double_opt;
+      using value_type = reactions::database::ve_double_opt;
       using range_type =
           range_collection<range<31, 47>, range<48, 57>, range<58, 67>>;
     };
+    /// Field for the width
     struct width {
       static constexpr const char *title = "width";
-      using value_type = ve_double_opt;
+      using value_type = reactions::database::ve_double_opt;
       using range_type =
           range_collection<range<68, 84>, range<85, 94>, range<95, 104>>;
     };
+    /// Field to store the self charge-conjugate state
     struct is_self_cc {
       static constexpr const char *title = "is_self_cc";
       using value_type = bool;
       using range_type = range<105, 106>;
     };
-
-    template <class F> struct field_overall_range {
-      using type = reactions::database::overall_range_t<typename F::range_type>;
-    };
-
-    template <class F>
-    using field_overall_range_t = typename field_overall_range<F>::type;
 
     /// Define a \ref std::tuple with the types of the fields provided
     template <class Tuple> struct underlying_types;
@@ -88,14 +79,21 @@ namespace reactions::database_pdg {
 
     /// Base class of a PDG element
     struct base_element {
+
+      /// Fields of the element
       using fields =
           std::tuple<name, pdg_id, three_charge, mass, width, is_self_cc>;
+
+      /// Underlying types of the fields, as a tuple
       using type = typename underlying_types<fields>::type;
 
+      /// Number of fields
       static constexpr auto size = std::tuple_size_v<fields>;
 
+      /// Field type at the given index
       template <std::size_t I> using field_t = std::tuple_element_t<I, fields>;
 
+      /// Field type at the given index
       template <std::size_t I>
       using field_underlying_type_t = std::tuple_element_t<I, type>;
 
@@ -109,18 +107,19 @@ namespace reactions::database_pdg {
         static constexpr auto value = I;
       };
 
-      /// Get the index of a given field
+      /// Index corresponding to a given field
       template <class F> struct field_index {
         static constexpr auto value = field_index_impl<
             0, F, std::tuple_element_t<0, base_element::fields>>::value;
       };
 
+      /// Index corresponding to a given field
       template <class F>
       static constexpr auto field_index_v = field_index<F>::value;
 
       /// Size of the line (in characters) associated to this class
-      static constexpr auto line_size =
-          field_overall_range_t<field_t<size - 1>>::max;
+      static constexpr auto line_size = reactions::database::overall_range_t<
+          field_t<size - 1>::range_type>::max;
     };
 
     /// Contain the information whether a field is optional or not
@@ -145,40 +144,40 @@ namespace reactions::database_pdg {
 
     /// Convert the given object to a string
     template <> std::string to_string(std::string const &v) { return v; }
-  } // namespace detail
+  } // namespace pdg
 
   /*! \brief A PDG particle, based on the fields of a particle in the PDG
    * database.
    */
-  class element : protected detail::base_element::type {
+  class pdg_element final : protected pdg::base_element::type {
 
   public:
     /// Base class
-    using base_type = detail::base_element::type;
+    using base_type = pdg::base_element::type;
 
     /// Number of data fields
     static const size_t nfields = std::tuple_size_v<base_type>;
 
-    element() = delete;
-    explicit element(element const &) = default;
-    explicit element(element &&) = default;
-    element &operator=(element const &) = default;
+    pdg_element() = delete;
+    explicit pdg_element(pdg_element const &) = default;
+    explicit pdg_element(pdg_element &&) = default;
+    pdg_element &operator=(pdg_element const &) = default;
 
     /// Construct the element from an initializer list
     template <class... Args>
-    element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
+    pdg_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
 
     /// Construct the element from the contents
-    explicit element(base_type &&tuple)
+    explicit pdg_element(base_type &&tuple)
         : base_type{std::forward<base_type>(tuple)} {}
 
     /// Compare the ID of the two particles
-    bool operator==(element const &other) const {
+    bool operator==(pdg_element const &other) const {
       return pdg_id() == other.pdg_id();
     }
 
     /// Compare the ID of the two particles
-    bool operator!=(element const &other) const {
+    bool operator!=(pdg_element const &other) const {
       return pdg_id() != other.pdg_id();
     }
 
@@ -186,77 +185,76 @@ namespace reactions::database_pdg {
      *
      * For fields of \ref std::optional type, the validity of the content
      * must be checked before calling this function using the
-     * \ref element::has member function. Otherwise the
+     * \ref pdg_element::has member function. Otherwise the
      * \ref reactions::exception::missing_fields_error exception is thrown,
      * if missing.
      */
     template <class F> auto const &get() const {
-      if constexpr (detail::is_optional_field_v<F>)
-        return std::get<detail::base_element::field_index_v<F>>(*this).value();
+      if constexpr (pdg::is_optional_field_v<F>)
+        return std::get<pdg::base_element::field_index_v<F>>(*this).value();
       else
-        return std::get<detail::base_element::field_index_v<F>>(*this);
+        return std::get<pdg::base_element::field_index_v<F>>(*this);
     }
 
     /// Check whether the given field information is missing or not
     template <class F> constexpr bool has() const {
-      if constexpr (detail::is_optional_field_v<F>)
-        return std::get<detail::base_element::field_index_v<F>>(*this)
-            .has_value();
+      if constexpr (pdg::is_optional_field_v<F>)
+        return std::get<pdg::base_element::field_index_v<F>>(*this).has_value();
       else
         return true;
     }
 
     /// Name of the particle
-    std::string const &name() const { return get<detail::name>(); }
+    std::string const &name() const { return get<pdg::name>(); }
 
     /// PDG ID
-    int const &pdg_id() const { return get<detail::pdg_id>(); }
+    int const &pdg_id() const { return get<pdg::pdg_id>(); }
 
     /// Three times the charge, as an integer
-    int const &three_charge() const { return get<detail::three_charge>(); }
+    int const &three_charge() const { return get<pdg::three_charge>(); }
 
     /// Charge as a doubleing point number
-    double charge() const { return get<detail::three_charge>() / 3.; }
+    double charge() const { return get<pdg::three_charge>() / 3.; }
 
     /// Whether the element is its own charge-conjugate
-    bool const &is_self_cc() const { return get<detail::is_self_cc>(); }
+    bool const &is_self_cc() const { return get<pdg::is_self_cc>(); }
 
     /*! Get the mass of the element
      *
      * You must check whether the mass is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
-    double const &mass() const { return get<detail::mass>().value; }
+    double const &mass() const { return get<pdg::mass>().value; }
 
     /// Whether the mass and its errors are defined or not
-    bool has_mass() const { return has<detail::mass>(); }
+    bool has_mass() const { return has<pdg::mass>(); }
 
     /*! \brief Lower mass error
      *
      * You must check whether the mass is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
     double const &mass_error_lower() const {
-      return get<detail::mass>().error_lower;
+      return get<pdg::mass>().error_lower;
     }
 
     /*! \brief Upper mass error
      *
      * You must check whether the mass is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
     double const &mass_error_upper() const {
-      return get<detail::mass>().error_upper;
+      return get<pdg::mass>().error_upper;
     }
 
     /* \brief Calculate the mass error
      *
      * You must check whether the width is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
     double mass_error() const { return std::sqrt(mass_error_squared()); }
 
@@ -264,12 +262,12 @@ namespace reactions::database_pdg {
      *
      * You must check whether the width is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
     double mass_error_squared() const {
 
-      if (!has<detail::mass>())
-        throw reactions::exceptions::missing_fields_error(
+      if (!has<pdg::mass>())
+        throw reactions::missing_fields_error(
             ("Unable to access mass errors; mass is not defined for particle" +
              name())
                 .c_str());
@@ -284,38 +282,38 @@ namespace reactions::database_pdg {
      *
      * You must check whether the width is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
-    double const &width() const { return get<detail::width>().value; }
+    double const &width() const { return get<pdg::width>().value; }
 
     /// Whether the width and its errors are defined or not
-    bool has_width() const { return has<detail::width>(); }
+    bool has_width() const { return has<pdg::width>(); }
 
     /*! \brief Get the lower width error
      *
      * You must check whether the width is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
     double const &width_error_lower() const {
-      return get<detail::width>().error_lower;
+      return get<pdg::width>().error_lower;
     }
 
     /*! \brief Get the upper width error
      *
      * You must check whether the width is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
     double const &width_error_upper() const {
-      return get<detail::width>().error_upper;
+      return get<pdg::width>().error_upper;
     }
 
     /*! Calculate the width error
      *
      * You must check whether the width is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
     double width_error() const { return std::sqrt(width_error_squared()); }
 
@@ -323,12 +321,12 @@ namespace reactions::database_pdg {
      *
      * You must check whether the width is defined or not before calling this
      * member function, otherwise a \ref
-     * reactions::exceptions::missing_fields_error is thrown.
+     * reactions::missing_fields_error is thrown.
      */
     double width_error_squared() const {
 
-      if (!has<detail::width>())
-        throw reactions::exceptions::missing_fields_error(
+      if (!has<pdg::width>())
+        throw reactions::missing_fields_error(
             ("Unable to access width errors; width is not defined for "
              "particle" +
              name())
@@ -344,7 +342,7 @@ namespace reactions::database_pdg {
   /*! \brief Database of elements following the PDG convention
    *
    */
-  class database {
+  class pdg_database final {
 
   public:
     /// Clear the cache, removing also user-registered elements
@@ -370,8 +368,8 @@ namespace reactions::database_pdg {
       auto start = skip_commented_lines(file);
 
       std::size_t count = 0;
-      while (file.ignore(detail::base_element::line_size +
-                         1)) // include end-of-line
+      while (
+          file.ignore(pdg::base_element::line_size + 1)) // include end-of-line
         ++count;
 
       file.clear(); // we reached the end of the file
@@ -380,15 +378,16 @@ namespace reactions::database_pdg {
       file.seekg(start);
 
       std::string line;
-      m_cache.add_database_elements(count, [this, &file, &line]() -> element {
-        std::getline(file, line);
-        return read_element(line);
-      });
+      m_cache.add_database_elements(count,
+                                    [this, &file, &line]() -> pdg_element {
+                                      std::getline(file, line);
+                                      return read_element(line);
+                                    });
       file.close();
     }
 
     /// Return the charge-conjugate of an element
-    element cc(element const &el) const {
+    pdg_element cc(pdg_element const &el) const {
 
       if (el.is_self_cc())
         return el;
@@ -397,8 +396,8 @@ namespace reactions::database_pdg {
     }
 
     /// Get the only instance of this class
-    static database &instance() {
-      static database db;
+    static pdg_database &instance() {
+      static pdg_database db;
       return db;
     }
 
@@ -412,7 +411,7 @@ namespace reactions::database_pdg {
      */
     template <class... Args> void register_element(Args &&... args) {
 
-      element new_element{std::forward<Args>(args)...};
+      pdg_element new_element{std::forward<Args>(args)...};
 
       // If the cache is enabled, the checks are done within the cache object,
       // otherwise we must check the database
@@ -426,25 +425,25 @@ namespace reactions::database_pdg {
 
         while (std::getline(file, line)) {
 
-          detail::name::value_type name;
-          if (reactions::database::read_field<detail::name::range_type>(
+          pdg::name::value_type name;
+          if (reactions::database::read_field<pdg::name::range_type>(
                   name, line) == reactions::database::failed)
-            throw reactions::exceptions::database_error(
+            throw reactions::database_error(
                 "Error reading PDG database; data format not understood");
 
           if (new_element.name() == name)
-            throw reactions::exceptions::database_error(
+            throw reactions::database_error(
                 "Attempt to register an element with similar name to an "
                 "element in the database");
 
-          detail::pdg_id::value_type pdg_id;
-          if (reactions::database::read_field<detail::pdg_id::range_type>(
+          pdg::pdg_id::value_type pdg_id;
+          if (reactions::database::read_field<pdg::pdg_id::range_type>(
                   pdg_id, line) == reactions::database::failed)
-            throw reactions::exceptions::database_error(
+            throw reactions::database_error(
                 "Error reading PDG database; data format not understood");
 
           if (new_element.pdg_id() == pdg_id)
-            throw reactions::exceptions::database_error(
+            throw reactions::database_error(
                 "Attempt to register an element with similar PDG ID to an "
                 "element in the database");
         }
@@ -468,11 +467,11 @@ namespace reactions::database_pdg {
     }
 
     /// Create an element accessing by ID
-    element operator()(int id) const { return access<detail::pdg_id>(id); }
+    pdg_element operator()(int id) const { return access<pdg::pdg_id>(id); }
 
     /// Create an element accessing by name
-    element operator()(std::string const &str) const {
-      return access<detail::name>(str);
+    pdg_element operator()(std::string const &str) const {
+      return access<pdg::name>(str);
     }
 
   private:
@@ -486,7 +485,7 @@ namespace reactions::database_pdg {
       /// Code to define the status of the cache
       enum cache_status { empty, user, full };
 
-      using cache_type = std::vector<element>;
+      using cache_type = std::vector<pdg_element>;
       using const_iterator_type = cache_type::const_iterator;
       using size_type = cache_type::size_type;
 
@@ -570,11 +569,11 @@ namespace reactions::database_pdg {
           if (user_registered_size() != 0) {
             auto cend = user_registered_cend();
             if (std::find_if(user_registered_cbegin(), cend,
-                             [&new_element](element const &el) {
+                             [&new_element](pdg_element const &el) {
                                return (el.name() == new_element.name() ||
                                        el.pdg_id() == new_element.pdg_id());
                              }) != cend)
-              throw reactions::exceptions::database_error(
+              throw reactions::database_error(
                   (std::string{"User-defined element clashes with database "
                                "element: \""} +
                    new_cache.back().name() + "\"")
@@ -593,14 +592,15 @@ namespace reactions::database_pdg {
 
       /// Add a new element (by the user)
       template <class... Args>
-      element const &add_user_element(Args &&... args) {
-        element new_element{std::forward<Args>(args)...};
+      pdg_element const &add_user_element(Args &&... args) {
+        pdg_element new_element{std::forward<Args>(args)...};
         auto e = end();
-        if (std::find_if(begin(), e, [this, &new_element](element const &el) {
-              return (el.name() == new_element.name() ||
-                      el.pdg_id() == new_element.pdg_id());
-            }) != e) {
-          throw reactions::exceptions::database_error(
+        if (std::find_if(begin(), e,
+                         [this, &new_element](pdg_element const &el) {
+                           return (el.name() == new_element.name() ||
+                                   el.pdg_id() == new_element.pdg_id());
+                         }) != e) {
+          throw reactions::database_error(
               (std::string{"User-registered element clashes: \""} +
                new_element.name() + "\"")
                   .c_str());
@@ -624,7 +624,7 @@ namespace reactions::database_pdg {
     std::ifstream open_database() const {
 
       if (m_db.empty())
-        throw reactions::exceptions::database_error(
+        throw reactions::database_error(
             "The PDG database has not been specified");
 
       std::ifstream file;
@@ -632,13 +632,11 @@ namespace reactions::database_pdg {
       try {
         file.open(m_db);
       } catch (...) {
-        throw reactions::exceptions::database_error(
-            "Unable to access the database");
+        throw reactions::database_error("Unable to access the database");
       }
 
       if (!file.is_open())
-        throw reactions::exceptions::database_error(
-            "Unable to access the database");
+        throw reactions::database_error("Unable to access the database");
 
       return file;
     }
@@ -661,11 +659,12 @@ namespace reactions::database_pdg {
 
     /// Read a field with the given index from a line
     template <std::size_t I>
-    bool read_field(element::base_type &tuple, std::string const &line) const {
+    bool read_field(pdg_element::base_type &tuple,
+                    std::string const &line) const {
 
-      using field = detail::base_element::field_t<I>;
+      using field = pdg::base_element::field_t<I>;
 
-      if constexpr (detail::is_optional_field_v<field>) {
+      if constexpr (pdg::is_optional_field_v<field>) {
 
         typename field::value_type::value_type value;
 
@@ -684,31 +683,32 @@ namespace reactions::database_pdg {
 
     /// Read all the fields from a line
     template <std::size_t... I>
-    bool read_line(element::base_type &tuple, std::string const &line,
+    bool read_line(pdg_element::base_type &tuple, std::string const &line,
                    std::index_sequence<I...>) const {
       return (read_field<I>(tuple, line) && ...);
     }
 
     /// Read all the fields from a line
-    bool read_line(element::base_type &tuple, std::string const &line) const {
+    bool read_line(pdg_element::base_type &tuple,
+                   std::string const &line) const {
       return read_line(tuple, line,
-                       std::make_index_sequence<element::nfields>());
+                       std::make_index_sequence<pdg_element::nfields>());
     }
 
     /// Advance to the next element in the file and read it
-    element read_element(std::string const &line) const {
+    pdg_element read_element(std::string const &line) const {
 
-      element::base_type tuple;
+      pdg_element::base_type tuple;
 
       if (!read_line(tuple, line))
-        throw reactions::exceptions::database_error(
+        throw reactions::database_error(
             "Error reading PDG database; data format not understood");
 
       return tuple;
     }
 
     /// Access an element using the field accessor
-    template <class F, class T> element access(T const &v) const {
+    template <class F, class T> pdg_element access(T const &v) const {
 
       switch (m_cache.status()) {
       case (cache::full): // the full database is loaded
@@ -742,11 +742,11 @@ namespace reactions::database_pdg {
               ref, line);
 
           if (sc == reactions::database::failed)
-            throw reactions::exceptions::database_error(
+            throw reactions::database_error(
                 "Error reading PDG database; data format not understood");
 
           if (ref == v) {
-            element el = read_element(line);
+            pdg_element el = read_element(line);
             file.close();
             return el;
           }
@@ -755,18 +755,18 @@ namespace reactions::database_pdg {
         file.close();
       }
 
-      throw reactions::exceptions::lookup_error(
+      throw reactions::lookup_error(
           (std::string{"Unable to find element with "} + F::title + " \"" +
-           detail::to_string(v) + '"')
+           pdg::to_string(v) + '"')
               .c_str());
     }
 
-    database() {}
-    database(database &&) = delete;
-    database(database const &) = delete;
-    void operator=(database &&) = delete;
-    void operator=(database const &) = delete;
+    pdg_database() {}
+    pdg_database(pdg_database &&) = delete;
+    pdg_database(pdg_database const &) = delete;
+    void operator=(pdg_database &&) = delete;
+    void operator=(pdg_database const &) = delete;
   };
-} // namespace reactions::database_pdg
+} // namespace reactions
 
 #endif // REACTIONS_PDG_HPP
