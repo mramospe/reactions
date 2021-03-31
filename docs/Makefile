@@ -6,7 +6,7 @@ SPHINXOPTS       =
 SPHINXBUILD      = python -msphinx
 SPHINXPROJ       = reactions
 SOURCEDIR        = source
-BUILDDIR        := $(if $(BUILDDIR),$(BUILDDIR),../../reactions-docs)
+BUILDDIR        := $(if $(BUILDDIR),$(BUILDDIR),./build)
 GITCOMMANDS      = cd $(BUILDDIR)/html; git add . ; git commit -m 'Rebuilt docs' ; git push origin gh-pages
 PROJECT_SOURCES  = $(shell find ../python/reactions -type f)
 

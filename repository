@@ -9,6 +9,7 @@ Usage: ./repository options...
 -h|--help: print this message and exit
 -b|--build: build the project under a "build" directory. It can be used together with "--clean".
 -p|--build-python: build the python package in development mode (assumes to be within a virtual environment)
+-d|--build-docs: build the documentation (inside docs/build)
 -c|--clean: clean the repository of temporary files, caches, build directories, ...
 --force: when specified before any number of commands described above, forces their execution, without any further interaction with the user
 EOF
@@ -23,7 +24,7 @@ while [[ $# -gt 0 ]]; do
 	    ;;
 	-b|--build)
 
-	    echo "Building project"
+	    echo "Build project"
 	    mkdir -p build
 	    cd build
 	    cmake ../ -DINSTALL_TESTS=ON
@@ -80,13 +81,27 @@ while [[ $# -gt 0 ]]; do
 	    shift
 	    ;;
 	-p|--build-python)
+
+	    echo "Build python package"
 	    pip install --force-reinstall -e .
 	    shift
 	    ;;
+
+	-d|--build-docs)
+
+	    echo "Create documentation"
+	    cd docs
+	    make html
+	    shift
+	    ;;
+
 	--force)
+
+	    echo "Forcing the execution of the following commands"
 	    force=true
 	    shift
 	    ;;
+
 	*)
 	    echo "ERROR: Unknown argument \"$key\""
 	    exit 1

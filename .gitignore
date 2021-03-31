@@ -4,6 +4,6 @@ dist/
 reactions.egg-info/
 __pycache__
 *.so
-docs/cpp
+docs/build
 /include/reactions/pdg.hpp
 .coverage
