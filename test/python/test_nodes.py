@@ -68,6 +68,20 @@ def test_pdg_element():
     with pytest.raises(reactions.LookupError):
         reactions.pdg_element('mu')
 
+    # test LaTeX names
+    assert reactions.pdg_element("KS0").latex_name == "K_{S}^{0}"
+    assert reactions.pdg_element("K+").latex_name == "K^{+}"
+    assert reactions.pdg_element("pi+").latex_name == "\\pi^{+}"
+    assert reactions.pdg_element("pi-").latex_name == "\\pi^{-}"
+    assert reactions.pdg_element("Lambda").latex_name == "\\Lambda"
+    assert reactions.pdg_element("eta'(958)").latex_name == "\\eta^{'}(958)"
+    assert reactions.pdg_element("a_0(980)0").latex_name == "a_{0}(980)^{0}"
+    assert reactions.pdg_element("f'_2(1525)").latex_name == "f^{'}_{2}(1525)"
+    assert reactions.pdg_element(
+        "K_2(1430)*~0").latex_name == "\\bar{K}_{2}(1430)^{*0}"
+    assert reactions.pdg_element(
+        "D_s2(2573)*+").latex_name == "D_{s2}(2573)^{*+}"
+
 
 def test_string_element():
 

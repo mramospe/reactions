@@ -7,6 +7,7 @@
 #include "reactions/database.hpp"
 #include "reactions/exceptions.hpp"
 #include "reactions/pow_enum.hpp"
+#include "reactions/tokens.hpp"
 
 #include <cmath>
 #include <fstream>
@@ -204,6 +205,137 @@ namespace reactions {
         return std::get<pdg::base_element::field_index_v<F>>(*this).has_value();
       else
         return true;
+    }
+
+    /// Representation of the element name as a LaTeX string
+    std::string latex_name() const {
+
+      const auto &ref = name();
+      std::size_t count = 0;
+      std::size_t size = ref.size();
+
+      if (size == 0)
+        return std::string{};
+
+      // this lambad function allows to avoid processing extra steps
+      auto process_latex_string = [&]() {
+        auto match_extra = [](char c) {
+          return reactions::tokens::match_any<'0', '+', '-', '*', '\''>(c);
+        };
+        auto match_lowercase = [](char c) {
+          return reactions::tokens::match_range<'a', 'z'>(c);
+        };
+        auto match_uppercase = [](char c) {
+          return reactions::tokens::match_range<'A', 'Z'>(c);
+        };
+        auto match_character = [](char c) {
+          return reactions::tokens::match_range<'A', 'z'>(c);
+        };
+
+        std::string latex;
+        // Avoid reallocations. The constant is based on the
+        // maximum size of an expansion of names to LaTeX
+        // names.
+        latex.reserve(8 * ref.size());
+
+        latex.push_back(ref[count++]); // first character
+
+        if (count == size)
+          return latex;
+
+        if (match_lowercase(ref[count])) {
+          latex.insert(0, 1, '\\'); // is a Greek letter
+          do {
+            latex.push_back(ref[count++]);
+          } while (count < size && match_lowercase(ref[count]));
+
+          if (count == size)
+            return latex;
+        }
+
+        if (ref.find('~') != std::string::npos) {
+          // it is an anti-particle, so we must tweak the base name
+          latex.insert(0, "\\bar{");
+          latex.insert(latex.size(), 1, '}');
+        }
+
+        if (match_uppercase(ref[count])) {
+          // KS0, KL0, ...
+          latex.push_back('_');
+          latex.push_back('{');
+          do {
+            latex.push_back(ref[count++]);
+          } while (count < size && match_character(ref[count]));
+          latex.push_back('}');
+
+          if (count == size)
+            return latex;
+        }
+
+        if (count < size && match_extra(ref[count])) {
+          // first or unique superscript
+          latex.push_back('^');
+          latex.push_back('{');
+          do {
+            latex.push_back(ref[count++]);
+          } while (count < size && match_extra(ref[count]));
+          latex.push_back('}');
+
+          if (count == size)
+            return latex;
+        }
+
+        if (count < size && ref[count] == '_') {
+          // unique subscript
+          latex.push_back(ref[count++]);
+          latex.push_back('{');
+          while (count < size && ref[count] != '(')
+            latex.push_back(ref[count++]);
+          latex.push_back('}');
+
+          if (count == size)
+            return latex;
+        }
+
+        if (count < size && ref[count] == '(') {
+          // parenthesized expression
+          latex.push_back(ref[count++]);
+          while (count < size && ref[count] != ')')
+            latex.push_back(ref[count++]);
+          latex.push_back(ref[count++]); // process ')'
+
+          if (count == size)
+            return latex;
+        }
+
+        if (count < size && (match_extra(ref[count]) || ref[count] == '~')) {
+          // second superscript
+          latex.push_back('^');
+          latex.push_back('{');
+          do {
+            if (ref[count] != '~') // anti-particle nature is processed above
+              latex.push_back(ref[count++]);
+            else
+              ++count;
+          } while (count < size &&
+                   (match_extra(ref[count]) || ref[count] == '~'));
+          latex.push_back('}');
+        }
+
+        return latex;
+      };
+
+      auto latex = process_latex_string();
+
+      if (count != size)
+        throw reactions::internal_error(
+            (std::string{"Failed to process LaTeX string for particle \""} +
+             name() + "\"")
+                .c_str());
+
+      latex.shrink_to_fit();
+
+      return latex;
     }
 
     /// Name of the particle

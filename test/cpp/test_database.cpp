@@ -55,6 +55,30 @@ int main() {
       if (c1.has_mass() || c1.has_width() || !c2.has_mass() || c2.has_width() ||
           !c3.has_mass() || !c3.has_width())
         errors.push_back("Problems found building custom PDG elements");
+
+      auto check_latex_name = [&db, &errors](std::string const &name,
+                                             std::string const &reference) {
+        auto const ln = db(name).latex_name();
+        if (ln != reference)
+          errors.push_back("Wrong LaTeX name for particle \"" + name +
+                           "\": \"" + ln + "\" (reference: \"" + reference +
+                           "\")");
+      };
+
+      try {
+        check_latex_name("KS0", "K_{S}^{0}");
+        check_latex_name("K+", "K^{+}");
+        check_latex_name("pi+", "\\pi^{+}");
+        check_latex_name("pi-", "\\pi^{-}");
+        check_latex_name("Lambda", "\\Lambda");
+        check_latex_name("eta'(958)", "\\eta^{'}(958)");
+        check_latex_name("a_0(980)0", "a_{0}(980)^{0}");
+        check_latex_name("f'_2(1525)", "f^{'}_{2}(1525)");
+        check_latex_name("K_2(1430)*~0", "\\bar{K}_{2}(1430)^{*0}");
+        check_latex_name("D_s2(2573)*+", "D_{s2}(2573)^{*+}");
+      } catch (reactions::internal_error &) {
+        errors.push_back("Internal error detected processing LaTeX names");
+      }
     }
     REACTIONS_TEST_UTILS_CATCH_EXCEPTIONS(errors);
 

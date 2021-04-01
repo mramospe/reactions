@@ -178,6 +178,12 @@ static PyMethodDef ElementPDG_methods[] = {
       return converter(self->element.name());                                  \
   }
 
+/// Define a function to call a member function of a PDG element
+#define REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(name, converter)              \
+  static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
+    return converter(self->element.name());                                    \
+  }
+
 /// Convert a std::string to a python unicode string
 #define REACTIONS_PYTHON_CPP_STRING_TOPY(string)                               \
   PyUnicode_FromString(string.c_str())
@@ -205,6 +211,9 @@ REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(mass_error, mass,
                                              PyFloat_FromDouble)
 REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(width_error, width,
                                              PyFloat_FromDouble)
+// Attributes from functions
+REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(latex_name,
+                                         REACTIONS_PYTHON_CPP_STRING_TOPY)
 
 /// Provide the data needed to define a "getter" function
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(name, description)             \
@@ -235,6 +244,9 @@ static PyGetSetDef ElementPDG_getsetters[] = {
         mass_error, "Mass error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
         width_error, "Width error (:py:obj:`None` if missing)"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
+        latex_name, "Representation of the name ready to be processed by LaTeX "
+                    "inside a mathematical expression"),
 };
 
 /// Type declaration

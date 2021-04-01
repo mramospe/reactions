@@ -278,7 +278,7 @@ if __name__ == '__main__':
                         config['is_self_cc'] = False
 
                         write_particle_and_antiparticle_(
-                            config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
+                            config, core_name, pid, three_charge, particle_format='{core_name}', antiparticle_format='{core_name}~')
 
                     elif category == 'meson':
 

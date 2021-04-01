@@ -38,4 +38,15 @@ namespace reactions::tokens {
     return match_token_impl(Token{}, std::make_index_sequence<Token::size>(),
                             it);
   }
+
+  /// Check if the given character matches any of the template arguments
+  template <char... C> constexpr bool match_any(char c) {
+    return ((C == c) || ...);
+  }
+
+  /// Check if the given character is within the range defined by the template
+  /// arguments
+  template <char C0, char C1> constexpr bool match_range(char c) {
+    return (c >= C0) && (c <= C1);
+  }
 } // namespace reactions::tokens
