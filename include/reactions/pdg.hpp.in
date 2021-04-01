@@ -184,7 +184,7 @@ namespace reactions {
       return pdg_id() != other.pdg_id();
     }
 
-    /*! Get an element using an accessor.
+    /*! \brief Get an element using an accessor.
      *
      * For fields of \ref std::optional type, the validity of the content
      * must be checked before calling this function using the
@@ -479,6 +479,61 @@ namespace reactions {
   class pdg_database final {
 
   public:
+    /*! \brief All the elements in the database file
+     *
+     * Calling this function does not alter the cache. If the cache is
+     * enabled a copy of its content is returned. If not, elements are
+     * read from the database file.
+     *
+     * This function returns the elements in the database and those registered
+     * by the user.
+     */
+    std::vector<pdg_element> all_elements() const {
+
+      std::vector<pdg_element> out;
+
+      switch (m_cache.status()) {
+
+      case (cache::full):
+
+        out.insert(out.end(), m_cache.begin(), m_cache.end());
+        return out;
+
+      default:
+
+        // open the database to count the number of lines
+        auto file = open_database();
+
+        auto start = skip_commented_lines(file);
+
+        std::size_t count = 0;
+        while (file.ignore(pdg::base_element::line_size +
+                           1)) // include end-of-line
+          ++count;
+
+        file.clear(); // we reached the end of the file
+
+        // go back to the start of the table and read the elements
+        file.seekg(start);
+
+        out.reserve(count + m_cache.size());
+
+        auto end = out.end();
+        for (auto it = out.begin(); it != end; ++it) {
+          std::string line;
+          std::getline(file, line);
+          *it = read_element(line);
+        }
+
+        if (m_cache.size())
+          out.insert(out.end(), m_cache.begin(), m_cache.end());
+
+        file.close();
+      }
+
+      return out;
+    }
+
     /// Clear the cache, removing also user-registered elements
     void clear_cache() { m_cache.clear(); }
 
@@ -649,6 +704,12 @@ namespace reactions {
         } else
           return cache_status::empty;
       }
+
+      /// Underlying vector of elements
+      cache_type const &elements() const { return m_vector; }
+
+      /// Underlying vector of elements
+      cache_type &elements() { return m_vector; }
 
       /// Begining of the cache
       const_iterator_type begin() const { return m_vector.cbegin(); }

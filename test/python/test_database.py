@@ -55,3 +55,6 @@ def test_pdg_user_register():
 
         with pytest.raises(reactions.DatabaseError):  # existing PDG ID
             db.register_element("Z0''''", 1, 0, None, None, True)
+
+        for el in db.all_elements():
+            assert db(el.name) == db(el.pdg_id)

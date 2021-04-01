@@ -156,6 +156,14 @@ int main() {
                 "the same PDG ID as one in the database");
           } catch (...) {
           };
+
+          // get all the elements and access them
+          for (auto e : db.all_elements()) {
+            if (db(e.name()) != db(e.pdg_id())) {
+              errors.push_back("Failed to load and read all elements");
+              break;
+            }
+          }
         };
 
         // cache is already enabled

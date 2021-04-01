@@ -94,6 +94,33 @@ static PyObject *DatabasePDG_register_element(DatabasePDG *self, PyObject *args,
   Py_RETURN_NONE;
 }
 
+/// Access an element of the database
+static PyObject *DatabasePDG_call(DatabasePDG *self, PyObject *args,
+                                  PyObject *kwargs) {
+
+  if (args == NULL || PyTuple_Size(args) != 1)
+    REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(NULL);
+
+  if (kwargs != NULL)
+    REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(NULL);
+
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args, "O", &obj))
+    REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(NULL);
+
+  if (PyUnicode_Check(obj))
+    return ElementPDG_New(
+        reactions::pdg_database::instance()(PyUnicode_AsUTF8(obj)));
+
+  if (PyLong_Check(obj))
+    return ElementPDG_New(
+        reactions::pdg_database::instance()(PyLong_AsLong(obj)));
+
+  PyErr_SetString(PyExc_ValueError,
+                  "Argument must be either the PDG ID or the name");
+  return NULL;
+}
+
 // Set the location of the PDG database
 static PyObject *DatabasePDG_set_database_path(DatabasePDG *self,
                                                PyObject *args) {
@@ -107,8 +134,23 @@ static PyObject *DatabasePDG_set_database_path(DatabasePDG *self,
   Py_RETURN_NONE;
 }
 
+// Get all the elements
+static PyObject *DatabasePDG_all_elements(DatabasePDG *self) {
+
+  auto all_elements = self->database->all_elements();
+
+  PyObject *list = PyList_New(all_elements.size());
+
+  for (auto i = 0u; i < all_elements.size(); ++i)
+    PyList_SetItem(list, i, ElementPDG_New(std::move(all_elements[i])));
+
+  return list;
+}
+
 // Methods of the DatabasePDG class
 static PyMethodDef DatabasePDG_methods[] = {
+    {"all_elements", (PyCFunction)DatabasePDG_all_elements, METH_NOARGS,
+     "Extract all the elements to a list"},
     {"clear_cache", (PyCFunction)DatabasePDG_clear_cache, METH_NOARGS,
      "Clear the internal cache, removing also user-registered elements"},
     {"disable_cache", (PyCFunction)DatabasePDG_disable_cache, METH_NOARGS,
@@ -140,7 +182,7 @@ static PyTypeObject DatabasePDGType = {
     0,                               /* tp_as_sequence */
     0,                               /* tp_as_mapping */
     0,                               /* tp_hash */
-    0,                               /* tp_call */
+    (ternaryfunc)DatabasePDG_call,   /* tp_call */
     0,                               /* tp_str */
     0,                               /* tp_getattro */
     0,                               /* tp_setattro */
