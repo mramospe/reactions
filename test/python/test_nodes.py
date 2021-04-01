@@ -84,7 +84,7 @@ def test_pdg_element():
 
     for e in reactions.pdg_database().all_elements():
         # we must be able to compute all the LaTeX names
-        e.latex_name()
+        e.latex_name
 
 
 def test_string_element():
