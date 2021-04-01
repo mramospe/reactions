@@ -243,11 +243,12 @@ namespace reactions {
         if (count == size)
           return latex;
 
-        if (match_lowercase(ref[count])) {
+        if (match_lowercase(ref[count]) || ref[count] == '/') { // J/psi(1S)
           latex.insert(0, 1, '\\'); // is a Greek letter
           do {
             latex.push_back(ref[count++]);
-          } while (count < size && match_lowercase(ref[count]));
+          } while (count < size &&
+                   (match_lowercase(ref[count]) || ref[count] == '/'));
 
           if (count == size)
             return latex;
@@ -518,11 +519,10 @@ namespace reactions {
 
         out.reserve(count + m_cache.size());
 
-        auto end = out.end();
-        for (auto it = out.begin(); it != end; ++it) {
+        for (auto i = 0u; i < count; ++i) {
           std::string line;
           std::getline(file, line);
-          *it = read_element(line);
+          out.emplace_back(read_element(line));
         }
 
         if (m_cache.size())

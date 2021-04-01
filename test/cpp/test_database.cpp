@@ -79,6 +79,13 @@ int main() {
       } catch (reactions::internal_error &) {
         errors.push_back("Internal error detected processing LaTeX names");
       }
+
+      try {
+        for (auto e : reactions::pdg_database::instance().all_elements())
+          e.latex_name();
+      } catch (reactions::internal_error &) {
+        errors.push_back("Unable to compute LaTeX names for some elements");
+      }
     }
     REACTIONS_TEST_UTILS_CATCH_EXCEPTIONS(errors);
 
