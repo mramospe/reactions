@@ -22,7 +22,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Get the table of particles
-    all_elements = reactions.pdg_database().all_elements()
+    all_elements = reactions.pdg_database.all_elements()
 
     fields = ['name', 'latex_name', 'pdg_id', 'three_charge', 'mass',
               'mass_error_lower', 'mass_error_upper', 'width', 'width_error_lower', 'width_error_upper', 'is_self_cc']
@@ -120,9 +120,10 @@ if __name__ == '__main__':
 '''.format(columns='|c' * len(fields) + '|', body=body, fields=fields))
 
     # run the command twice to process the references
-    subprocess.run([args.compiler, latex_name], cwd=tmpdir, check=True)
-    subprocess.run([args.compiler, latex_name], cwd=tmpdir, check=True)
+    subprocess.check_call([args.compiler, latex_name], cwd=tmpdir)
+    subprocess.check_call([args.compiler, latex_name], cwd=tmpdir)
 
     if args.tmp_dir is None:
         # copy the PDF file from the temporary directory
-        subprocess.run(['cp', os.path.join(tmpdir, pdf_name), '.'], check=True)
+        subprocess.check_call(
+            ['cp', os.path.join(tmpdir, pdf_name), args.output])

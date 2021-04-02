@@ -85,7 +85,7 @@ def test_pdg_element():
     assert reactions.pdg_element(
         "D_s2(2573)*+").latex_name == "D_{s2}(2573)^{*+}"
 
-    for e in reactions.pdg_database().all_elements():
+    for e in reactions.pdg_database.all_elements():
         # we must be able to compute all the LaTeX names
         e.latex_name
 

@@ -8,20 +8,22 @@ import helpers
 
 
 def test_pdg_database():
-    a = reactions.pdg_database()
-    b = reactions.pdg_database()
+    from reactions.reactions import pdg_database
+    a = pdg_database()
+    b = pdg_database()
     assert a is b
 
 
 @helpers.restore_pdg_database
 def test_pdg_getter_setter():
-    first = reactions.pdg_database()
-    second = reactions.pdg_database()
-    reactions.set_pdg_database_path('some_path')
-    assert first.get_database_path() == reactions.get_pdg_database_path()
+    from reactions.reactions import pdg_database
+    first = pdg_database()
+    second = pdg_database()
+    reactions.pdg_database.set_database_path('some_path')
+    assert first.get_database_path() == reactions.pdg_database.get_database_path()
     assert first.get_database_path() == second.get_database_path()
     first.set_database_path('another_path')
-    assert first.get_database_path() == reactions.get_pdg_database_path()
+    assert first.get_database_path() == reactions.pdg_database.get_database_path()
     assert first.get_database_path() == second.get_database_path()
 
     # try to use a non-existing database
@@ -31,7 +33,7 @@ def test_pdg_getter_setter():
 
 @helpers.restore_pdg_database
 def test_pdg_database_cache():
-    db = reactions.pdg_database()
+    db = reactions.pdg_database
     path = db.get_database_path()
     db.enable_cache()
     db.set_database_path(path)

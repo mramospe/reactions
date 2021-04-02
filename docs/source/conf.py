@@ -58,6 +58,12 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
 ''')
     subprocess.check_call(['doxygen'], cwd=tmpdir)
 
+# Generate additional documents needed by the documentation, like tables, plots, ...
+pdg_table = os.path.join(static_doc_dir, 'pdf_table.pdf')
+
+subprocess.check_call(['python', os.path.join(
+    root, 'scripts', 'display-pdg-table.py'), '--output', pdg_table])
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.

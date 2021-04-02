@@ -13,7 +13,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()  # no arguments
 
-    all_elements = reactions.pdg_database().all_elements()
+    all_elements = reactions.pdg_database.all_elements()
 
     superscript_chars = ('+', '-', '0', '*', '\'')
 
