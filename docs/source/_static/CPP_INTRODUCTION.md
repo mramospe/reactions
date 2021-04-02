@@ -23,11 +23,11 @@ to search for header files and use the `C++17` standard (or greater).
 
 int main() {
 
-   auto r = reactions::make_reaction<reactions::element_kind::string>("A B -> C D");
+   auto r = reactions::make_reaction<reactions::string_element>("A B -> C D");
 
    std::cout << "Reaction number of reactants/products: " << r.reactants().size() << '/' << r.products().size() << std::endl;
 
-   auto d = reactions::make_decay<reactions::element_kind::pdg>("pi+ -> mu+ nu_mu");
+   auto d = reactions::make_decay<reactions::pdg_element>("pi+ -> mu+ nu_mu");
 
    std::cout << "Decay head/number of products: " << r.head().ptr_as_element()->name() << '/' << r.products().size() << std::endl;
 

@@ -40,6 +40,23 @@ static PyObject *DatabasePDG_clear_cache(DatabasePDG *self) {
   Py_RETURN_NONE;
 }
 
+// Get the charge-conjugate of the given element
+static PyObject *DatabasePDG_charge_conjugate(DatabasePDG *self,
+                                              PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args, "O", &obj))
+    return NULL;
+
+  if (!PyObject_IsInstance(obj, (PyObject *)&ElementPDGType)) {
+    PyErr_SetString(PyExc_ValueError,
+                    "Argument must be a reactions.pdg_element object");
+    return NULL;
+  }
+
+  return ElementPDG_New(
+      self->database->charge_conjugate(((ElementPDG *)obj)->element));
+}
+
 // Disable the internal cache
 static PyObject *DatabasePDG_disable_cache(DatabasePDG *self) {
   self->database->disable_cache();
@@ -153,6 +170,8 @@ static PyMethodDef DatabasePDG_methods[] = {
      "Extract all the elements to a list"},
     {"clear_cache", (PyCFunction)DatabasePDG_clear_cache, METH_NOARGS,
      "Clear the internal cache, removing also user-registered elements"},
+    {"charge_conjugate", (PyCFunction)DatabasePDG_charge_conjugate,
+     METH_VARARGS, "Get the charge-conjugate of an element"},
     {"disable_cache", (PyCFunction)DatabasePDG_disable_cache, METH_NOARGS,
      "Disable the internal cache"},
     {"enable_cache", (PyCFunction)DatabasePDG_enable_cache, METH_NOARGS,

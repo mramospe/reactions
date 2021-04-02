@@ -647,7 +647,7 @@ namespace reactions {
     }
 
     /// Return the charge-conjugate of an element
-    pdg_element cc(pdg_element const &el) const {
+    pdg_element charge_conjugate(pdg_element const &el) const {
 
       if (el.is_self_cc())
         return el;
@@ -668,6 +668,45 @@ namespace reactions {
      *
      * The new element must have a name and a PDG ID that does not clash with
      * any of the database used.
+     *
+     * For the LaTeX name to be valid (an to avoid possible exceptions thrown
+     * during its computation), the element name must follow the following
+     * convention:
+     *
+     * - The name starts with a set of characters. A capital letter followed by
+     * lowercase letters or a set of lowercase letters are considered as a Greek
+     * letter. Any capital letter following this is considered an eigenstate
+     * marker (like for the two mass eigenstates of the neutral kaon), and is
+     * placed as a subindex. In the latter case, no more subindices are allowed
+     * in the following.
+     * - Tha base name can be followed by an indicator that the particle has
+     * slightly variations with respect to another existing particle or if it
+     * corresponds to an excited state, in which it should be indicated with one
+     * or various prime symbols for the first case, or an asterisk for the
+     * second.
+     * - A set of subindices can be specified afterwards, that can be characters
+     * (indicating the underlying falvour) or numbers (indicating the spin),
+     * preceeded by an underscore symbol.
+     * - The mass can be indicated between two parentheses as an integral
+     * number, and is mandatory if you are providing subindices.
+     * - The last part of the name is composed by the possible anti-particle
+     * marker, specified with a tilde, and the charge, which can be 0, + or -.
+     *
+     * There is no official naming scheme for the PDG particles, but the
+     * following guidelines can be used in order to get the most common way of
+     * naming the particles:
+     *
+     * - Quarks are specified with a single character, and anti-quarks extend
+     * this name by adding a tilde.
+     * - If the name refers to a gauge boson, it must only contain the charge if
+     * it is named with a captial letter.
+     * - Hadrons only contain the charge if there are other entries in the
+     * database with the same name. In the case of mesons, they also contain the
+     * charge if the particle is not self charge-conjugate.
+     * - The anti-particles of mesons where the charge is in the name are
+     * specified using the opposite charge. For the rest, anti-particles are
+     * specified by including a tilde before the charge or at the end of the
+     * name, where adecuate.
      */
     template <class... Args> void register_element(Args &&... args) {
 
