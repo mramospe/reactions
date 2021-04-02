@@ -123,6 +123,9 @@ if __name__ == '__main__':
     # check if a base name is an uppercase character
     re_uppercase_character = re.compile('^[A-Z]$')
 
+    # check if a base name is an lowercase character
+    re_lowercase_character = re.compile('^[a-z]$')
+
     # check if a base name is an uppercase string
     re_uppercase_string = re.compile('^[A-Z]{2,}$')
 
@@ -214,7 +217,6 @@ if __name__ == '__main__':
             charges = charge.split(',')
 
             def write_element_(config, name, three_charge, pid):
-                """"""
                 config = dict(config)
                 config['name'] = name
                 config['three_charge'] = f'{three_charge:+d}'
@@ -224,7 +226,6 @@ if __name__ == '__main__':
                 new_particle_names.append(config['name'])
 
             def write_particle_and_antiparticle_(config, core_name, pid, three_charge, particle_format, antiparticle_format):
-                """"""
                 for i, (t, p, f) in enumerate([(+three_charge, +pid, particle_format), (-three_charge, -pid, antiparticle_format)]):
                     c = int(round(t / 3.))
                     if c == 0:
@@ -235,7 +236,6 @@ if __name__ == '__main__':
                         core_name=core_name, charge=charge), t, p)
 
             def category_from_pid_(pid):
-                """"""
                 if pid % 10000 > 999:
                     return 'baryon'
                 elif pid % 1000 > 99:
@@ -267,8 +267,12 @@ if __name__ == '__main__':
                         config, core_name, pid, three_charge, particle_format='{core_name}', antiparticle_format='{core_name}~')
                 elif three_charge != 0:  # charged
                     if category == 'baryon':
-                        write_particle_and_antiparticle_(
-                            config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
+                        if re_lowercase_character.match(core_name):  # p, p~
+                            write_particle_and_antiparticle_(
+                                config, core_name, pid, three_charge, particle_format='{core_name}', antiparticle_format='{core_name}~')
+                        else:
+                            write_particle_and_antiparticle_(
+                                config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
                     else:  # meson or fundamental
                         write_particle_and_antiparticle_(
                             config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}{charge}')

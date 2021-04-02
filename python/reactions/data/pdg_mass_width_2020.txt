@@ -1,5 +1,5 @@
 *
-* Reactions particle table for PDG elements, generated on 2021-04-01
+* Reactions particle table for PDG elements, generated on 2021-04-02
 *
 * This table has been generated from the PDG table of masses and widths at https://pdg.lbl.gov/2020/html/computer_read.html,
 * where particles have been expanded by charge so they can be efficiently read by name.#
@@ -235,8 +235,8 @@
      Upsilon(4S)     300553 +0  1.057940000e+01  1.20e-03  1.20e-03  2.050000000e-02  2.50e-03  2.50e-03 1
   Upsilon(10860)    9000553 +0  1.088520000e+01  1.60e-03  2.60e-03  3.700000000e-02  4.00e-03  4.00e-03 1
   Upsilon(11020)    9010553 +0  1.100000000e+01  4.00e-03  4.00e-03  2.400000000e-02  6.00e-03  8.00e-03 1
-              p+       2212 +3  9.382720810e-01  6.00e-09  6.00e-09  0.000000000e+00  0.00e+00  0.00e+00 0
-             p~-      -2212 -3  9.382720810e-01  6.00e-09  6.00e-09  0.000000000e+00  0.00e+00  0.00e+00 0
+               p       2212 +3  9.382720810e-01  6.00e-09  6.00e-09  0.000000000e+00  0.00e+00  0.00e+00 0
+              p~      -2212 -3  9.382720810e-01  6.00e-09  6.00e-09  0.000000000e+00  0.00e+00  0.00e+00 0
                n       2112 +0  9.395654130e-01  6.00e-09  6.00e-09  7.485000000e-28  5.00e-31  5.00e-31 0
               n~      -2112 +0  9.395654130e-01  6.00e-09  6.00e-09  7.485000000e-28  5.00e-31  5.00e-31 0
         N(1440)0      12112 +0  1.440000000e+00  3.00e-02  3.00e-02  3.500000000e-01  1.00e-01  1.00e-01 0
