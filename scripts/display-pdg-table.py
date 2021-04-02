@@ -38,10 +38,14 @@ if __name__ == '__main__':
             e = f'\\times 10^{{{exp}}}'
             while s[-1] == '0':
                 s = s[:-1]
+            if s[-1] == '.':
+                s = s[:-1]
             return f'\\({s} {e}\\)'
         else:
             s = f'{v:.{prec + 1}f}'
             while s[-1:] == '0':
+                s = s[:-1]
+            if s[-1] == '.':
                 s = s[:-1]
             return s
 
