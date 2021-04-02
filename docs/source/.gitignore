@@ -2,3 +2,4 @@
 api/
 _static/cpp/
 _static/*.pdf
+.ipynb_checkpoints/

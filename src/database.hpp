@@ -125,13 +125,16 @@ static PyObject *DatabasePDG_call(DatabasePDG *self, PyObject *args,
   if (!PyArg_ParseTuple(args, "O", &obj))
     REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(NULL);
 
-  if (PyUnicode_Check(obj))
-    return ElementPDG_New(
+  try {
+    if (PyUnicode_Check(obj))
+      return ElementPDG_New(
         reactions::pdg_database::instance()(PyUnicode_AsUTF8(obj)));
 
   if (PyLong_Check(obj))
     return ElementPDG_New(
         reactions::pdg_database::instance()(PyLong_AsLong(obj)));
+  }
+  REACTIONS_PYTHON_CATCH_ERRORS(NULL);
 
   PyErr_SetString(PyExc_ValueError,
                   "Argument must be either the PDG ID or the name");
