@@ -17,6 +17,10 @@ static PyObject *LookupError =
 static PyObject *SyntaxError =
     PyErr_NewException("reactions.SyntaxError", PyExc_RuntimeError, NULL);
 
+// Definition of an internal error
+static PyObject *InternalError =
+    PyErr_NewException("reactions.InternalError", PyExc_RuntimeError, NULL);
+
 #define REACTIONS_PYTHON_UNEXPECTED_BEHAVIOUR                                  \
   {                                                                            \
     PyErr_SetString(                                                           \
@@ -44,6 +48,11 @@ static PyObject *SyntaxError =
   }                                                                            \
   catch (reactions::lookup_error & e) {                                        \
     PyErr_SetString(LookupError, e.what());                                    \
+    __VA_ARGS__;                                                               \
+    return returncode;                                                         \
+  }                                                                            \
+  catch (reactions::internal_error & e) {                                      \
+    PyErr_SetString(InternalError, e.what());                                  \
     __VA_ARGS__;                                                               \
     return returncode;                                                         \
   }                                                                            \

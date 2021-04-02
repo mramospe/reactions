@@ -132,6 +132,7 @@ PyMODINIT_FUNC PyInit_reactions(void) {
   REACTIONS_PYTHON_REGISTER_ERROR(m, DatabaseError);
   REACTIONS_PYTHON_REGISTER_ERROR(m, LookupError);
   REACTIONS_PYTHON_REGISTER_ERROR(m, SyntaxError);
+  REACTIONS_PYTHON_REGISTER_ERROR(m, InternalError);
 
   return m;
 }

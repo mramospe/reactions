@@ -17,6 +17,8 @@
 #include <tuple>
 #include <vector>
 
+#include <iostream>
+
 namespace reactions {
 
   /// Define short structures that represent the fields of a \ref
@@ -217,10 +219,13 @@ namespace reactions {
       if (size == 0)
         return std::string{};
 
-      // this lambad function allows to avoid processing extra steps
+      // this lambda function allows to simplify the processing of errors
       auto process_latex_string = [&]() {
         auto match_extra = [](char c) {
           return reactions::tokens::match_any<'0', '+', '-', '*', '\''>(c);
+        };
+        auto match_number = [](char c) {
+          return reactions::tokens::match_range<'0', '9'>(c);
         };
         auto match_lowercase = [](char c) {
           return reactions::tokens::match_range<'a', 'z'>(c);
@@ -236,23 +241,47 @@ namespace reactions {
         // Avoid reallocations. The constant is based on the
         // maximum size of an expansion of names to LaTeX
         // names.
-        latex.reserve(8 * ref.size());
+        latex.reserve(6 * ref.size());
 
-        latex.push_back(ref[count++]); // first character
+        // add a character or process a Greek letter
+        auto process_characters = [&]() {
+          latex.push_back(ref[count++]);
+
+          if (count == size)
+            return;
+
+          if (match_lowercase(ref[count])) {
+            latex.insert(latex.size() - 1, 1, '\\');
+            // is a Greek letter
+            do {
+              latex.push_back(ref[count++]);
+            } while (count < size && match_lowercase(ref[count]));
+          }
+        };
+
+        // ========== process the base name
+
+        process_characters(); // first element is always a character
 
         if (count == size)
           return latex;
 
-        if (match_lowercase(ref[count]) || ref[count] == '/') { // J/psi(1S)
-          latex.insert(0, 1, '\\'); // is a Greek letter
-          do {
-            latex.push_back(ref[count++]);
-          } while (count < size &&
-                   (match_lowercase(ref[count]) || ref[count] == '/'));
+        if (reactions::tokens::match_any<'/'>(ref[count])) {
+
+          // this is needed to process composed names like the J/psi
+          latex.push_back(ref[count++]);
+
+          if (count == size)
+            return latex;
+
+          if (match_character(ref[count]))
+            process_characters();
 
           if (count == size)
             return latex;
         }
+
+        // ========== process particle/anti-particle information
 
         if (ref.find('~') != std::string::npos) {
           // it is an anti-particle, so we must tweak the base name
@@ -260,10 +289,11 @@ namespace reactions {
           latex.insert(latex.size(), 1, '}');
         }
 
+        // ========== process additional qualifiers
+
         if (match_uppercase(ref[count])) {
           // KS0, KL0, ...
-          latex.push_back('_');
-          latex.push_back('{');
+          latex.append("_{");
           do {
             latex.push_back(ref[count++]);
           } while (count < size && match_character(ref[count]));
@@ -273,10 +303,9 @@ namespace reactions {
             return latex;
         }
 
-        if (count < size && match_extra(ref[count])) {
+        if (match_extra(ref[count])) {
           // first or unique superscript
-          latex.push_back('^');
-          latex.push_back('{');
+          latex.append("{}^{");
           do {
             latex.push_back(ref[count++]);
           } while (count < size && match_extra(ref[count]));
@@ -286,33 +315,42 @@ namespace reactions {
             return latex;
         }
 
-        if (count < size && ref[count] == '_') {
+        if (ref[count] == '_') {
           // unique subscript
           latex.push_back(ref[count++]);
           latex.push_back('{');
-          while (count < size && ref[count] != '(')
-            latex.push_back(ref[count++]);
-          latex.push_back('}');
+          while (count < size) {
+            if (match_number(ref[count]))
+              latex.push_back(ref[count++]);
+            else if (match_character(ref[count]))
+              process_characters();
+            else
+              break;
+          }
 
+          latex.push_back('}');
           if (count == size)
             return latex;
         }
 
-        if (count < size && ref[count] == '(') {
+        // ========== process the resonance mass
+
+        if (ref[count] == '(') {
           // parenthesized expression
           latex.push_back(ref[count++]);
           while (count < size && ref[count] != ')')
             latex.push_back(ref[count++]);
-          latex.push_back(ref[count++]); // process ')'
+          latex.push_back(ref[count++]); // process ')' (no check is done)
 
           if (count == size)
             return latex;
         }
 
-        if (count < size && (match_extra(ref[count]) || ref[count] == '~')) {
+        // ========== process the charge and the excitation status
+
+        if (match_extra(ref[count]) || ref[count] == '~') {
           // second superscript
-          latex.push_back('^');
-          latex.push_back('{');
+          latex.append("{}^{");
           do {
             if (ref[count] != '~') // anti-particle nature is processed above
               latex.push_back(ref[count++]);

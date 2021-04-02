@@ -181,7 +181,10 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to call a member function of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(name, converter)              \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    return converter(self->element.name());                                    \
+    try {                                                                      \
+      return converter(self->element.name());                                  \
+    }                                                                          \
+    REACTIONS_PYTHON_CATCH_ERRORS(NULL)                                        \
   }
 
 /// Convert a std::string to a python unicode string
