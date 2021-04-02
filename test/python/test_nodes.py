@@ -76,7 +76,10 @@ def test_pdg_element():
     assert reactions.pdg_element("Lambda").latex_name == "\\Lambda"
     assert reactions.pdg_element("eta'(958)").latex_name == "\\eta^{'}(958)"
     assert reactions.pdg_element("a_0(980)0").latex_name == "a_{0}(980)^{0}"
-    assert reactions.pdg_element("f'_2(1525)").latex_name == "f^{'}_{2}(1525)"
+    assert reactions.pdg_element("f'_2(1525)").latex_name == "f_{2}^{'}(1525)"
+    assert reactions.pdg_element("Xi'_c+").latex_name == "\\Xi_{c}^{'+}"
+    assert reactions.pdg_element(
+        "Delta(1950)~-").latex_name == "\\bar{\\Delta}(1950)^{-}"
     assert reactions.pdg_element(
         "K_2(1430)*~0").latex_name == "\\bar{K}_{2}(1430)^{*0}"
     assert reactions.pdg_element(

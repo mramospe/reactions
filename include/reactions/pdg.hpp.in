@@ -238,10 +238,16 @@ namespace reactions {
         };
 
         std::string latex;
+        std::string superscript_buffer;
         // Avoid reallocations. The constant is based on the
         // maximum size of an expansion of names to LaTeX
         // names.
-        latex.reserve(6 * ref.size());
+        //
+        // Obtained with: scripts/pdg-latex-name-buffers.py
+        //
+        latex.reserve(4 * ref.size());
+        superscript_buffer.reserve(
+            5); // maximum number of (', *, 0/+/-) in names
 
         // add a character or process a Greek letter
         auto process_characters = [&]() {
@@ -257,6 +263,15 @@ namespace reactions {
               latex.push_back(ref[count++]);
             } while (count < size && match_lowercase(ref[count]));
           }
+        };
+
+        // add the superscript
+        auto process_superscript = [&]() {
+          latex.append("^{");
+          latex.insert(latex.end(), superscript_buffer.begin(),
+                       superscript_buffer.end());
+          superscript_buffer.clear();
+          latex.push_back('}');
         };
 
         // ========== process the base name
@@ -305,14 +320,14 @@ namespace reactions {
 
         if (match_extra(ref[count])) {
           // first or unique superscript
-          latex.append("{}^{");
-          do {
-            latex.push_back(ref[count++]);
-          } while (count < size && match_extra(ref[count]));
-          latex.push_back('}');
+          superscript_buffer.push_back(ref[count++]);
+          while (count < size && match_extra(ref[count]))
+            superscript_buffer.push_back(ref[count++]);
 
-          if (count == size)
+          if (count == size) {
+            process_superscript();
             return latex;
+          }
         }
 
         if (ref[count] == '_') {
@@ -327,15 +342,23 @@ namespace reactions {
             else
               break;
           }
-
           latex.push_back('}');
-          if (count == size)
+
+          if (count == size) {
+            if (!superscript_buffer.empty())
+              process_superscript();
             return latex;
+          }
         }
 
         // ========== process the resonance mass
 
         if (ref[count] == '(') {
+
+          // if there is a superscript, add it now
+          if (!superscript_buffer.empty())
+            process_superscript();
+
           // parenthesized expression
           latex.push_back(ref[count++]);
           while (count < size && ref[count] != ')')
@@ -346,20 +369,22 @@ namespace reactions {
             return latex;
         }
 
-        // ========== process the charge and the excitation status
+        // ========== process the charge and the excitation status (if not set
+        // already)
 
         if (match_extra(ref[count]) || ref[count] == '~') {
           // second superscript
-          latex.append("{}^{");
           do {
             if (ref[count] != '~') // anti-particle nature is processed above
-              latex.push_back(ref[count++]);
+              superscript_buffer.push_back(ref[count++]);
             else
               ++count;
           } while (count < size &&
                    (match_extra(ref[count]) || ref[count] == '~'));
-          latex.push_back('}');
         }
+
+        if (!superscript_buffer.empty())
+          process_superscript();
 
         return latex;
       };
