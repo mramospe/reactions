@@ -74,8 +74,8 @@ int main() {
         check_latex_name("eta'(958)", "\\eta^{'}(958)");
         check_latex_name("a_0(980)0", "a_{0}(980)^{0}");
         check_latex_name("f'_2(1525)", "f_{2}^{'}(1525)");
-        check_latex_name("K_2(1430)*~0", "\\bar{K}_{2}(1430)^{*0}");
-        check_latex_name("D_s2(2573)*+", "D_{s2}(2573)^{*+}");
+        check_latex_name("K*_2(1430)~0", "\\bar{K}_{2}^{*}(1430)^{0}");
+        check_latex_name("D*_s2(2573)+", "D_{s2}^{*}(2573)^{+}");
         check_latex_name("Xi'_c+", "\\Xi_{c}^{'+}");
         check_latex_name("Delta(1950)~-", "\\bar{\\Delta}(1950)^{-}");
       } catch (reactions::internal_error &) {

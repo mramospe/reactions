@@ -17,8 +17,6 @@
 #include <tuple>
 #include <vector>
 
-#include <iostream>
-
 namespace reactions {
 
   /// Define short structures that represent the fields of a \ref
@@ -221,8 +219,11 @@ namespace reactions {
 
       // this lambda function allows to simplify the processing of errors
       auto process_latex_string = [&]() {
+        auto match_charge = [](char c) {
+          return reactions::tokens::match_any<'0', '+', '-'>(c);
+        };
         auto match_extra = [](char c) {
-          return reactions::tokens::match_any<'0', '+', '-', '*', '\''>(c);
+          return reactions::tokens::match_any<'*', '\''>(c);
         };
         auto match_number = [](char c) {
           return reactions::tokens::match_range<'0', '9'>(c);
@@ -321,8 +322,16 @@ namespace reactions {
         if (match_extra(ref[count])) {
           // first or unique superscript
           superscript_buffer.push_back(ref[count++]);
-          while (count < size && match_extra(ref[count]))
-            superscript_buffer.push_back(ref[count++]);
+          while (count < size && match_extra(ref[count])) {
+            if (reactions::tokens::match_any<'\''>(ref[count])) {
+              superscript_buffer.append("\\prime");
+              ++count;
+            } else if (reactions::tokens::match_any<'*'>(ref[count])) {
+              superscript_buffer.append("\\ast");
+              ++count;
+            } else
+              superscript_buffer.push_back(ref[count++]);
+          }
 
           if (count == size) {
             process_superscript();
@@ -369,18 +378,17 @@ namespace reactions {
             return latex;
         }
 
-        // ========== process the charge and the excitation status (if not set
-        // already)
+        // ========== process the charge (skip the anti-particle token)
 
-        if (match_extra(ref[count]) || ref[count] == '~') {
+        if (match_charge(ref[count]) || ref[count] == '~') {
           // second superscript
           do {
-            if (ref[count] != '~') // anti-particle nature is processed above
-              superscript_buffer.push_back(ref[count++]);
-            else
+            if (ref[count] == '~') // anti-particle nature is processed above
               ++count;
+            else
+              superscript_buffer.push_back(ref[count++]);
           } while (count < size &&
-                   (match_extra(ref[count]) || ref[count] == '~'));
+                   (match_charge(ref[count]) || ref[count] == '~'));
         }
 
         if (!superscript_buffer.empty())

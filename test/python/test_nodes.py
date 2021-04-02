@@ -81,9 +81,9 @@ def test_pdg_element():
     assert reactions.pdg_element(
         "Delta(1950)~-").latex_name == "\\bar{\\Delta}(1950)^{-}"
     assert reactions.pdg_element(
-        "K_2(1430)*~0").latex_name == "\\bar{K}_{2}(1430)^{*0}"
+        "K*_2(1430)~0").latex_name == "\\bar{K}_{2}^{*}(1430)^{0}"
     assert reactions.pdg_element(
-        "D_s2(2573)*+").latex_name == "D_{s2}(2573)^{*+}"
+        "D*_s2(2573)+").latex_name == "D_{s2}^{*}(2573)^{+}"
 
     for e in reactions.pdg_database.all_elements():
         # we must be able to compute all the LaTeX names

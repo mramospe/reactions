@@ -212,7 +212,7 @@ if __name__ == '__main__':
                 raise RuntimeError(
                     'Can not process more than three paranthesized values')
 
-            core_name = f'{base_name}{primes}{extra}{excited}'
+            core_name = f'{base_name}{primes}{excited}{extra}'
 
             charges = charge.split(',')
 

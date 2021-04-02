@@ -52,7 +52,7 @@ if __name__ == '__main__':
     formatters = dict(
         name=lambda v: f'\\verb|{v}|',
         latex_name=lambda v: f'\\({v}\\)',
-        pdg_id=lambda v: f'\\({v}\\)',
+        pdg_id=lambda v: f'\\({v:+d}\\)',
         three_charge=lambda v: f'\\({v:+d}\\)',
         mass=format_float,
         mass_error_lower=format_error,
