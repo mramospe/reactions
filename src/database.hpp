@@ -128,11 +128,11 @@ static PyObject *DatabasePDG_call(DatabasePDG *self, PyObject *args,
   try {
     if (PyUnicode_Check(obj))
       return ElementPDG_New(
-        reactions::pdg_database::instance()(PyUnicode_AsUTF8(obj)));
+          reactions::pdg_database::instance()(PyUnicode_AsUTF8(obj)));
 
-  if (PyLong_Check(obj))
-    return ElementPDG_New(
-        reactions::pdg_database::instance()(PyLong_AsLong(obj)));
+    if (PyLong_Check(obj))
+      return ElementPDG_New(
+          reactions::pdg_database::instance()(PyLong_AsLong(obj)));
   }
   REACTIONS_PYTHON_CATCH_ERRORS(NULL);
 
