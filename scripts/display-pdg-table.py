@@ -121,7 +121,7 @@ if __name__ == '__main__':
 \end{{longtable}}
 \end{{landscape}}
 \end{{document}}
-'''.format(columns='|c' * len(fields) + '|', body=body, fields=fields))
+'''.format(columns='|c' * len(fields) + '|', body=body))
 
     # run the command twice to process the references
     subprocess.check_call([args.compiler, latex_name], cwd=tmpdir)
