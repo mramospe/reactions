@@ -31,16 +31,15 @@ namespace reactions {
 
     /*! \brief Internal function to process an expression
      *
-     * This function takes the current position in the expression, the end
-     * of it and three functions:
-     *
-     * * **fill_element**: fills an element. The function must check whether
+     * \param sit current position in the processed string
+     * \param end end of the string to process
+     * \param fill_element fills an element. The function must check whether
      * it needs to fill a component on the left or right side of an arrow. The
      * start of the element is provided to the function.
-     * * **fill_expression**: fills an expression. The function must check
+     * \param fill_expression: fills an expression. The function must check
      * whether it needs to fill a component on the left or right side of an
      * arrow.
-     * * **arrow_switch**: action to execute when an arrow is detected.
+     * \param arrow_switch: action to execute when an arrow is detected.
      */
     template <class FillElement, class FillExpression, class ArrowSwitch>
     void process_expression(std::string::const_iterator &sit,
@@ -123,7 +122,12 @@ namespace reactions {
         fill_element(start);
     }
 
-    /// Make a new process (a reaction or a decay)
+    /*! \brief Make a new process (a reaction or a decay)
+     *
+     * \param str string to parse
+     * \param builder function to build the underlying elements
+     * \return the new process
+     */
     template <class Process>
     Process make_process(std::string const &str,
                          typename Process::builder_type builder) {
@@ -269,63 +273,71 @@ namespace reactions {
     node_object *m_ptr = nullptr;
   };
 
-  /// Compare nodes
-  template <class Element>
-  inline bool check_nodes(std::vector<node<Element>> const &first,
-                          std::vector<node<Element>> const &second) {
+  namespace detail {
+    /*! \brief Compare two nodes
+     *
+     * \param first node to compare
+     * \param second node to compare
+     * \return whether the two nodes are equal or not (processing
+     * whether they are reactions, decays or elements).
+     */
+    template <class Element>
+    inline bool check_nodes(std::vector<node<Element>> const &first,
+                            std::vector<node<Element>> const &second) {
 
-    auto size = first.size();
+      auto size = first.size();
 
-    if (size != second.size())
-      return false;
+      if (size != second.size())
+        return false;
 
-    // two masks to count the elements that are gone
-    std::vector<bool> mask(size, false);
+      // two masks to count the elements that are gone
+      std::vector<bool> mask(size, false);
 
-    for (auto i = 0u; i < size; ++i) {
+      for (auto i = 0u; i < size; ++i) {
 
-      for (auto j = 0u; j < size; ++j) {
+        for (auto j = 0u; j < size; ++j) {
 
-        if (mask[j])
-          // already used
-          continue;
+          if (mask[j])
+            // already used
+            continue;
 
-        if (second[j].type() != first[i].type())
-          // different types
-          continue;
+          if (second[j].type() != first[i].type())
+            // different types
+            continue;
 
-        switch (first[i].type()) {
-        case (processes::node_kind::element):
-          if (*(first[i].ptr_as_element()) == *(second[i].ptr_as_element()))
-            mask[j] = true;
-          break;
-        case (processes::node_kind::reaction):
-          if (*(first[i].ptr_as_reaction()) == *(second[i].ptr_as_reaction()))
-            mask[j] = true;
-          break;
-        case (processes::node_kind::decay):
-          if (*(first[i].ptr_as_decay()) == *(second[i].ptr_as_decay()))
-            mask[j] = true;
-          break;
-        case (processes::node_kind::unknown):
-          throw reactions::internal_error(
-              "A node can not be of unknown type (internal error); please "
-              "report the bug");
-          break;
+          switch (first[i].type()) {
+          case (processes::node_kind::element):
+            if (*(first[i].ptr_as_element()) == *(second[i].ptr_as_element()))
+              mask[j] = true;
+            break;
+          case (processes::node_kind::reaction):
+            if (*(first[i].ptr_as_reaction()) == *(second[i].ptr_as_reaction()))
+              mask[j] = true;
+            break;
+          case (processes::node_kind::decay):
+            if (*(first[i].ptr_as_decay()) == *(second[i].ptr_as_decay()))
+              mask[j] = true;
+            break;
+          case (processes::node_kind::unknown):
+            throw reactions::internal_error(
+                "A node can not be of unknown type (internal error); please "
+                "report the bug");
+            break;
+          }
         }
+        // if we reach this point, no match has been found for "first[i]"
+        return false;
       }
-      // if we reach this point, no match has been found for "first[i]"
-      return false;
-    }
 
-    // all of them have been matched
-    return true;
-  }
+      // all of them have been matched
+      return true;
+    }
+  } // namespace detail
 } // namespace reactions
 
 namespace reactions {
 
-  /** \brief Template for elements of a reaction or decay.
+  /*! \brief Template for elements of a reaction or decay.
    *
    * This class wraps the template argument type, which becomes accessible
    * through the * and -> operators.
@@ -355,7 +367,7 @@ namespace reactions {
     Element m_element;
   };
 
-  /** \brief Description of a process where reactants generate a set of products
+  /*! \brief Description of a process where reactants generate a set of products
    *
    * Nested reactions must be expressed within parenteses.
    */
@@ -385,29 +397,41 @@ namespace reactions {
     /// Get the products of the reaction
     nodes_type const &products() const { return m_products; }
 
-    /// Compare two reactions
+    /*! \brief Compare two reactions
+     *
+     * \param other the reaction to compare with (of the same
+     * underlying type).
+     * \return whether the two reactions have the same reactants
+     * and products or not.
+     */
     bool operator==(reaction<Element> const &other) const {
 
       if (m_reactants.size() != other.m_reactants.size() ||
           m_products.size() != other.m_products.size())
         return false;
 
-      return check_nodes(m_reactants, other.m_reactants) &&
-             check_nodes(m_products, other.m_products);
+      return detail::check_nodes(m_reactants, other.m_reactants) &&
+             detail::check_nodes(m_products, other.m_products);
     }
 
-    /// Compare two reactions
+    /// \copydoc reaction<Element>::operator==
     bool operator!=(reaction<Element> const &other) const {
       return !(*this == other);
     }
 
   protected:
-    /// Constructor from the string iterators
+    /*!\brief Constructor from the string iterators
+     *
+     * \param begin iterator pointing to the beginning of the string.
+     * \param end iterator pointing to the end of the string.
+     * \param builder function to create the underlying element from
+     * a string.
+     */
     reaction(std::string::const_iterator &&begin,
              std::string::const_iterator const &end, builder_type builder)
         : reaction{begin, end, builder} {}
 
-    /// Create a new instance using the protected constructor
+    // Create a new instance using the protected constructor
     friend std::unique_ptr<reaction>
     std::make_unique<reaction>(std::string::const_iterator &,
                                std::string::const_iterator const &,
@@ -418,7 +442,16 @@ namespace reactions {
     reactions::processes::make_process(std::string const &,
                                        typename Process::builder_type);
 
-    /// Constructor from the string iterators
+    /*!\brief Constructor from the string iterators
+     *
+     * This constructor is called internally when creating reactions that
+     * contain other reactions.
+     *
+     * \param begin iterator pointing to the beginning of the string.
+     * \param end iterator pointing to the end of the string.
+     * \param builder function to create the underlying element from
+     * a string.
+     */
     reaction(std::string::const_iterator &sit,
              std::string::const_iterator const &end, builder_type builder)
         : node_object{} {
@@ -463,7 +496,7 @@ namespace reactions {
     nodes_type m_products;
   };
 
-  /** \brief Description of a process where head particle generate a set of
+  /*! \brief Description of a process where head particle generate a set of
    * products
    *
    * This can be seen as a special reaction with only one reactant, and where
@@ -500,7 +533,7 @@ namespace reactions {
         return false;
 
       return (*m_head == *other.m_head) &&
-             check_nodes(m_products, other.m_products);
+             detail::check_nodes(m_products, other.m_products);
     }
 
     /// Comparison operator
@@ -509,7 +542,16 @@ namespace reactions {
     }
 
   protected:
-    /// Constructor from the string iterators
+    /*!\brief Constructor from the string iterators
+     *
+     * This constructor is called internally when creating decays that
+     * contain other decays.
+     *
+     * \param begin iterator pointing to the beginning of the string.
+     * \param end iterator pointing to the end of the string.
+     * \param builder function to create the underlying element from
+     * a string.
+     */
     decay(std::string::const_iterator &&begin,
           std::string::const_iterator const &end, builder_type builder)
         : decay{begin, end, builder} {}
@@ -524,7 +566,16 @@ namespace reactions {
     reactions::processes::make_process(std::string const &,
                                        typename Process::builder_type);
 
-    /// Constructor from the string iterators
+    /*!\brief Constructor from the string iterators
+     *
+     * This constructor is called internally when creating decays that
+     * contain other decays.
+     *
+     * \param sit iterator pointing to the current point int the string.
+     * \param end iterator pointing to the end of the string.
+     * \param builder function to create the underlying element from
+     * a string.
+     */
     decay(std::string::const_iterator &sit,
           std::string::const_iterator const &end, builder_type builder)
         : node_object{} {
@@ -585,9 +636,9 @@ namespace reactions {
 
   /*! \brief Create a new reaction with a custom builder
    *
-   * This function uses the template argument as element type, the first
-   * argument as the string to parse and the second is the object used to
-   * build the elements (the database).
+   * \param str string to parse
+   * \param builder function to build the underlying elements
+   * \return the new reaction
    */
   template <class Element>
   reaction<Element>
@@ -598,8 +649,8 @@ namespace reactions {
 
   /*! \brief Create a new reaction
    *
-   * Use the default constructor for the element type provided as a template
-   * argument.
+   * \param str string to process
+   * \return the reaction
    */
   template <class Element>
   reaction<Element> make_reaction(std::string const &str) {
@@ -608,9 +659,9 @@ namespace reactions {
 
   /*! \brief Create a new decay with a custom builder
    *
-   * This function uses the template argument as element type, the first
-   * argument as the string to parse and the second is the object used to
-   * build the elements (the database).
+   * \param str string to parse
+   * \param builder function to build the underlying elements
+   * \return the new decay
    */
   template <class Element>
   decay<Element> make_decay_for(std::string const &str,
@@ -620,8 +671,8 @@ namespace reactions {
 
   /*! \brief Create a new decay
    *
-   * Use the default constructor for the element type provided as a template
-   * argument.
+   * \param str string to process
+   * \return the decay
    */
   template <class Element> decay<Element> make_decay(std::string const &str) {
     return make_decay_for<Element>(str, element_traits::builder<Element>);

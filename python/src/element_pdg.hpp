@@ -273,7 +273,7 @@ static PyTypeObject ElementPDGType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    R"(Store information about a PDG element. The values that are accessible
+    R"(Represent an element of the PDG database. The values that are accessible
 can be consulted below. The values of the mass and the width (and their
 corresponding errors) can be missing for certain elements. Having defined the
 mass or the width means that the errors for this magnitude are also defined.)", /* tp_doc */

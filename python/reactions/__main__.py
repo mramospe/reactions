@@ -1,7 +1,7 @@
 """
 Process a sets of reactions and/or decays, checking its syntax
 """
-from . import get_pdg_database, reaction, decay
+from . import pdg_database, reaction, decay
 
 import argparse
 
@@ -20,7 +20,7 @@ def check_syntax(reactions, decays, kind):
 def print_table(kind):
     """ Print the table of particles """
     if kind == 'pdg':
-        with open(get_pdg_database()) as db:
+        with open(pdg_database.get_database_path()) as db:
             print(db.read())
     else:
         raise ValueError(f'Unknown kind "{kind}"')

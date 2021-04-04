@@ -174,12 +174,16 @@ namespace reactions {
     explicit pdg_element(base_type &&tuple)
         : base_type{std::forward<base_type>(tuple)} {}
 
-    /// Compare the ID of the two particles
+    /*! \brief Compare the ID of the two particles
+     *
+     * \param other element to compare with
+     * \return the result of comparing the PDG IDs of the two elements
+     */
     bool operator==(pdg_element const &other) const {
       return pdg_id() == other.pdg_id();
     }
 
-    /// Compare the ID of the two particles
+    /// \copydoc pdg_element::operator==
     bool operator!=(pdg_element const &other) const {
       return pdg_id() != other.pdg_id();
     }

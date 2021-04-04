@@ -219,24 +219,24 @@ static PyTypeObject ReactionType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "Reaction object",                        /* tp_doc */
-    0,                                        /* tp_traverse */
-    0,                                        /* tp_clear */
-    Reaction_richcompare,                     /* tp_richcompare */
-    0,                                        /* tp_weaklistoffset */
-    0,                                        /* tp_iter */
-    0,                                        /* tp_iternext */
-    Reaction_methods,                         /* tp_methods */
-    0,                                        /* tp_members */
-    Reaction_getsetters,                      /* tp_getset */
-    &NodeType,                                /* tp_base */
-    0,                                        /* tp_dict */
-    0,                                        /* tp_descr_get */
-    0,                                        /* tp_descr_set */
-    0,                                        /* tp_dictoffset */
-    (initproc)Reaction_init,                  /* tp_init */
-    0,                                        /* tp_alloc */
-    Reaction_new,                             /* tp_new */
+    "Reaction involving several elements of the same type", /* tp_doc */
+    0,                                                      /* tp_traverse */
+    0,                                                      /* tp_clear */
+    Reaction_richcompare,                                   /* tp_richcompare */
+    0,                       /* tp_weaklistoffset */
+    0,                       /* tp_iter */
+    0,                       /* tp_iternext */
+    Reaction_methods,        /* tp_methods */
+    0,                       /* tp_members */
+    Reaction_getsetters,     /* tp_getset */
+    &NodeType,               /* tp_base */
+    0,                       /* tp_dict */
+    0,                       /* tp_descr_get */
+    0,                       /* tp_descr_set */
+    0,                       /* tp_dictoffset */
+    (initproc)Reaction_init, /* tp_init */
+    0,                       /* tp_alloc */
+    Reaction_new,            /* tp_new */
 };
 
 /// Implementation of the comparison operators
@@ -479,24 +479,24 @@ static PyTypeObject DecayType = {
     0,                                                /* tp_setattro */
     0,                                                /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,         /* tp_flags */
-    "Decay object",                                   /* tp_doc */
-    0,                                                /* tp_traverse */
-    0,                                                /* tp_clear */
-    Decay_richcompare,                                /* tp_richcompare */
-    0,                                                /* tp_weaklistoffset */
-    0,                                                /* tp_iter */
-    0,                                                /* tp_iternext */
-    Decay_methods,                                    /* tp_methods */
-    0,                                                /* tp_members */
-    Decay_getsetters,                                 /* tp_getset */
-    &NodeType,                                        /* tp_base */
-    0,                                                /* tp_dict */
-    0,                                                /* tp_descr_get */
-    0,                                                /* tp_descr_set */
-    0,                                                /* tp_dictoffset */
-    (initproc)Decay_init,                             /* tp_init */
-    0,                                                /* tp_alloc */
-    Decay_new,                                        /* tp_new */
+    "Decay involving several elements of the same type", /* tp_doc */
+    0,                                                   /* tp_traverse */
+    0,                                                   /* tp_clear */
+    Decay_richcompare,                                   /* tp_richcompare */
+    0,                                                   /* tp_weaklistoffset */
+    0,                                                   /* tp_iter */
+    0,                                                   /* tp_iternext */
+    Decay_methods,                                       /* tp_methods */
+    0,                                                   /* tp_members */
+    Decay_getsetters,                                    /* tp_getset */
+    &NodeType,                                           /* tp_base */
+    0,                                                   /* tp_dict */
+    0,                                                   /* tp_descr_get */
+    0,                                                   /* tp_descr_set */
+    0,                                                   /* tp_dictoffset */
+    (initproc)Decay_init,                                /* tp_init */
+    0,                                                   /* tp_alloc */
+    Decay_new,                                           /* tp_new */
 };
 
 /// Implementation of the comparison operators
