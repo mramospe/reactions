@@ -248,8 +248,8 @@ static PyGetSetDef ElementPDG_getsetters[] = {
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
         width_error, "Width error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        latex_name, "Representation of the name ready to be processed by LaTeX "
-                    "inside a mathematical expression"),
+        latex_name, "Representation of the name to be processed by LaTeX "
+                    "(needs to be inserted inside a mathematical expression)"),
 };
 
 /// Type declaration
