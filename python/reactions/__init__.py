@@ -5,7 +5,7 @@ try:
 
     from .reactions import (
         # types
-        reaction, decay, string_element, pdg_element, pdg_database,
+        node, reaction, decay, string_element, pdg_element, pdg_database,
         # functions
         is_element, node_type,
         # errors
@@ -21,7 +21,7 @@ try:
     del os
 
     # Variables exported
-    __all__ = ['reaction', 'decay', 'string_element', 'pdg_element', 'pdg_database',
+    __all__ = ['node', 'reaction', 'decay', 'string_element', 'pdg_element', 'pdg_database',
                'is_element', 'node_type',
                'DatabaseError', 'LookupError', 'SyntaxError', 'InternalError']
 
