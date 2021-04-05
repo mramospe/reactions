@@ -8,6 +8,7 @@
 #include "reactions/exceptions.hpp"
 #include "reactions/pow_enum.hpp"
 #include "reactions/tokens.hpp"
+#include "reactions/units.hpp"
 
 #include <cmath>
 #include <fstream>
@@ -35,24 +36,28 @@ namespace reactions {
     struct name {
       static constexpr const char *title = "name";
       using value_type = std::string;
+      using units_type = units::none;
       using range_type = range<0, 16>;
     };
     /// Field for the PDG ID
     struct pdg_id {
       static constexpr const char *title = "pdg_id";
       using value_type = int;
+      using units_type = units::none;
       using range_type = range<17, 27>;
     };
     /// Field the charge multiplied by three
     struct three_charge {
       static constexpr const char *title = "three_charge";
       using value_type = int;
+      using units_type = units::none;
       using range_type = range<28, 30>;
     };
     /// Field for the mass
     struct mass {
       static constexpr const char *title = "mass";
       using value_type = reactions::database::ve_double_opt;
+      using units_type = units::reference<energy_units::GeV>;
       using range_type =
           range_collection<range<31, 47>, range<48, 57>, range<58, 67>>;
     };
@@ -60,6 +65,7 @@ namespace reactions {
     struct width {
       static constexpr const char *title = "width";
       using value_type = reactions::database::ve_double_opt;
+      using units_type = units::reference<energy_units::GeV>;
       using range_type =
           range_collection<range<68, 84>, range<85, 94>, range<95, 104>>;
     };
@@ -67,6 +73,7 @@ namespace reactions {
     struct is_self_cc {
       static constexpr const char *title = "is_self_cc";
       using value_type = bool;
+      using units_type = units::none;
       using range_type = range<105, 106>;
     };
 
@@ -148,6 +155,41 @@ namespace reactions {
     /// \copydoc to_string
     template <> std::string to_string(std::string const &v) { return v; }
   } // namespace pdg
+
+  class pdg_system_of_units final {
+
+  public:
+    /// Get the only instance of this class
+    static pdg_system_of_units &instance() {
+      static pdg_system_of_units sou;
+      return sou;
+    }
+
+    /// Get the energy units
+    energy_units const &get_energy_units() const { return m_energy_units; }
+
+    /// Set the energy units
+    void set_energy_units(energy_units u) { m_energy_units = u; }
+
+  private:
+    /// Units of energy
+    energy_units m_energy_units = energy_units::GeV;
+
+    pdg_system_of_units() {}
+    pdg_system_of_units(pdg_system_of_units &&) = delete;
+    pdg_system_of_units(pdg_system_of_units const &) = delete;
+    void operator=(pdg_system_of_units &&) = delete;
+    void operator=(pdg_system_of_units const &) = delete;
+  };
+
+  namespace pdg::detail {
+    /// Calculate the scale factor for a given energy field
+    template <class F> auto energy_scale_factor() {
+      using units_type_t = typename F::units_type;
+      return units_type_t::reference::scale_factor(
+          pdg_system_of_units::instance().get_energy_units());
+    }
+  } // namespace pdg::detail
 
   /*! \brief A PDG particle, based on the fields of a particle in the PDG
    * database.
@@ -435,7 +477,10 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double const &mass() const { return get<pdg::mass>().value; }
+    double mass() const {
+      return pdg::detail::energy_scale_factor<pdg::mass>() *
+             get<pdg::mass>().value;
+    }
 
     /// Whether the mass and its errors are defined or not
     bool has_mass() const { return has<pdg::mass>(); }
@@ -446,8 +491,9 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double const &mass_error_lower() const {
-      return get<pdg::mass>().error_lower;
+    double mass_error_lower() const {
+      return pdg::detail::energy_scale_factor<pdg::mass>() *
+             get<pdg::mass>().error_lower;
     }
 
     /*! \brief Upper mass error
@@ -456,8 +502,9 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double const &mass_error_upper() const {
-      return get<pdg::mass>().error_upper;
+    double mass_error_upper() const {
+      return pdg::detail::energy_scale_factor<pdg::mass>() *
+             get<pdg::mass>().error_upper;
     }
 
     /* \brief Calculate the mass error
@@ -494,7 +541,10 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double const &width() const { return get<pdg::width>().value; }
+    double width() const {
+      return pdg::detail::energy_scale_factor<pdg::width>() *
+             get<pdg::width>().value;
+    }
 
     /// Whether the width and its errors are defined or not
     bool has_width() const { return has<pdg::width>(); }
@@ -505,8 +555,9 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double const &width_error_lower() const {
-      return get<pdg::width>().error_lower;
+    double width_error_lower() const {
+      return pdg::detail::energy_scale_factor<pdg::width>() *
+             get<pdg::width>().error_lower;
     }
 
     /*! \brief Get the upper width error
@@ -515,8 +566,9 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double const &width_error_upper() const {
-      return get<pdg::width>().error_upper;
+    double width_error_upper() const {
+      return pdg::detail::energy_scale_factor<pdg::width>() *
+             get<pdg::width>().error_upper;
     }
 
     /*! Calculate the width error

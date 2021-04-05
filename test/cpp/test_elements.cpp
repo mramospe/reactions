@@ -88,5 +88,5 @@ int main() {
   auto str_status = !string_element_coll.run();
   auto pdg_status = !pdg_element_coll.run();
 
-  return str_status && pdg_status;
+  return str_status || pdg_status;
 }

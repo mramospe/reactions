@@ -64,6 +64,19 @@ namespace reactions::database {
     T error() const { return std::sqrt(error_squared()); }
   };
 
+  /// Multiply all members by a constant
+  template <class T, class V>
+  std::enable_if_t<std::is_arithmetic_v<V>, value_and_errors<T>>
+  operator*(value_and_errors<T> const &ve, V v) {
+    return {ve.value * v, ve.error_lower * v, ve.error_upper * v};
+  }
+
+  /// \copydoc value_and_errors::operator*
+  template <class T, class V>
+  value_and_errors<T> operator*(V v, value_and_errors<T> const &ve) {
+    return ve * v;
+  }
+
   /// Optional for \ref float type
   using float_opt = std::optional<float>;
   /// Optional for \ref double type

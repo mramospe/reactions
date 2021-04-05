@@ -116,6 +116,31 @@ int main() {
 
         return errors;
       });
+  test::collector pdg_system_of_units_coll("pdg_system_of_units");
+  pdg_system_of_units_coll.add_test_function(
+      "test units", []() -> test::errors {
+        test::errors errors;
+        auto &db = reactions::pdg_database::instance();
+        auto &sou = reactions::pdg_system_of_units::instance();
 
-  return !pdg_database_coll.run();
+        auto ks0_mass_gev = db("KS0").mass();
+
+        sou.set_energy_units(reactions::MeV);
+
+        auto ks0_pos = db("KS0");
+
+        if (ks0_pos.mass() < 400.)
+          errors.push_back("Unable to change units");
+
+        auto diff = ks0_mass_gev - ks0_pos.mass() * 1e-3;
+        if ((diff > 0 ? diff : -diff) > 1e-12)
+          errors.push_back("Wrong unit scale factors");
+
+        return errors;
+      });
+
+  auto pdg_status = !pdg_database_coll.run();
+  auto sou_status = !pdg_system_of_units_coll.run();
+
+  return pdg_status || sou_status;
 }
