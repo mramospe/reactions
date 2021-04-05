@@ -169,7 +169,13 @@ namespace reactions {
     energy_units const &get_energy_units() const { return m_energy_units; }
 
     /// Set the energy units
-    void set_energy_units(energy_units u) { m_energy_units = u; }
+    void set_energy_units(energy_units u) {
+
+      if (u == energy_units::unknown)
+        throw value_error("Setting energy units to unknown");
+
+      m_energy_units = u;
+    }
 
   private:
     /// Units of energy
@@ -189,12 +195,91 @@ namespace reactions {
       return units_type_t::reference::scale_factor(
           pdg_system_of_units::instance().get_energy_units());
     }
+
+    /// Functor to process the units of a field
+    template <class F, class Enable = void> struct process_units_t;
+
+    template <class F>
+    struct process_units_t<
+        F, std::enable_if_t<std::is_same_v<typename F::units_type, units::none>,
+                            void>> {
+      template <class T>
+      constexpr auto const &operator()(T const &value) const {
+        return value;
+      }
+    };
+
+    /// \copydoc process_units_t
+    template <class F>
+    struct process_units_t<
+        F, std::enable_if_t<
+               !std::is_same_v<typename F::units_type, units::none>, void>> {
+      template <class T> constexpr auto operator()(T &&value) const {
+        return energy_scale_factor<F>() * value;
+      }
+    };
+
+    /// \copydoc process_units_t
+    template <class F> static constexpr process_units_t<F> process_units;
+
+    /// Return type of the accessor of a field
+    template <class F, class S> struct return_type {
+      using type = typename database::remove_optional_t<
+          typename F::value_type>::value_type;
+    };
+
+    /// \copydoc return_type
+    template <class F> struct return_type<F, void> {
+      using type = database::remove_optional_t<typename F::value_type> const &;
+    };
+
+    /// \copydoc return_type
+    template <class F, class S = void>
+    using return_type_t = typename return_type<F, S>::type;
+
+  } // namespace pdg::detail
+
+  // Forward declaration
+  class pdg_element;
+
+  namespace pdg::detail {
+    /// Access a field of a PDG element
+    template <class F, class S = void>
+    pdg::detail::return_type_t<F, S> get(pdg_element const &element);
   } // namespace pdg::detail
 
   /*! \brief A PDG particle, based on the fields of a particle in the PDG
    * database.
    */
   class pdg_element final : protected pdg::base_element::type {
+
+  private:
+    /*! \brief Get an element using an accessor.
+     *
+     * For fields of \ref std::optional type, the validity of the content
+     * must be checked before calling this function using the
+     * \ref pdg_element::has member function. Otherwise the
+     * \ref reactions::missing_fields_error exception is thrown,
+     * if missing.
+     */
+    template <class F, class S = void>
+    friend pdg::detail::return_type_t<F, S>
+    reactions::pdg::detail::get(pdg_element const &element) {
+      if constexpr (std::is_same_v<S, void>)
+        return pdg::detail::process_units<F>(
+            std::get<pdg::base_element::field_index_v<F>>(element));
+      else
+        return pdg::detail::process_units<F>(database::get<S>(
+            std::get<pdg::base_element::field_index_v<F>>(element).value()));
+    }
+
+    /// Check whether the given field information is missing or not
+    template <class F> constexpr bool has() const {
+      if constexpr (pdg::is_optional_field_v<F>)
+        return std::get<pdg::base_element::field_index_v<F>>(*this).has_value();
+      else
+        return true;
+    }
 
   public:
     /// Base class
@@ -228,29 +313,6 @@ namespace reactions {
     /// \copydoc pdg_element::operator==
     bool operator!=(pdg_element const &other) const {
       return pdg_id() != other.pdg_id();
-    }
-
-    /*! \brief Get an element using an accessor.
-     *
-     * For fields of \ref std::optional type, the validity of the content
-     * must be checked before calling this function using the
-     * \ref pdg_element::has member function. Otherwise the
-     * \ref reactions::missing_fields_error exception is thrown,
-     * if missing.
-     */
-    template <class F> auto const &get() const {
-      if constexpr (pdg::is_optional_field_v<F>)
-        return std::get<pdg::base_element::field_index_v<F>>(*this).value();
-      else
-        return std::get<pdg::base_element::field_index_v<F>>(*this);
-    }
-
-    /// Check whether the given field information is missing or not
-    template <class F> constexpr bool has() const {
-      if constexpr (pdg::is_optional_field_v<F>)
-        return std::get<pdg::base_element::field_index_v<F>>(*this).has_value();
-      else
-        return true;
     }
 
     /// Representation of the element name as a LaTeX string
@@ -457,19 +519,25 @@ namespace reactions {
     }
 
     /// Name of the particle
-    std::string const &name() const { return get<pdg::name>(); }
+    std::string const &name() const {
+      return pdg::detail::get<pdg::name>(*this);
+    }
 
     /// PDG ID
-    int const &pdg_id() const { return get<pdg::pdg_id>(); }
+    int pdg_id() const { return pdg::detail::get<pdg::pdg_id>(*this); }
 
     /// Three times the charge, as an integer
-    int const &three_charge() const { return get<pdg::three_charge>(); }
+    int three_charge() const {
+      return pdg::detail::get<pdg::three_charge>(*this);
+    }
 
     /// Charge as a doubleing point number
-    double charge() const { return get<pdg::three_charge>() / 3.; }
+    double charge() const {
+      return pdg::detail::get<pdg::three_charge>(*this) / 3.;
+    }
 
     /// Whether the element is its own charge-conjugate
-    bool const &is_self_cc() const { return get<pdg::is_self_cc>(); }
+    bool is_self_cc() const { return pdg::detail::get<pdg::is_self_cc>(*this); }
 
     /*! Get the mass of the element
      *
@@ -478,8 +546,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double mass() const {
-      return pdg::detail::energy_scale_factor<pdg::mass>() *
-             get<pdg::mass>().value;
+      return pdg::detail::get<pdg::mass, database::value>(*this);
     }
 
     /// Whether the mass and its errors are defined or not
@@ -492,8 +559,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double mass_error_lower() const {
-      return pdg::detail::energy_scale_factor<pdg::mass>() *
-             get<pdg::mass>().error_lower;
+      return pdg::detail::get<pdg::mass, database::error_lower>(*this);
     }
 
     /*! \brief Upper mass error
@@ -503,8 +569,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double mass_error_upper() const {
-      return pdg::detail::energy_scale_factor<pdg::mass>() *
-             get<pdg::mass>().error_upper;
+      return pdg::detail::get<pdg::mass, database::error_lower>(*this);
     }
 
     /* \brief Calculate the mass error
@@ -542,8 +607,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double width() const {
-      return pdg::detail::energy_scale_factor<pdg::width>() *
-             get<pdg::width>().value;
+      return pdg::detail::get<pdg::width, database::value>(*this);
     }
 
     /// Whether the width and its errors are defined or not
@@ -556,8 +620,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double width_error_lower() const {
-      return pdg::detail::energy_scale_factor<pdg::width>() *
-             get<pdg::width>().error_lower;
+      return pdg::detail::get<pdg::width, database::error_lower>(*this);
     }
 
     /*! \brief Get the upper width error
@@ -567,8 +630,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double width_error_upper() const {
-      return pdg::detail::energy_scale_factor<pdg::width>() *
-             get<pdg::width>().error_upper;
+      return pdg::detail::get<pdg::width, database::error_upper>(*this);
     }
 
     /*! Calculate the width error
@@ -1075,7 +1137,7 @@ namespace reactions {
       case (cache::full): // the full database is loaded
 
         for (auto const &el : m_cache)
-          if (el.get<F>() == v)
+          if (pdg::detail::get<F>(el) == v)
             return el;
 
         break; // throws an exception
@@ -1083,7 +1145,7 @@ namespace reactions {
       case (cache::user): // only user-registered entries exist
 
         for (auto const &el : m_cache)
-          if (el.get<F>() == v)
+          if (pdg::detail::get<F>(el) == v)
             return el;
 
         [[fallthrough]]; // continue as if we had no cache

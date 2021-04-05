@@ -6,4 +6,5 @@ of the Reactions package.
 
 .. automodapi:: reactions
    :no-heading:
+   :include-all-objects:
    :inherited-members:

@@ -21,6 +21,10 @@ static PyObject *SyntaxError =
 static PyObject *InternalError =
     PyErr_NewException("reactions.InternalError", PyExc_RuntimeError, NULL);
 
+// Definition of a value error
+static PyObject *ValueError =
+    PyErr_NewException("reactions.ValueError", PyExc_ValueError, NULL);
+
 #define REACTIONS_PYTHON_UNEXPECTED_BEHAVIOUR                                  \
   {                                                                            \
     PyErr_SetString(                                                           \
@@ -53,6 +57,11 @@ static PyObject *InternalError =
   }                                                                            \
   catch (reactions::internal_error & e) {                                      \
     PyErr_SetString(InternalError, e.what());                                  \
+    __VA_ARGS__;                                                               \
+    return returncode;                                                         \
+  }                                                                            \
+  catch (reactions::value_error & e) {                                         \
+    PyErr_SetString(ValueError, e.what());                                     \
     __VA_ARGS__;                                                               \
     return returncode;                                                         \
   }                                                                            \

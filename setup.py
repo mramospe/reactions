@@ -272,7 +272,7 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
         include_package_data=True,
 
         # Modules
-        ext_modules=[Extension('reactions.reactions',
+        ext_modules=[Extension('reactions.capi',
                                include_dirs=[tmp_include_dir,
                                              'include', os.path.join(PWD, 'python', 'src')],
                                sources=[os.path.relpath(s, PWD) for s in files_with_extension(

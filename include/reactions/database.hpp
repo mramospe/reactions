@@ -32,12 +32,24 @@ namespace reactions {
 /// Utilities to handle database objects and their elements
 namespace reactions::database {
 
+  /// Field for a value
+  struct value {};
+  /// Field for an error
+  struct error {};
+  /// Field for a lower error
+  struct error_lower {};
+  /// Field for an lower error
+  struct error_upper {};
+
   template <class T, class Enable = void> struct value_and_errors;
 
   /// Simple structure composed by a value and the lower and upper errors
   template <class T>
   struct value_and_errors<T,
                           std::enable_if_t<std::is_floating_point_v<T>, void>> {
+
+    using value_type = T;
+
     /// Empty constructor
     value_and_errors() = default;
     /// Build the class with forwarded arguments
@@ -50,32 +62,66 @@ namespace reactions::database {
     value_and_errors(fill<Value, ErrorLower, ErrorUpper> &&f)
         : value(std::get<0>(f)), error_lower(std::get<1>(f)),
           error_upper(std::get<2>(f)) {}
+
     /// Value
-    T value;
+    value_type value;
     /// Lower error
-    T error_lower;
+    value_type error_lower;
     /// Upper error
-    T error_upper;
+    value_type error_upper;
     /// Calculate the squared error from the lower and upper errors
-    T error_squared() const {
+    value_type error_squared() const {
       return error_lower * error_lower + error_upper * error_upper;
     };
     /// Calculate the error from the lower and upper errors
-    T error() const { return std::sqrt(error_squared()); }
+    value_type error() const { return std::sqrt(error_squared()); }
   };
 
-  /// Multiply all members by a constant
-  template <class T, class V>
-  std::enable_if_t<std::is_arithmetic_v<V>, value_and_errors<T>>
-  operator*(value_and_errors<T> const &ve, V v) {
-    return {ve.value * v, ve.error_lower * v, ve.error_upper * v};
+  /// Return the underlying value of an object (the same if the object is \ref
+  /// std::optional)
+  template <class T> constexpr auto const &access_value(T const &c) {
+    return c;
   }
 
-  /// \copydoc value_and_errors::operator*
-  template <class T, class V>
-  value_and_errors<T> operator*(V v, value_and_errors<T> const &ve) {
-    return ve * v;
+  /// \copydoc access_value
+  template <class T>
+  constexpr auto const &access_value(std::optional<T> const &opt) {
+    return opt.value();
   }
+
+  /// Type defining an accessor to a value/error field
+  template <class F> struct get_t;
+
+  /// Accessor to the value
+  template <> struct get_t<value> {
+    template <class T> constexpr auto const &operator()(T const &t) const {
+      return access_value(t).value;
+    }
+  };
+
+  /// Accessor to the error
+  template <> struct get_t<error> {
+    template <class T> constexpr auto const &operator()(T const &t) const {
+      return access_value(t).error;
+    }
+  };
+
+  /// Accessor to the lower error
+  template <> struct get_t<error_lower> {
+    template <class T> constexpr auto const &operator()(T const &t) const {
+      return access_value(t).error_lower;
+    }
+  };
+
+  /// Accessor to the upper error
+  template <> struct get_t<error_upper> {
+    template <class T> constexpr auto const &operator()(T const &t) const {
+      return access_value(t).error_upper;
+    }
+  };
+
+  /// Accessor to a value/error field
+  template <class F> static constexpr get_t<F> get;
 
   /// Optional for \ref float type
   using float_opt = std::optional<float>;
@@ -94,6 +140,18 @@ namespace reactions::database {
 
   /// Alias to check if a type represents an optional
   template <class T> constexpr auto is_optional_v = is_optional<T>::value;
+
+  /// If the input type is an optional, get the underying type
+  template <class T> struct remove_optional { using type = T; };
+
+  /// \copydoc remove_optional
+  template <class T> struct remove_optional<std::optional<T>> {
+    using type = T;
+  };
+
+  /// \copydoc remove_optional
+  template <class T>
+  using remove_optional_t = typename remove_optional<T>::type;
 
   /// Define a range with minimum and maximum indices
   template <std::size_t Min, std::size_t Max> struct range {
