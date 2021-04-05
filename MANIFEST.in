@@ -4,3 +4,5 @@ include requirements.txt
 include include/reactions/*.hpp
 include include/reactions/*.hpp.in
 include python/reactions/data/*.txt
+include python/src/*.hpp
+include python/src/*.cpp

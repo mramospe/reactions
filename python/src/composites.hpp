@@ -1,12 +1,11 @@
-#ifndef REACTIONS_PYTHON_COMPOSITES_HPP
-#define REACTIONS_PYTHON_COMPOSITES_HPP
+#pragma once
 
-#include "database.hpp"
 #include "element.hpp"
 #include "errors.hpp"
 #include "node.hpp"
 
 #include "reactions/element_traits.hpp"
+#include "reactions/pdg.hpp"
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
@@ -79,14 +78,15 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  element_kind ek = element_kind::unknown;
+  reactions::python::element_kind ek = reactions::python::element_kind::unknown;
   PyObject *reactants; // list of reactants
   PyObject *products;  // list of products
 } Reaction;
 
 /// Way to fill a reaction in python
 template <class Element>
-inline void python_node_fill_reaction(Reaction *, reaction<Element> const &);
+inline void python_node_fill_reaction(Reaction *,
+                                      reactions::reaction<Element> const &);
 
 // Initialize a new reaction
 static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
@@ -103,11 +103,11 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
                                    const_cast<char **>(kwds), &str, &kind))
     return -1;
 
-  self->ek = element_kind_properties::from_string(kind);
+  self->ek = reactions::python::element_kind_properties::from_string(kind);
 
   if (!str) {
     // initialization with no values
-    if (self->ek == unknown) {
+    if (self->ek == reactions::python::unknown) {
       PyErr_SetString(
           PyExc_ValueError,
           (std::string{"Unknown element type \""} + kind + "\"").c_str());
@@ -123,37 +123,31 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
     }
   }
 
-  using namespace database_pdg;
-
   switch (self->ek) {
 
-  case (element_kind::pdg): {
-
-    DatabasePDG *pdg_instance =
-        (DatabasePDG *)DatabasePDGType.tp_new(&DatabasePDGType, NULL, NULL);
+  case (reactions::python::element_kind::pdg): {
 
     try {
-      auto reac = make_reaction_for<element>(
-          str, [&pdg_instance](std::string const &s) -> element {
-            return pdg_instance->database->operator()(s);
+      auto reac = reactions::make_reaction_for<reactions::pdg_element>(
+          str, [](std::string const &s) -> reactions::pdg_element {
+            return reactions::pdg_database::instance()(s);
           });
       python_node_fill_reaction(self, reac);
     }
-    REACTIONS_PYTHON_CATCH_ERRORS(
-        Py_DecRef((PyObject *)pdg_instance)) // delete database on error
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
     break;
   }
-  case (element_kind::string): {
+  case (reactions::python::element_kind::string): {
 
     try {
-      auto reac = make_reaction<element_kind::string>(str);
+      auto reac = reactions::make_reaction<reactions::string_element>(str);
       python_node_fill_reaction(self, reac);
       break;
     }
-    REACTIONS_PYTHON_CATCH_ERRORS()
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
   }
-  case (element_kind::unknown):
+  case (reactions::python::element_kind::unknown):
 
     PyErr_SetString(PyExc_ValueError,
                     (std::string{"Unknown element type "} + kind).c_str());
@@ -173,7 +167,7 @@ static PyObject *Reaction_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = processes::detail::node_kind::reaction;
+  self->node.c_type = reactions::processes::node_kind::reaction;
 
   return (PyObject *)self;
 }
@@ -225,24 +219,24 @@ static PyTypeObject ReactionType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "Reaction object",                        /* tp_doc */
-    0,                                        /* tp_traverse */
-    0,                                        /* tp_clear */
-    Reaction_richcompare,                     /* tp_richcompare */
-    0,                                        /* tp_weaklistoffset */
-    0,                                        /* tp_iter */
-    0,                                        /* tp_iternext */
-    Reaction_methods,                         /* tp_methods */
-    0,                                        /* tp_members */
-    Reaction_getsetters,                      /* tp_getset */
-    &NodeType,                                /* tp_base */
-    0,                                        /* tp_dict */
-    0,                                        /* tp_descr_get */
-    0,                                        /* tp_descr_set */
-    0,                                        /* tp_dictoffset */
-    (initproc)Reaction_init,                  /* tp_init */
-    0,                                        /* tp_alloc */
-    Reaction_new,                             /* tp_new */
+    "Reaction involving several elements of the same type", /* tp_doc */
+    0,                                                      /* tp_traverse */
+    0,                                                      /* tp_clear */
+    Reaction_richcompare,                                   /* tp_richcompare */
+    0,                       /* tp_weaklistoffset */
+    0,                       /* tp_iter */
+    0,                       /* tp_iternext */
+    Reaction_methods,        /* tp_methods */
+    0,                       /* tp_members */
+    Reaction_getsetters,     /* tp_getset */
+    &NodeType,               /* tp_base */
+    0,                       /* tp_dict */
+    0,                       /* tp_descr_get */
+    0,                       /* tp_descr_set */
+    0,                       /* tp_dictoffset */
+    (initproc)Reaction_init, /* tp_init */
+    0,                       /* tp_alloc */
+    Reaction_new,            /* tp_new */
 };
 
 /// Implementation of the comparison operators
@@ -274,8 +268,9 @@ static PyObject *Reaction_richcompare(PyObject *obj1, PyObject *obj2, int op) {
 
 /// Way to fill a reaction in python
 template <class Element>
-inline void python_node_fill_reaction(Reaction *self,
-                                      reaction<Element> const &reac) {
+inline void
+python_node_fill_reaction(Reaction *self,
+                          reactions::reaction<Element> const &reac) {
 
   using object = python_element_object_o<Element>;
   constexpr static PyTypeObject *type_ptr = python_element_object_t<Element>;
@@ -293,7 +288,7 @@ inline void python_node_fill_reaction(Reaction *self,
 
     if (obj.is_element()) {
       object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      python_node_fill_element(e, *(obj.ptr_as_element()));
+      e->element = *(obj.ptr_as_element());
       PyList_SetItem(self->reactants, i, (PyObject *)e); // steals the reference
     } else {
       Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
@@ -309,7 +304,7 @@ inline void python_node_fill_reaction(Reaction *self,
 
     if (obj.is_element()) {
       object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      python_node_fill_element(e, *(obj.ptr_as_element()));
+      e->element = *(obj.ptr_as_element());
       PyList_SetItem(self->products, i, (PyObject *)e); // steals the reference
     } else {
       Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
@@ -328,14 +323,15 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  element_kind ek = element_kind::unknown;
+  reactions::python::element_kind ek = reactions::python::element_kind::unknown;
   PyObject *head;     // head of the decay
   PyObject *products; // list of products
 } Decay;
 
 // Way to fill a decay in python
 template <class Element>
-inline void python_node_fill_decay(Decay *self, decay<Element> const &reac);
+inline void python_node_fill_decay(Decay *self,
+                                   reactions::decay<Element> const &reac);
 
 // Initialize a new reaction
 static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
@@ -352,11 +348,11 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
                                    const_cast<char **>(kwds), &str, &kind))
     return -1;
 
-  self->ek = element_kind_properties::from_string(kind);
+  self->ek = reactions::python::element_kind_properties::from_string(kind);
 
   if (!str) {
     // initialization with no values
-    if (self->ek == element_kind::unknown) {
+    if (self->ek == reactions::python::element_kind::unknown) {
       PyErr_SetString(
           PyExc_ValueError,
           (std::string{"Unknown element type \""} + kind + "\"").c_str());
@@ -374,38 +370,32 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
     }
   }
 
-  using namespace database_pdg;
-
   switch (self->ek) {
 
-  case (element_kind::pdg): {
-
-    DatabasePDG *pdg_instance =
-        (DatabasePDG *)DatabasePDGType.tp_new(&DatabasePDGType, NULL, NULL);
+  case (reactions::python::element_kind::pdg): {
 
     try {
-      auto reac = make_decay_for<element>(
-          str, [&pdg_instance](std::string const &s) -> element {
-            return pdg_instance->database->operator()(s);
+      auto reac = reactions::make_decay_for<reactions::pdg_element>(
+          str, [](std::string const &s) -> reactions::pdg_element {
+            return reactions::pdg_database::instance()(s);
           });
       python_node_fill_decay(self, reac);
     }
-    REACTIONS_PYTHON_CATCH_ERRORS(
-        Py_DecRef((PyObject *)pdg_instance)) // delete database on error
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
     break;
   }
-  case (element_kind::string): {
+  case (reactions::python::element_kind::string): {
 
     try {
-      auto reac = make_decay<element_kind::string>(str);
+      auto reac = reactions::make_decay<reactions::string_element>(str);
       python_node_fill_decay(self, reac);
     }
-    REACTIONS_PYTHON_CATCH_ERRORS()
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
     break;
   }
-  case (element_kind::unknown):
+  case (reactions::python::element_kind::unknown):
 
     PyErr_SetString(PyExc_ValueError,
                     (std::string{"Unknown element type "} + kind).c_str());
@@ -425,7 +415,7 @@ static PyObject *Decay_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = processes::detail::node_kind::decay;
+  self->node.c_type = reactions::processes::node_kind::decay;
 
   return (PyObject *)self;
 }
@@ -489,24 +479,24 @@ static PyTypeObject DecayType = {
     0,                                                /* tp_setattro */
     0,                                                /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,         /* tp_flags */
-    "Decay object",                                   /* tp_doc */
-    0,                                                /* tp_traverse */
-    0,                                                /* tp_clear */
-    Decay_richcompare,                                /* tp_richcompare */
-    0,                                                /* tp_weaklistoffset */
-    0,                                                /* tp_iter */
-    0,                                                /* tp_iternext */
-    Decay_methods,                                    /* tp_methods */
-    0,                                                /* tp_members */
-    Decay_getsetters,                                 /* tp_getset */
-    &NodeType,                                        /* tp_base */
-    0,                                                /* tp_dict */
-    0,                                                /* tp_descr_get */
-    0,                                                /* tp_descr_set */
-    0,                                                /* tp_dictoffset */
-    (initproc)Decay_init,                             /* tp_init */
-    0,                                                /* tp_alloc */
-    Decay_new,                                        /* tp_new */
+    "Decay involving several elements of the same type", /* tp_doc */
+    0,                                                   /* tp_traverse */
+    0,                                                   /* tp_clear */
+    Decay_richcompare,                                   /* tp_richcompare */
+    0,                                                   /* tp_weaklistoffset */
+    0,                                                   /* tp_iter */
+    0,                                                   /* tp_iternext */
+    Decay_methods,                                       /* tp_methods */
+    0,                                                   /* tp_members */
+    Decay_getsetters,                                    /* tp_getset */
+    &NodeType,                                           /* tp_base */
+    0,                                                   /* tp_dict */
+    0,                                                   /* tp_descr_get */
+    0,                                                   /* tp_descr_set */
+    0,                                                   /* tp_dictoffset */
+    (initproc)Decay_init,                                /* tp_init */
+    0,                                                   /* tp_alloc */
+    Decay_new,                                           /* tp_new */
 };
 
 /// Implementation of the comparison operators
@@ -542,7 +532,8 @@ static PyObject *Decay_richcompare(PyObject *obj1, PyObject *obj2, int op) {
 
 /// Way to fill a decay in python
 template <class Element>
-inline void python_node_fill_decay(Decay *self, decay<Element> const &reac) {
+inline void python_node_fill_decay(Decay *self,
+                                   reactions::decay<Element> const &reac) {
 
   using object = python_element_object_o<Element>;
   constexpr static PyTypeObject *type_ptr = python_element_object_t<Element>;
@@ -550,7 +541,7 @@ inline void python_node_fill_decay(Decay *self, decay<Element> const &reac) {
   // will be re-assigned
   Py_DecRef(self->head);
   self->head = (PyObject *)type_ptr->tp_new(type_ptr, NULL, NULL);
-  python_node_fill_element((object *)self->head, reac.head());
+  ((object *)self->head)->element = reac.head();
 
   Py_DecRef(self->products);
   self->products = PyList_New(reac.products().size());
@@ -562,7 +553,7 @@ inline void python_node_fill_decay(Decay *self, decay<Element> const &reac) {
 
     if (obj.is_element()) {
       object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      python_node_fill_element(e, *(obj.ptr_as_element()));
+      e->element = *(obj.ptr_as_element());
       PyList_SetItem(self->products, i, (PyObject *)e); // steals the reference
     } else {
       Decay *r = (Decay *)DecayType.tp_new(&DecayType, NULL, NULL);
@@ -571,5 +562,3 @@ inline void python_node_fill_decay(Decay *self, decay<Element> const &reac) {
     }
   }
 }
-
-#endif // REACTIONS_PYTHON_COMPOSITES_HPP

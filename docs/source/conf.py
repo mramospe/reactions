@@ -58,6 +58,12 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
 ''')
     subprocess.check_call(['doxygen'], cwd=tmpdir)
 
+# Generate additional documents needed by the documentation, like tables, plots, ...
+pdg_table = os.path.join(static_doc_dir, 'pdf_table.pdf')
+
+subprocess.check_call(['python', os.path.join(
+    root, 'scripts', 'display-pdg-table.py'), '--output', pdg_table])
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -116,7 +122,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = []
+exclude_patterns = ['notebooks/.ipynb_checkpoints/*']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'

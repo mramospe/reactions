@@ -1,5 +1,4 @@
-#ifndef REACTIONS_PYTHON_ELEMENTSTRING_HPP
-#define REACTIONS_PYTHON_ELEMENTSTRING_HPP
+#pragma once
 
 #include "reactions/processes.hpp"
 
@@ -10,14 +9,8 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  std::string name;
+  reactions::string_element element;
 } ElementString;
-
-/// Way to fill an element name-based
-inline void python_node_fill_element(ElementString *pyel,
-                                     std::string const &el) {
-  pyel->name = el;
-}
 
 // Allocate a new ElementString
 static PyObject *ElementString_new(PyTypeObject *type,
@@ -30,7 +23,7 @@ static PyObject *ElementString_new(PyTypeObject *type,
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = processes::detail::node_kind::element;
+  self->node.c_type = reactions::processes::node_kind::element;
 
   return (PyObject *)self;
 }
@@ -47,14 +40,14 @@ static int ElementString_init(ElementString *self, PyObject *args,
     return -1;
 
   // no database for this class
-  python_node_fill_element(self, str);
+  self->element = str;
 
   return 0;
 }
 
 /// Access the name
 static PyObject *ElementString_get_name(ElementString *self, void *) {
-  return PyUnicode_FromString(self->name.c_str());
+  return PyUnicode_FromString(self->element.c_str());
 }
 
 /// Properties of the Reaction class
@@ -92,7 +85,7 @@ static PyTypeObject ElementStringType = {
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /* tp_flags */
-    "ElementString object",                   /* tp_doc */
+    "Represent an element based on a string", /* tp_doc */
     0,                                        /* tp_traverse */
     0,                                        /* tp_clear */
     ElementString_richcompare,                /* tp_richcompare */
@@ -125,10 +118,12 @@ static PyObject *ElementString_richcompare(PyObject *obj1, PyObject *obj2,
   bool result;
   switch (op) {
   case Py_EQ:
-    result = ((ElementString *)obj1)->name == ((ElementString *)obj2)->name;
+    result =
+        ((ElementString *)obj1)->element == ((ElementString *)obj2)->element;
     break;
   case Py_NE:
-    result = ((ElementString *)obj1)->name != ((ElementString *)obj2)->name;
+    result =
+        ((ElementString *)obj1)->element != ((ElementString *)obj2)->element;
     break;
   default:
     PyErr_SetString(PyExc_NotImplementedError,
@@ -141,5 +136,3 @@ static PyObject *ElementString_richcompare(PyObject *obj1, PyObject *obj2,
   else
     Py_RETURN_FALSE;
 }
-
-#endif // REACTIONS_PYTHON_ELEMENTSTRING_HPP

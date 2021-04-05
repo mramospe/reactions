@@ -1,23 +1,18 @@
-#ifndef REACTIONS_PYTHON_NODE_HPP
-#define REACTIONS_PYTHON_NODE_HPP
+#pragma once
 
 #include "reactions/processes.hpp"
 
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
-namespace {
-  using namespace reactions;
-}
-
 // Wrapper for a node
 typedef struct {
-  PyObject_HEAD processes::detail::node_kind c_type =
-      processes::detail::node_kind::unknown;
+  PyObject_HEAD reactions::processes::node_kind c_type =
+      reactions::processes::node_kind::unknown;
 } Node;
 
 #define REACTIONS_PYTHON_NODE_CHECK_UNKNOWN(self)                              \
-  if (self->c_type == processes::detail::node_kind::unknown) {                 \
+  if (self->c_type == reactions::processes::node_kind::unknown) {              \
     PyErr_SetString(PyExc_RuntimeError,                                        \
                     "Node type is not defined (internal error); please "       \
                     "report the bug");                                         \
@@ -39,7 +34,7 @@ static PyObject *Node_new(PyTypeObject *type, PyObject *args,
   if (!self)
     return NULL;
 
-  self->c_type = processes::detail::node_kind::unknown;
+  self->c_type = reactions::processes::node_kind::unknown;
 
   return (PyObject *)self;
 }
@@ -65,24 +60,24 @@ static PyTypeObject NodeType = {
     0,                                               /* tp_setattro */
     0,                                               /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,        /* tp_flags */
-    "Node object",                                   /* tp_doc */
-    0,                                               /* tp_traverse */
-    0,                                               /* tp_clear */
-    0,                                               /* tp_richcompare */
-    0,                                               /* tp_weaklistoffset */
-    0,                                               /* tp_iter */
-    0,                                               /* tp_iternext */
-    0,                                               /* tp_methods */
-    0,                                               /* tp_members */
-    0,                                               /* tp_getset */
-    0,                                               /* tp_base */
-    0,                                               /* tp_dict */
-    0,                                               /* tp_descr_get */
-    0,                                               /* tp_descr_set */
-    0,                                               /* tp_dictoffset */
-    (initproc)Node_init,                             /* tp_init */
-    0,                                               /* tp_alloc */
-    Node_new,                                        /* tp_new */
+    "Base class for a node in a reaction/decay chain", /* tp_doc */
+    0,                                                 /* tp_traverse */
+    0,                                                 /* tp_clear */
+    0,                                                 /* tp_richcompare */
+    0,                                                 /* tp_weaklistoffset */
+    0,                                                 /* tp_iter */
+    0,                                                 /* tp_iternext */
+    0,                                                 /* tp_methods */
+    0,                                                 /* tp_members */
+    0,                                                 /* tp_getset */
+    0,                                                 /* tp_base */
+    0,                                                 /* tp_dict */
+    0,                                                 /* tp_descr_get */
+    0,                                                 /* tp_descr_set */
+    0,                                                 /* tp_dictoffset */
+    (initproc)Node_init,                               /* tp_init */
+    0,                                                 /* tp_alloc */
+    Node_new,                                          /* tp_new */
 };
 
 /// Check if the object is a node
@@ -90,5 +85,3 @@ bool is_node(PyObject *obj) {
 
   return PyObject_IsInstance(obj, (PyObject *)&NodeType);
 }
-
-#endif // REACTIONS_PYTHON_NODE_HPP

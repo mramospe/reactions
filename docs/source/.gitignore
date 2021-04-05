@@ -1,3 +1,5 @@
 # Ignore some automatically generated files
 api/
 _static/cpp/
+_static/*.pdf
+.ipynb_checkpoints/

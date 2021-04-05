@@ -45,7 +45,6 @@ sensitive basis, so `A -> B C` is the same as `A -> C B`.
 
 .. code-block:: python
 
-   import reactions
    assert reactions.decay('A -> B C') == reactions.decay('A -> C B')
 
 It is possible to check the syntax of several reactions and/or decays executing
@@ -71,5 +70,6 @@ The documentation covers the following aspects:
    :maxdepth: 2
 
    installation
+   notebooks/user_guide
    syntax
    reference

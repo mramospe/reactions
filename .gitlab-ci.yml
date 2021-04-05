@@ -33,6 +33,7 @@ build-python:
 cpp:
    stage: test
    script:
+      - ./build/test/test_elements
       - ./build/test/test_database
       - ./build/test/test_processes
    dependencies:
@@ -63,4 +64,12 @@ format:
    script:
       - source vpython3/bin/activate
       - pip install -r test/python/requirements.txt
-      - python setup.py check_format --regex '(include|python|test|src|doc)'
+      - python setup.py check_format --regex '(include|python|test|docs|scripts)'
+      - python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
+
+module:
+   stage: test
+   script:
+      - source vpython3/bin/activate
+      - python -m reactions print-table
+      - python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string

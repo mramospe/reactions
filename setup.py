@@ -2,15 +2,13 @@
 Setup script for the "reactions" package
 """
 
-import importlib
-import inspect
 import os
 import re
 import subprocess
 import tempfile
 import warnings
 
-from setuptools import Command, Extension, setup, find_packages
+from setuptools import Command, Extension, setup
 
 PWD = os.path.abspath(os.path.dirname(__file__))
 
@@ -129,7 +127,11 @@ class ApplyFormatCommand(DirectoryWorker):
             c_proc = None if not c_files else subprocess.Popen(
                 ['clang-format', '-i'] + c_files)
 
-            def killall(): return python_proc.kill() and c_proc.kill()
+            def killall():
+                if python_proc is not None:
+                    python_proc.kill()
+                if c_proc is not None:
+                    c_proc.kill()
 
             # Wait for the processes to finish
             if python_proc is not None and python_proc.wait() != 0:
@@ -240,7 +242,7 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
     os.mkdir(os.path.join(tmp_include_dir, 'reactions'))
 
     # modify headers that need to be configured
-    for input_filename in files_with_extension(os.path.join(PWD, 'include'), 'in'):
+    for input_filename in files_with_extension(os.path.join(PWD, 'include'), 'hpp.in'):
         output_filename = os.path.join(
             tmp_include_dir, 'reactions', os.path.basename(input_filename[:-3]))
         with open(input_filename) as input_file, open(output_filename, 'wt') as output_file:
@@ -272,9 +274,9 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
         # Modules
         ext_modules=[Extension('reactions.reactions',
                                include_dirs=[tmp_include_dir,
-                                             'include', os.path.join(PWD, 'src')],
+                                             'include', os.path.join(PWD, 'python', 'src')],
                                sources=[os.path.relpath(s, PWD) for s in files_with_extension(
-                                   os.path.join(PWD, 'src'), 'cpp')],
+                                   os.path.join(PWD, 'python', 'src'), 'cpp')],
                                extra_compile_args=['-std=c++17'],
                                language='c++')],
 

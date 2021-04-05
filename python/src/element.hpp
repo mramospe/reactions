@@ -1,22 +1,29 @@
-#ifndef REACTIONS_PYTHON_ELEMENT_HPP
-#define REACTIONS_PYTHON_ELEMENT_HPP
+#pragma once
 
 #include "element_pdg.hpp"
 #include "element_string.hpp"
 
-#include "reactions/database_pdg.hpp"
+#include "reactions/pdg.hpp"
+#include "reactions/pow_enum.hpp"
+
+namespace reactions::python {
+  /*\brief Define the element types available in python
+   *
+   */
+  REACTIONS_POW_ENUM_WITH_UNKNOWN(element_kind, pdg, string);
+} // namespace reactions::python
 
 /// Element by type
 template <class Element> struct python_element_object {};
 
 // Properties of a PDG element
-template <> struct python_element_object<reactions::database_pdg::element> {
+template <> struct python_element_object<reactions::pdg_element> {
   using object = ElementPDG;
   constexpr static PyTypeObject *type_ptr = &ElementPDGType;
 };
 
 // Properties of a string element
-template <> struct python_element_object<std::string> {
+template <> struct python_element_object<reactions::string_element> {
   using object = ElementString;
   constexpr static PyTypeObject *type_ptr = &ElementStringType;
 };
@@ -49,5 +56,3 @@ int object_is_element(PyObject *obj) {
 
   return dec;
 }
-
-#endif // REACTIONS_PYTHON_ELEMENT_HPP

@@ -1,11 +1,12 @@
 /*! \file
+  \brief Contains macros to define smart enumeration types
+
   The macro \ref REACTIONS_POW_ENUM_WITH_UNKNOWN is provided in this file, which
   defines a class containing an enumeration type, and several functions and
   constant objects to iterate over the enumeration values and convert/parse
   them to/from strings.
 */
-#ifndef REACTIONS_POWENUM_HPP
-#define REACTIONS_POWENUM_HPP
+#pragma once
 
 #include <cstdlib>
 #include <string>
@@ -27,7 +28,7 @@ namespace reactions::pow_enum {
     };
   };
 
-  /// Functions to transform a template of characters into a string
+  /// Transform a template of characters into a string
   template <std::size_t count, template <std::size_t...> class meta_functor,
             std::size_t... indices>
   struct apply_range {
@@ -35,6 +36,7 @@ namespace reactions::pow_enum {
                                  indices...>::result result;
   };
 
+  /// \copydoc apply_range
   template <template <std::size_t...> class meta_functor,
             std::size_t... indices>
   struct apply_range<0, meta_functor, indices...> {
@@ -77,6 +79,38 @@ namespace reactions::pow_enum {
     return parse_string_impl(string_group<>{}, string_tpl<>{}, s);
   }
 } // namespace reactions::pow_enum
+
+/*!
+ * This macro defines a new class with the given name, which itself defines an
+ * enum and a series of elements to facilitate operations with them.
+ * - enum_type: type of the enumeration
+ * - size: number of elements defined
+ * - list: elements as an array
+ */
+#define REACTIONS_POW_ENUM(enum_name, ...)                                     \
+  enum enum_name : int { __VA_ARGS__ };                                        \
+                                                                               \
+  struct enum_name##_properties {                                              \
+                                                                               \
+    static constexpr std::size_t size =                                        \
+        std::initializer_list{__VA_ARGS__}.size();                             \
+                                                                               \
+    static constexpr enum_name list[size] = {__VA_ARGS__};                     \
+                                                                               \
+    template <enum_name E, std::size_t I = 0>                                  \
+    static constexpr auto index_impl() {                                       \
+      static_assert(I < size);                                                 \
+      if constexpr (list[I] == E)                                              \
+        return I;                                                              \
+      else                                                                     \
+        return index_impl<E, I + 1>();                                         \
+    }                                                                          \
+                                                                               \
+    template <enum_name E> static constexpr auto index() {                     \
+      return index_impl<E>();                                                  \
+    }                                                                          \
+  }
+// must use a comma
 
 /*!
  * This macro defines a new class with the given name, which itself defines an
@@ -155,5 +189,3 @@ namespace reactions::pow_enum {
     static std::string to_string(enum_name e) { return to_c_string(e); }       \
   }
 // must use a comma
-
-#endif // REACTIONS_POWENUM_HPP

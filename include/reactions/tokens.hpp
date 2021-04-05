@@ -1,8 +1,7 @@
 /*! \file
-  \brief Define the tokens allowed in a reaction or decay.
+  \brief Tokens allowed in a reaction or decay.
  */
-#ifndef REACTIONS_TOKENS_HPP
-#define REACTIONS_TOKENS_HPP
+#pragma once
 
 #include <cstdlib>
 #include <string>
@@ -26,18 +25,28 @@ namespace reactions::tokens {
   /// Defines the end of a reaction
   using right_bra = token<'}'>;
 
+  /// Check if the iterator at the current position matches the token
   template <char... C, std::size_t... I>
   bool match_token_impl(token<C...>, std::index_sequence<I...>,
                         std::string::const_iterator const &it) {
     return ((*(it + I) == C) && ...);
   }
 
-  /// Check if the iterator at the current position matches the token
+  /// \copydoc match_token_impl
   template <class Token>
   bool match_token(std::string::const_iterator const &it) {
     return match_token_impl(Token{}, std::make_index_sequence<Token::size>(),
                             it);
   }
-} // namespace reactions::tokens
 
-#endif // REACTIONS_TOKENS_HPP
+  /// Check if the given character matches any of the template arguments
+  template <char... C> constexpr bool match_any(char c) {
+    return ((C == c) || ...);
+  }
+
+  /// Check if the given character is within the range defined by the template
+  /// arguments
+  template <char C0, char C1> constexpr bool match_range(char c) {
+    return (c >= C0) && (c <= C1);
+  }
+} // namespace reactions::tokens

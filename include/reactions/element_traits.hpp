@@ -1,60 +1,50 @@
 /*! \file
-  \brief Define the types of elements that can go into a reaction or decay.
+  \brief Utilities to work with element types
  */
-#ifndef REACTIONS_ELEMENT_TYPES_HPP
-#define REACTIONS_ELEMENT_TYPES_HPP
+#pragma once
 
-#include "reactions/database_pdg.hpp"
+#include "reactions/pdg.hpp"
 #include "reactions/pow_enum.hpp"
 
 #include <functional>
+#include <string>
 
 namespace reactions {
-  /*! \brief Kind of elements that can be processed
-   *
-   * This exposes the kind of elements that can be processed in the
-   * package. Such elements are:
-   * - **reactions::pdg**: for PDG elements
-   * - **reactions::string**: for string elements
-   * - **reactions::unknown**: when the type is unknown
-   */
-  REACTIONS_POW_ENUM_WITH_UNKNOWN(element_kind, pdg, string);
+  /// Alias for an element based on a simple string
+  using string_element = std::string;
 } // namespace reactions
 
-/*! \brief Kinds of elements
+/*! \brief Handle the properties of elements
  */
 namespace reactions::element_traits {
 
   /// Define properties for a given element kind
-  template <element_kind T> struct properties;
+  template <class T> struct properties;
 
   /// Definition of the properties of a PDG element
-  template <> struct properties<element_kind::pdg> {
-    using type = database_pdg::element;
+  template <> struct properties<reactions::pdg_element> {
+    using type = reactions::pdg_element;
     static constexpr auto builder = [](std::string const &s) {
-      return database_pdg::database::instance()(s);
+      return reactions::pdg_database::instance()(s);
     };
   };
 
   /// Definition of the properties of a string element
-  template <> struct properties<element_kind::string> {
-    using type = std::string;
+  template <> struct properties<reactions::string_element> {
+    using type = reactions::string_element;
     static constexpr auto builder = [](std::string const &s) { return s; };
   };
 
   /// Actual C++ type for the given kind of element
-  template <element_kind T> using element_t = typename properties<T>::type;
+  template <class T> using element_t = typename properties<T>::type;
 
   /// Default builder for a given kind of element
-  template <element_kind T>
-  static constexpr auto builder = properties<T>::builder;
+  template <class T> static constexpr auto builder = properties<T>::builder;
 
   /// Default builder type for a given kind of element
-  template <element_kind T> using builder_t = decltype(builder<T>);
+  template <class T> using builder_t = decltype(builder<T>);
 
   /// General builder type for a given kind of element
   template <class T>
   using builder_tpl_t = std::function<T(std::string const &)> const &;
 } // namespace reactions::element_traits
-
-#endif // REACTIONS_ELEMENT_TYPES_HPP
