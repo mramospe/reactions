@@ -9,7 +9,7 @@ def test_package():
     """
     import reactions
     members = set(filter(lambda s: not s.startswith('_'), dir(reactions)))
-    assert members == set(reactions.__all__)
+    assert members == set(['capi'] + reactions.__all__)
 
 
 def test_version():

@@ -11,7 +11,6 @@ try:
         # errors
         DatabaseError, LookupError, SyntaxError, InternalError, ValueError
     )
-    del capi
 
     pdg_database = pdg_database_sgl()  # overwrite it
     pdg_system_of_units = pdg_system_of_units_sgl()  # overwrite it
