@@ -14,6 +14,12 @@ def test_pdg_database():
     assert a is b
 
 
+def test_pdg_unique_elements():
+    all_elements = reactions.pdg_database.all_elements()
+    assert len({e.name for e in all_elements}) == len(all_elements)
+    assert len({e.pdg_id for e in all_elements}) == len(all_elements)
+
+
 @helpers.restore_pdg_database
 def test_pdg_getter_setter():
     from reactions.reactions import pdg_database
