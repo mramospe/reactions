@@ -17,7 +17,7 @@ namespace reactions {
     struct none {};
 
     /// Compute the scale factor for the given unit
-    constexpr auto scale_factor_for(energy_units u) {
+    auto scale_factor_for(energy_units u) {
       switch (u) {
       case (energy_units::eV):
         return 1.;
