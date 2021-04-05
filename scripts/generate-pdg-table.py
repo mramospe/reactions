@@ -161,7 +161,7 @@ if __name__ == '__main__':
 * Reactions particle table for PDG elements, generated on {datetime.datetime.today().date()}
 *
 * This table has been generated from the PDG table of masses and widths at https://pdg.lbl.gov/2020/html/computer_read.html,
-* where particles have been expanded by charge so they can be efficiently read by name.#
+* where particles have been expanded by charge so they can be efficiently read by name.
 *
 ''')
 
