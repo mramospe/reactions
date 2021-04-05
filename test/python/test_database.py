@@ -48,6 +48,10 @@ def test_pdg_database_cache():
 @helpers.restore_pdg_database
 def test_pdg_user_register():
 
+    for db in helpers.toggle_database_cache_status(clear_user_cache=False):
+        for el in db.all_elements():
+            assert db(el.name) == db(el.pdg_id)
+
     for db in helpers.toggle_database_cache_status(clear_user_cache=True):
 
         z = reactions.pdg_element(name="Z0'", pdg_id=9999999, three_charge=0,

@@ -40,4 +40,6 @@ def toggle_database_cache_status(db=None, clear_user_cache=False):
         db.disable_cache()
 
     yield db
-    db.enable_cache()
+
+    # clear the cache at the end of the execution
+    db.clear_cache()
