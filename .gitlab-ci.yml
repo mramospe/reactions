@@ -33,6 +33,7 @@ build-python:
 cpp:
    stage: test
    script:
+      - ./build/test/test_elements
       - ./build/test/test_database
       - ./build/test/test_processes
    dependencies:

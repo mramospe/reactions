@@ -32,6 +32,7 @@ jobs:
   include:
     - name: cpp
       script:
+         - ./build/test/test_elements
          - ./build/test/test_database
          - ./build/test/test_processes
       after_success: " "
