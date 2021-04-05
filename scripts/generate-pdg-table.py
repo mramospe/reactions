@@ -65,7 +65,7 @@ def parse_value(v):
 def parse_error(e):
     """ Format an error """
     if e.strip():
-        return f'{abs(float(e)):>{ERROR_SIZE}.{ERROR_SIZE - 7}e}'
+        return f'{abs(float(e)):>{ERROR_SIZE}.1e}'
     else:
         return ERROR_SIZE * ' '
 
