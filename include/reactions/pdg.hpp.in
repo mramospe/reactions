@@ -984,9 +984,7 @@ namespace reactions {
 
         for (auto i = 0u; i < n; ++i) {
 
-          new_cache.emplace_back(func());
-
-          auto const &new_element = new_cache.back();
+          auto new_element = func();
 
           // check that we do not repeat any entry
           if (user_registered_size() != 0) {
@@ -1001,7 +999,8 @@ namespace reactions {
                                "element: \""} +
                    new_cache.back().name() + "\"")
                       .c_str());
-          }
+          } else
+            new_cache.emplace_back(std::move(new_element));
         }
 
         // insert the elements and assign the separator to the number of
