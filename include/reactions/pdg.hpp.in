@@ -264,7 +264,7 @@ namespace reactions {
      */
     template <class F, class S = void>
     friend pdg::detail::return_type_t<F, S>
-    reactions::pdg::detail::get(pdg_element const &element) {
+    pdg::detail::get(pdg_element const &element) {
       if constexpr (std::is_same_v<S, void>)
         return pdg::detail::process_units<F>(
             std::get<pdg::base_element::field_index_v<F>>(element));
