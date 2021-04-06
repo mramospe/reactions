@@ -245,7 +245,14 @@ namespace reactions {
   namespace pdg::detail {
     /// Access a field of a PDG element
     template <class F, class S = void>
-    pdg::detail::return_type_t<F, S> get(pdg_element const &element);
+    pdg::detail::return_type_t<F, S> get(pdg_element const &element) {
+      if constexpr (std::is_same_v<S, void>)
+        return pdg::detail::process_units<F>(
+            std::get<pdg::base_element::field_index_v<F>>(element));
+      else
+        return pdg::detail::process_units<F>(database::get<S>(
+            std::get<pdg::base_element::field_index_v<F>>(element).value()));
+    }
   } // namespace pdg::detail
 
   /*! \brief A PDG particle, based on the fields of a particle in the PDG
@@ -262,16 +269,9 @@ namespace reactions {
      * \ref reactions::missing_fields_error exception is thrown,
      * if missing.
      */
-    template <class F, class S = void>
+    template <class F, class S>
     friend pdg::detail::return_type_t<F, S>
-    pdg::detail::get(pdg_element const &element) {
-      if constexpr (std::is_same_v<S, void>)
-        return pdg::detail::process_units<F>(
-            std::get<pdg::base_element::field_index_v<F>>(element));
-      else
-        return pdg::detail::process_units<F>(database::get<S>(
-            std::get<pdg::base_element::field_index_v<F>>(element).value()));
-    }
+    pdg::detail::get(pdg_element const &);
 
     /// Check whether the given field information is missing or not
     template <class F> constexpr bool has() const {
