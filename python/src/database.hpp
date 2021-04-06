@@ -169,24 +169,55 @@ static PyObject *DatabasePDG_all_elements(DatabasePDG *self) {
 
 // Methods of the DatabasePDG class
 static PyMethodDef DatabasePDG_methods[] = {
+    {"__call__", (PyCFunction)DatabasePDG_call, METH_VARARGS | METH_COEXIST,
+     R"(Access an element of the database by name or PDG ID
+
+:param arg: element name or PDG ID
+:type arg: str or int
+:returns: corresponding element
+:rtype: pdg_element
+:raises reactions.LookupError: if the element is not found
+)"},
     {"all_elements", (PyCFunction)DatabasePDG_all_elements, METH_NOARGS,
-     "Extract all the elements to a list"},
+     R"(Extract all the elements to a list. This includes all those elements
+registered by the user.
+
+:returns: all the elements
+:rtype: list(pdg_element)
+)"},
     {"clear_cache", (PyCFunction)DatabasePDG_clear_cache, METH_NOARGS,
      "Clear the internal cache, removing also user-registered elements"},
     {"charge_conjugate", (PyCFunction)DatabasePDG_charge_conjugate,
-     METH_VARARGS, "Get the charge-conjugate of an element"},
+     METH_VARARGS, R"(Get the charge-conjugate of an element.
+
+:param element: element to calculate the charge-conjugate
+:type element: pdg_element
+:returns: charge-conjugate of the given element
+:rtype: pdg_element
+)"},
     {"disable_cache", (PyCFunction)DatabasePDG_disable_cache, METH_NOARGS,
      "Disable the internal cache"},
     {"enable_cache", (PyCFunction)DatabasePDG_enable_cache, METH_NOARGS,
      "Enable the internal cache. All the elements will be loaded in memory."},
     {"get_database_path", (PyCFunction)DatabasePDG_get_database_path,
-     METH_NOARGS, "Get the path to the database file"},
+     METH_NOARGS, R"(Get the path to the database file
+
+:returns: path to the database file
+:rtype: str
+)"},
     {"register_element", (PyCFunction)DatabasePDG_register_element,
-     METH_VARARGS | METH_KEYWORDS, "Register a new element in the database"},
+     METH_VARARGS | METH_KEYWORDS,
+     R"(Register a new element in the database. Arguments
+can be either a single PDG element object or the arguments to the constructor
+of :class:`reactions.pdg_element`.)"},
     {"set_database_path", (PyCFunction)DatabasePDG_set_database_path,
      METH_VARARGS,
-     "Set the path to the database file. If the cache is enabled, reloads the "
-     "data. If the cache is enabled, elements are reloaded in memory."},
+     R"(Set the path to the database file. If the cache is enabled, reloads the
+data. If the cache is enabled, elements are reloaded in memory.
+
+:param path: path to the database file
+:type path: str
+)"},
     {NULL, NULL, 0, NULL}};
 
 // Definition of the DatabasePDG type
@@ -323,7 +354,7 @@ static PyMethodDef SystemOfUnitsPDG_methods[] = {
 
 :param units: units of energy to use
 :type units: str
-:raises reactions.ValueError: if the provided units are unknown.
+:raises reactions.ValueError: if the provided units are unknown
 )"},
     {NULL, NULL, 0, NULL}};
 

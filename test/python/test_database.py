@@ -41,7 +41,9 @@ def test_pdg_getter_setter():
 def test_pdg_database_cache():
     db = reactions.pdg_database
     path = db.get_database_path()
+    nels = len(db.all_elements())
     db.enable_cache()
+    assert nels == len(db.all_elements())
     db.set_database_path(path)
 
 

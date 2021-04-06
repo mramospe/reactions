@@ -13,9 +13,8 @@ typedef struct {
 
 #define REACTIONS_PYTHON_NODE_CHECK_UNKNOWN(self)                              \
   if (self->c_type == reactions::processes::node_kind::unknown) {              \
-    PyErr_SetString(PyExc_RuntimeError,                                        \
-                    "Node type is not defined (internal error); please "       \
-                    "report the bug");                                         \
+    PyErr_SetString(InternalError,                                             \
+                    "Node type is not defined; please report the bug");        \
     return NULL;                                                               \
   }
 

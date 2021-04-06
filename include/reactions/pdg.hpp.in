@@ -761,6 +761,7 @@ namespace reactions {
                                       std::getline(file, line);
                                       return read_element(line);
                                     });
+
       file.close();
     }
 
@@ -925,7 +926,7 @@ namespace reactions {
       /// Status of the cache
       cache_status status() const {
         if (m_vector.size()) {
-          if (m_separator == 0)
+          if (database_size() == 0)
             return cache_status::user;
           else
             return cache_status::full;
@@ -999,8 +1000,9 @@ namespace reactions {
                                "element: \""} +
                    new_cache.back().name() + "\"")
                       .c_str());
-          } else
-            new_cache.emplace_back(std::move(new_element));
+          }
+
+          new_cache.emplace_back(std::move(new_element));
         }
 
         // insert the elements and assign the separator to the number of

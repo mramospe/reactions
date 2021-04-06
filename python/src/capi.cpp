@@ -32,7 +32,7 @@ PyObject *node_type(PyObject *module, PyObject *args) {
     return NULL;
 
   if (!PyObject_IsInstance(obj, (PyObject *)&NodeType)) {
-    PyErr_SetString(PyExc_RuntimeError, "Input argument must be a node");
+    PyErr_SetString(PyExc_TypeError, "Input argument must be a node");
     return NULL;
   }
 
@@ -46,9 +46,21 @@ PyObject *node_type(PyObject *module, PyObject *args) {
 // Module global functions
 static PyMethodDef capi_methods[] = {
     {"is_element", (PyCFunction)is_element, METH_VARARGS,
-     "Check if an object is of element type"},
+     R"(Check if an object is of element type
+
+:param obj: input object
+:returns: whether the object is an element
+:rtype: bool
+)"},
     {"node_type", (PyCFunction)node_type, METH_VARARGS,
-     "Get the node type as a string"},
+     R"(Get the node type as a string (`decay`, `reaction` or `element`)
+
+:param obj: input node
+:type obj: node
+:returns: node type as a string
+:rtype: str
+:raises TypeError: if the input object is not a :class:`node` object.
+)"},
     {NULL, NULL, 0, NULL}};
 
 // Module definition
