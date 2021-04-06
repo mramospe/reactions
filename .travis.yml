@@ -25,9 +25,6 @@ install:
    - make install
    - cd ..
 
-after_success:
-   - codecov
-
 jobs:
   include:
     - name: cpp
@@ -60,7 +57,9 @@ jobs:
       python: 3.7
       install: pip install .
       script: pytest
+      after_success: codecov
     - name: python 3.8
       python: 3.8
       install: pip install .
       script: pytest
+      after_success: codecov
