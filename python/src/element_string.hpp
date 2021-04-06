@@ -136,3 +136,23 @@ static PyObject *ElementString_richcompare(PyObject *obj1, PyObject *obj2,
   else
     Py_RETURN_FALSE;
 }
+
+/// Create a new element using the python API
+PyObject *ElementString_New(reactions::string_element &&el) {
+  PyObject *obj =
+      ElementStringType.tp_new((PyTypeObject *)&ElementStringType, NULL, NULL);
+  if (NodeType.tp_init(obj, NULL, NULL) < 0)
+    return NULL;
+  ((ElementString *)obj)->element = el;
+  return obj;
+}
+
+/// Create a new element using the python API
+PyObject *ElementString_New(reactions::string_element const &el) {
+  PyObject *obj =
+      ElementStringType.tp_new((PyTypeObject *)&ElementStringType, NULL, NULL);
+  if (NodeType.tp_init(obj, NULL, NULL) < 0)
+    return NULL;
+  ((ElementString *)obj)->element = el;
+  return obj;
+}

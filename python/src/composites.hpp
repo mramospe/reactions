@@ -266,14 +266,27 @@ static PyObject *Reaction_richcompare(PyObject *obj1, PyObject *obj2, int op) {
     Py_RETURN_FALSE;
 }
 
+/// Create a new instance of the Reaction class
+template <class Element>
+PyObject *Reaction_New(reactions::reaction<Element> &&reaction) {
+  Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
+  python_node_fill_reaction(r, reaction);
+  return (PyObject *)r;
+}
+
+/// Create a new instance of the Reaction class
+template <class Element>
+PyObject *Reaction_New(reactions::reaction<Element> const &reaction) {
+  Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
+  python_node_fill_reaction(r, reaction);
+  return (PyObject *)r;
+}
+
 /// Way to fill a reaction in python
 template <class Element>
 inline void
 python_node_fill_reaction(Reaction *self,
                           reactions::reaction<Element> const &reac) {
-
-  using object = python_element_object_o<Element>;
-  constexpr static PyTypeObject *type_ptr = python_element_object_t<Element>;
 
   // will be re-assigned
   Py_DecRef(self->reactants);
@@ -287,13 +300,12 @@ python_node_fill_reaction(Reaction *self,
     auto &obj = reac.reactants().at(i);
 
     if (obj.is_element()) {
-      object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      e->element = *(obj.ptr_as_element());
-      PyList_SetItem(self->reactants, i, (PyObject *)e); // steals the reference
+      PyObject *e =
+          python_element<Element>::new_instance(*(obj.ptr_as_element()));
+      PyList_SetItem(self->reactants, i, e); // steals the reference
     } else {
-      Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
-      python_node_fill_reaction(r, *(obj.ptr_as_reaction()));
-      PyList_SetItem(self->reactants, i, (PyObject *)r); // steals the reference
+      PyObject *r = Reaction_New(*(obj.ptr_as_reaction()));
+      PyList_SetItem(self->reactants, i, r); // steals the reference
     }
   }
 
@@ -303,13 +315,12 @@ python_node_fill_reaction(Reaction *self,
     auto &obj = reac.products().at(i);
 
     if (obj.is_element()) {
-      object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      e->element = *(obj.ptr_as_element());
-      PyList_SetItem(self->products, i, (PyObject *)e); // steals the reference
+      PyObject *e =
+          python_element<Element>::new_instance(*(obj.ptr_as_element()));
+      PyList_SetItem(self->products, i, e); // steals the reference
     } else {
-      Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
-      python_node_fill_reaction(r, *(obj.ptr_as_reaction()));
-      PyList_SetItem(self->products, i, (PyObject *)r); // steals the reference
+      PyObject *r = Reaction_New(*(obj.ptr_as_reaction()));
+      PyList_SetItem(self->products, i, r); // steals the reference
     }
   }
 }
@@ -530,18 +541,30 @@ static PyObject *Decay_richcompare(PyObject *obj1, PyObject *obj2, int op) {
     Py_RETURN_FALSE;
 }
 
+/// Create a new instance of the Decay class
+template <class Element>
+PyObject *Decay_New(reactions::decay<Element> &&decay) {
+  Decay *d = (Decay *)DecayType.tp_new(&DecayType, NULL, NULL);
+  python_node_fill_decay(d, decay);
+  return (PyObject *)d;
+}
+
+/// Create a new instance of the Decay class
+template <class Element>
+PyObject *Decay_New(reactions::decay<Element> const &decay) {
+  Decay *d = (Decay *)DecayType.tp_new(&DecayType, NULL, NULL);
+  python_node_fill_decay(d, decay);
+  return (PyObject *)d;
+}
+
 /// Way to fill a decay in python
 template <class Element>
 inline void python_node_fill_decay(Decay *self,
                                    reactions::decay<Element> const &reac) {
 
-  using object = python_element_object_o<Element>;
-  constexpr static PyTypeObject *type_ptr = python_element_object_t<Element>;
-
   // will be re-assigned
   Py_DecRef(self->head);
-  self->head = (PyObject *)type_ptr->tp_new(type_ptr, NULL, NULL);
-  ((object *)self->head)->element = reac.head();
+  self->head = python_element<Element>::new_instance(reac.head());
 
   Py_DecRef(self->products);
   self->products = PyList_New(reac.products().size());
@@ -552,13 +575,12 @@ inline void python_node_fill_decay(Decay *self,
     auto &obj = reac.products().at(i);
 
     if (obj.is_element()) {
-      object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      e->element = *(obj.ptr_as_element());
-      PyList_SetItem(self->products, i, (PyObject *)e); // steals the reference
+      PyObject *e =
+          python_element<Element>::new_instance(*(obj.ptr_as_element()));
+      PyList_SetItem(self->products, i, e); // steals the reference
     } else {
-      Decay *r = (Decay *)DecayType.tp_new(&DecayType, NULL, NULL);
-      python_node_fill_decay(r, *(obj.ptr_as_decay()));
-      PyList_SetItem(self->products, i, (PyObject *)r); // steals the reference
+      PyObject *d = Decay_New(*(obj.ptr_as_decay()));
+      PyList_SetItem(self->products, i, d); // steals the reference
     }
   }
 }

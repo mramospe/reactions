@@ -327,3 +327,13 @@ PyObject *ElementPDG_New(reactions::pdg_element &&el) {
   ((ElementPDG *)obj)->element = el;
   return obj;
 }
+
+/// Create a new element using the python API
+PyObject *ElementPDG_New(reactions::pdg_element const &el) {
+  PyObject *obj =
+      ElementPDGType.tp_new((PyTypeObject *)&ElementPDGType, NULL, NULL);
+  if (NodeType.tp_init(obj, NULL, NULL) < 0)
+    return NULL;
+  ((ElementPDG *)obj)->element = el;
+  return obj;
+}
