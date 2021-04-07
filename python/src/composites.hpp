@@ -85,7 +85,7 @@ typedef struct {
 
 /// Way to fill a reaction in python
 template <class Element>
-inline void python_node_fill_reaction(Reaction *,
+inline bool python_node_fill_reaction(Reaction *,
                                       reactions::reaction<Element> const &);
 
 // Initialize a new reaction
@@ -132,7 +132,8 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
           str, [](std::string const &s) -> reactions::pdg_element {
             return reactions::pdg_database::instance()(s);
           });
-      python_node_fill_reaction(self, reac);
+      if (!python_node_fill_reaction(self, reac))
+        return -1;
     }
     REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
@@ -142,7 +143,8 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
 
     try {
       auto reac = reactions::make_reaction<reactions::string_element>(str);
-      python_node_fill_reaction(self, reac);
+      if (!python_node_fill_reaction(self, reac))
+        return -1;
       break;
     }
     REACTIONS_PYTHON_CATCH_ERRORS(-1)
@@ -193,9 +195,18 @@ static PyObject *Reaction_get_products(Reaction *self, void *) {
 
 /// Properties of the Reaction class
 static PyGetSetDef Reaction_getsetters[] = {
-    {"reactants", (getter)Reaction_get_reactants, NULL, "Get the reactants",
+    {"reactants", (getter)Reaction_get_reactants, NULL,
+     R"(Objects at the left hand-side of a reaction
+
+:type: list(node)
+)",
      NULL},
-    {"products", (getter)Reaction_get_products, NULL, "Get the products", NULL},
+    {"products", (getter)Reaction_get_products, NULL,
+     R"(Objects at the right hand-side of a reaction
+
+:type: list(node)
+)",
+     NULL},
     {NULL},
 };
 
@@ -266,14 +277,20 @@ static PyObject *Reaction_richcompare(PyObject *obj1, PyObject *obj2, int op) {
     Py_RETURN_FALSE;
 }
 
-/// Way to fill a reaction in python
+/// Create a new instance of the Reaction class
 template <class Element>
-inline void
+PyObject *Reaction_New(reactions::reaction<Element> const &reaction) {
+  Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
+  if (!python_node_fill_reaction(r, reaction))
+    return NULL;
+  return (PyObject *)r;
+}
+
+/// Way to fill a reaction in python (set an error and return False on failure)
+template <class Element>
+inline bool
 python_node_fill_reaction(Reaction *self,
                           reactions::reaction<Element> const &reac) {
-
-  using object = python_element_object_o<Element>;
-  constexpr static PyTypeObject *type_ptr = python_element_object_t<Element>;
 
   // will be re-assigned
   Py_DecRef(self->reactants);
@@ -281,20 +298,27 @@ python_node_fill_reaction(Reaction *self,
   Py_DecRef(self->products);
   self->products = PyList_New(reac.products().size());
 
+  if (!self->reactants || !self->products) {
+    PyErr_SetString(InternalError, "Unable to create a new list");
+    return false;
+  }
+
   // fill reactants
   for (auto i = 0u; i < reac.reactants().size(); ++i) {
 
     auto &obj = reac.reactants().at(i);
 
-    if (obj.is_element()) {
-      object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      e->element = *(obj.ptr_as_element());
-      PyList_SetItem(self->reactants, i, (PyObject *)e); // steals the reference
-    } else {
-      Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
-      python_node_fill_reaction(r, *(obj.ptr_as_reaction()));
-      PyList_SetItem(self->reactants, i, (PyObject *)r); // steals the reference
+    PyObject *o =
+        obj.is_element()
+            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
+            : Reaction_New(*(obj.ptr_as_reaction()));
+
+    if (!o) {
+      PyErr_SetString(InternalError, "Unable to create element");
+      return false;
     }
+
+    PyList_SetItem(self->reactants, i, o); // steals the reference
   }
 
   // fill products
@@ -302,16 +326,20 @@ python_node_fill_reaction(Reaction *self,
 
     auto &obj = reac.products().at(i);
 
-    if (obj.is_element()) {
-      object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      e->element = *(obj.ptr_as_element());
-      PyList_SetItem(self->products, i, (PyObject *)e); // steals the reference
-    } else {
-      Reaction *r = (Reaction *)ReactionType.tp_new(&ReactionType, NULL, NULL);
-      python_node_fill_reaction(r, *(obj.ptr_as_reaction()));
-      PyList_SetItem(self->products, i, (PyObject *)r); // steals the reference
+    PyObject *o =
+        obj.is_element()
+            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
+            : Reaction_New(*(obj.ptr_as_reaction()));
+
+    if (!o) {
+      PyErr_SetString(InternalError, "Unable to create element");
+      return false;
     }
+
+    PyList_SetItem(self->products, i, o); // steals the reference
   }
+
+  return true;
 }
 
 //********************************************
@@ -330,7 +358,7 @@ typedef struct {
 
 // Way to fill a decay in python
 template <class Element>
-inline void python_node_fill_decay(Decay *self,
+inline bool python_node_fill_decay(Decay *self,
                                    reactions::decay<Element> const &reac);
 
 // Initialize a new reaction
@@ -375,11 +403,12 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
   case (reactions::python::element_kind::pdg): {
 
     try {
-      auto reac = reactions::make_decay_for<reactions::pdg_element>(
+      auto dec = reactions::make_decay_for<reactions::pdg_element>(
           str, [](std::string const &s) -> reactions::pdg_element {
             return reactions::pdg_database::instance()(s);
           });
-      python_node_fill_decay(self, reac);
+      if (!python_node_fill_decay(self, dec))
+        return -1;
     }
     REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
@@ -388,8 +417,9 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
   case (reactions::python::element_kind::string): {
 
     try {
-      auto reac = reactions::make_decay<reactions::string_element>(str);
-      python_node_fill_decay(self, reac);
+      auto dec = reactions::make_decay<reactions::string_element>(str);
+      if (!python_node_fill_decay(self, dec))
+        return -1;
     }
     REACTIONS_PYTHON_CATCH_ERRORS(-1)
 
@@ -454,8 +484,17 @@ static PyObject *Decay_get_products(Decay *self, void *) {
 /// Properties of the Decay class
 static PyGetSetDef Decay_getsetters[] = {
     {"head", (getter)Decay_get_head, (setter)Decay_set_head,
-     "Get the head of the decay", NULL},
-    {"products", (getter)Decay_get_products, NULL, "Get the products", NULL},
+     R"(Element at the left hand-side of a decay
+
+:type: pdg_element or string_element
+)",
+     NULL},
+    {"products", (getter)Decay_get_products, NULL,
+     R"(Objects at the right hand-side of a decay
+
+:type: list(node)
+)",
+     NULL},
     {NULL},
 };
 
@@ -530,35 +569,54 @@ static PyObject *Decay_richcompare(PyObject *obj1, PyObject *obj2, int op) {
     Py_RETURN_FALSE;
 }
 
+/// Create a new instance of the Decay class
+template <class Element>
+PyObject *Decay_New(reactions::decay<Element> const &decay) {
+  Decay *d = (Decay *)DecayType.tp_new(&DecayType, NULL, NULL);
+  if (!python_node_fill_decay(d, decay))
+    return NULL;
+  return (PyObject *)d;
+}
+
 /// Way to fill a decay in python
 template <class Element>
-inline void python_node_fill_decay(Decay *self,
+inline bool python_node_fill_decay(Decay *self,
                                    reactions::decay<Element> const &reac) {
-
-  using object = python_element_object_o<Element>;
-  constexpr static PyTypeObject *type_ptr = python_element_object_t<Element>;
 
   // will be re-assigned
   Py_DecRef(self->head);
-  self->head = (PyObject *)type_ptr->tp_new(type_ptr, NULL, NULL);
-  ((object *)self->head)->element = reac.head();
+  self->head = python_element<Element>::new_instance(reac.head());
+
+  if (!self->head) {
+    PyErr_SetString(InternalError, "Unable to create element");
+    return false;
+  }
 
   Py_DecRef(self->products);
   self->products = PyList_New(reac.products().size());
+
+  if (!self->products) {
+    PyErr_SetString(InternalError, "Unable to create list");
+    return false;
+  }
 
   // fill products
   for (auto i = 0u; i < reac.products().size(); ++i) {
 
     auto &obj = reac.products().at(i);
 
-    if (obj.is_element()) {
-      object *e = (object *)type_ptr->tp_new(type_ptr, NULL, NULL);
-      e->element = *(obj.ptr_as_element());
-      PyList_SetItem(self->products, i, (PyObject *)e); // steals the reference
-    } else {
-      Decay *r = (Decay *)DecayType.tp_new(&DecayType, NULL, NULL);
-      python_node_fill_decay(r, *(obj.ptr_as_decay()));
-      PyList_SetItem(self->products, i, (PyObject *)r); // steals the reference
+    PyObject *o =
+        obj.is_element()
+            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
+            : Decay_New(*(obj.ptr_as_decay()));
+
+    if (!o) {
+      PyErr_SetString(InternalError, "Unable to create decay");
+      return false;
     }
+
+    PyList_SetItem(self->products, i, o); // steals the reference
   }
+
+  return true;
 }

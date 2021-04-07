@@ -55,7 +55,7 @@ the package as a script
    python -m reactions --decays 'A -> B C' --reactions 'A B -> C D' --kind string
    python -m reactions --decays 'KS0 -> pi+ pi-' --reactions 'e+ e- -> gamma gamma' --kind pdg
 
-You can check the script options providing the `--help` argument:
+You can check the script options invoking:
 
 .. code-block:: bash
 

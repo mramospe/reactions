@@ -281,8 +281,12 @@ if __name__ == '__main__':
 
                         config['is_self_cc'] = False
 
-                        write_particle_and_antiparticle_(
-                            config, core_name, pid, three_charge, particle_format='{core_name}', antiparticle_format='{core_name}~')
+                        if pdg_particle_names.count(name) > 1:
+                            write_particle_and_antiparticle_(
+                                config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
+                        else:
+                            write_particle_and_antiparticle_(
+                                config, core_name, pid, three_charge, particle_format='{core_name}', antiparticle_format='{core_name}~')
 
                     elif category == 'meson':
 
@@ -297,7 +301,7 @@ if __name__ == '__main__':
                             write_particle_and_antiparticle_(
                                 config, core_name, pid, three_charge, particle_format='{core_name}{charge}', antiparticle_format='{core_name}~{charge}')
                         # pi, KS, KL, ...
-                        elif pdg_particle_names.count(base_name) > 1 or re_uppercase_string.match(base_name):
+                        elif pdg_particle_names.count(name) > 1 or re_uppercase_string.match(base_name):
                             write_element_(
                                 config, f'{core_name}{charge}', three_charge, pid)
                         else:  # eta, phi, ...

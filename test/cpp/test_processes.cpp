@@ -79,11 +79,8 @@ int main() {
   REACTIONS_TEST_UTILS_ADD_TEST(decay_coll,
                                 decay_tester<pdg_element>{"pi+ -> mu+ nu_mu"});
 
-  bool const reaction_code = reaction_coll.run();
-  bool const decay_code = decay_coll.run();
+  auto reaction_status = !reaction_coll.run();
+  auto decay_status = !decay_coll.run();
 
-  if (reaction_code && decay_code)
-    return 0;
-  else
-    return 1;
+  return reaction_status || decay_status;
 }

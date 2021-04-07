@@ -32,7 +32,7 @@ PyObject *node_type(PyObject *module, PyObject *args) {
     return NULL;
 
   if (!PyObject_IsInstance(obj, (PyObject *)&NodeType)) {
-    PyErr_SetString(PyExc_RuntimeError, "Input argument must be a node");
+    PyErr_SetString(PyExc_TypeError, "Input argument must be a node");
     return NULL;
   }
 
@@ -44,23 +44,35 @@ PyObject *node_type(PyObject *module, PyObject *args) {
 }
 
 // Module global functions
-static PyMethodDef reactions_methods[] = {
+static PyMethodDef capi_methods[] = {
     {"is_element", (PyCFunction)is_element, METH_VARARGS,
-     "Check if an object is of element type"},
+     R"(Check if an object is of element type
+
+:param obj: input object
+:returns: whether the object is an element
+:rtype: bool
+)"},
     {"node_type", (PyCFunction)node_type, METH_VARARGS,
-     "Get the node type as a string"},
+     R"(Get the node type as a string (`decay`, `reaction` or `element`)
+
+:param obj: input node
+:type obj: node
+:returns: node type as a string
+:rtype: str
+:raises TypeError: if the input object is not a :class:`node` object.
+)"},
     {NULL, NULL, 0, NULL}};
 
 // Module definition
-static PyModuleDef reactions_module = {PyModuleDef_HEAD_INIT,
-                                       "reactions",
-                                       "C++ bindings of the reactions package",
-                                       -1,
-                                       reactions_methods,
-                                       NULL,
-                                       NULL,
-                                       NULL,
-                                       NULL};
+static PyModuleDef capi_module = {PyModuleDef_HEAD_INIT,
+                                  "capi",
+                                  "C++ bindings of the reactions package",
+                                  -1,
+                                  capi_methods,
+                                  NULL,
+                                  NULL,
+                                  NULL,
+                                  NULL};
 
 // Prepare the class and return on failure
 #define REACTIONS_PYTHON_CLASS_READY(type)                                     \
@@ -83,7 +95,7 @@ static PyModuleDef reactions_module = {PyModuleDef_HEAD_INIT,
   }
 
 // Initialize the module
-PyMODINIT_FUNC PyInit_reactions(void) {
+PyMODINIT_FUNC PyInit_capi(void) {
 
   // Types
   REACTIONS_PYTHON_CLASS_READY(NodeType);
@@ -92,9 +104,10 @@ PyMODINIT_FUNC PyInit_reactions(void) {
   REACTIONS_PYTHON_CLASS_READY(ReactionType);
   REACTIONS_PYTHON_CLASS_READY(DecayType);
   REACTIONS_PYTHON_CLASS_READY(DatabasePDGType);
+  REACTIONS_PYTHON_CLASS_READY(SystemOfUnitsPDGType);
 
   // Create the module
-  PyObject *m = PyModule_Create(&reactions_module);
+  PyObject *m = PyModule_Create(&capi_module);
   if (!m)
     return NULL;
 
@@ -104,13 +117,16 @@ PyMODINIT_FUNC PyInit_reactions(void) {
   REACTIONS_PYTHON_REGISTER_CLASS(m, "string_element", ElementStringType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "reaction", ReactionType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "decay", DecayType);
-  REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_database", DatabasePDGType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_database_sgl", DatabasePDGType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_system_of_units_sgl",
+                                  SystemOfUnitsPDGType);
 
   // Add errors
   REACTIONS_PYTHON_REGISTER_ERROR(m, DatabaseError);
   REACTIONS_PYTHON_REGISTER_ERROR(m, LookupError);
   REACTIONS_PYTHON_REGISTER_ERROR(m, SyntaxError);
   REACTIONS_PYTHON_REGISTER_ERROR(m, InternalError);
+  REACTIONS_PYTHON_REGISTER_ERROR(m, ValueError);
 
   return m;
 }

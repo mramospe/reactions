@@ -105,4 +105,13 @@ namespace reactions {
 
     const char *what() const noexcept { return std::runtime_error::what(); }
   };
+
+  /// Raised whenever a problem is detected with an input value
+  class value_error : std::runtime_error {
+
+  public:
+    value_error(const char *msg) : std::runtime_error{msg} {};
+
+    const char *what() const noexcept { return std::runtime_error::what(); }
+  };
 } // namespace reactions

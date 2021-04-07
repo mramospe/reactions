@@ -57,4 +57,4 @@ html: html-doc;
 latexpdf: latexpdf-doc;
 
 clean:
-	@rm -rf source/_static/cpp source/api
+	@rm -rf source/_static/cpp source/api build

@@ -8,12 +8,8 @@ def test_package():
     Access the package from python
     """
     import reactions
-
     members = set(filter(lambda s: not s.startswith('_'), dir(reactions)))
-
-    exposed_objects = set(['reactions'] + reactions.__all__)
-
-    assert members == exposed_objects
+    assert members == set(['capi'] + reactions.__all__)
 
 
 def test_version():

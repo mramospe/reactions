@@ -155,14 +155,7 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to get access to an attribute of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(name, converter)                \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    namespace pdg = reactions::pdg;                                            \
-    if constexpr (pdg::is_optional_field_v<pdg::name>)                         \
-      if (!self->element.has<pdg::name>())                                     \
-        Py_RETURN_NONE;                                                        \
-      else                                                                     \
-        return converter(self->element.name());                                \
-    else                                                                       \
-      return converter(self->element.name());                                  \
+    return converter(self->element.name());                                    \
   }
 
 /// Define a function to get access to an attribute of a PDG element
@@ -170,7 +163,7 @@ static PyMethodDef ElementPDG_methods[] = {
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
     namespace pdg = reactions::pdg;                                            \
     if constexpr (pdg::is_optional_field_v<pdg::check>)                        \
-      if (!self->element.has<pdg::check>())                                    \
+      if (!self->element.has_##check())                                        \
         Py_RETURN_NONE;                                                        \
       else                                                                     \
         return converter(self->element.name());                                \
@@ -208,8 +201,7 @@ REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(width_error_upper, width,
 REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(is_self_cc, PyBool_FromLong)
 
 // Define the functions (used later also to define "getters")
-REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(charge, three_charge,
-                                             PyFloat_FromDouble)
+REACTIONS_PYTHON_ELEMENTPDG_GETTER_DEF(charge, PyFloat_FromDouble)
 REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(mass_error, mass,
                                              PyFloat_FromDouble)
 REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(width_error, width,
@@ -328,6 +320,16 @@ static PyObject *ElementPDG_richcompare(PyObject *obj1, PyObject *obj2,
 
 /// Create a new element using the python API
 PyObject *ElementPDG_New(reactions::pdg_element &&el) {
+  PyObject *obj =
+      ElementPDGType.tp_new((PyTypeObject *)&ElementPDGType, NULL, NULL);
+  if (NodeType.tp_init(obj, NULL, NULL) < 0)
+    return NULL;
+  ((ElementPDG *)obj)->element = el;
+  return obj;
+}
+
+/// Create a new element using the python API
+PyObject *ElementPDG_New(reactions::pdg_element const &el) {
   PyObject *obj =
       ElementPDGType.tp_new((PyTypeObject *)&ElementPDGType, NULL, NULL);
   if (NodeType.tp_init(obj, NULL, NULL) < 0)

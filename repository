@@ -7,7 +7,7 @@ Execute actions in the current repository.
 Usage: ./repository options...
 
 -h|--help: print this message and exit
--b|--build: build the project under a "build" directory. It can be used together with "--clean".
+-b|--build-cpp: build the project under a "build" directory. It can be used together with "--clean".
 -p|--build-python: build the python package in development mode (assumes to be within a virtual environment)
 -d|--build-docs: build the documentation (inside docs/build)
 -c|--clean: clean the repository of temporary files, caches, build directories, ...
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
 	    echo "$usage"
 	    exit 0
 	    ;;
-	-b|--build)
+	-b|--build-cpp)
 
 	    echo "Build project"
 	    mkdir -p build

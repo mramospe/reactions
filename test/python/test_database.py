@@ -8,9 +8,9 @@ import helpers
 
 
 def test_pdg_database():
-    from reactions.reactions import pdg_database
-    a = pdg_database()
-    b = pdg_database()
+    from reactions.capi import pdg_database_sgl
+    a = pdg_database_sgl()
+    b = pdg_database_sgl()
     assert a is b
 
 
@@ -22,9 +22,9 @@ def test_pdg_unique_elements():
 
 @helpers.restore_pdg_database
 def test_pdg_getter_setter():
-    from reactions.reactions import pdg_database
-    first = pdg_database()
-    second = pdg_database()
+    from reactions.capi import pdg_database_sgl
+    first = pdg_database_sgl()
+    second = pdg_database_sgl()
     reactions.pdg_database.set_database_path('some_path')
     assert first.get_database_path() == reactions.pdg_database.get_database_path()
     assert first.get_database_path() == second.get_database_path()
@@ -41,7 +41,9 @@ def test_pdg_getter_setter():
 def test_pdg_database_cache():
     db = reactions.pdg_database
     path = db.get_database_path()
+    nels = len(db.all_elements())
     db.enable_cache()
+    assert nels == len(db.all_elements())
     db.set_database_path(path)
 
 
