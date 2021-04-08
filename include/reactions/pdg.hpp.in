@@ -815,6 +815,8 @@ namespace reactions {
      * - Hadrons only contain the charge if there are other entries in the
      * database with the same name. In the case of mesons, they also contain the
      * charge if the particle is not self charge-conjugate.
+     * - Particle names referring to mass-eigenstates contain the charge if
+     * the corresponding flavour eigenstates do.
      * - The anti-particles of mesons where the charge is in the name are
      * specified using the opposite charge. For the rest, anti-particles are
      * specified by including a tilde before the charge or at the end of the
