@@ -75,6 +75,6 @@ def test_pdg_user_register():
 
 
 def test_charge_conjugate():
-    for pa, cc in ('KS0', 'KS0'), ('pi+', 'pi-'), ('p', 'p~'), ('Lambda', 'Lambda~'):
+    for pa, cc in ('K(S)0', 'K(S)0'), ('pi+', 'pi-'), ('p', 'p~'), ('Lambda', 'Lambda~'):
         f, s = reactions.pdg_database(pa), reactions.pdg_database(cc)
         assert reactions.pdg_database.charge_conjugate(f) == s

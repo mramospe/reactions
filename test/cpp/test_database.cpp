@@ -123,16 +123,15 @@ int main() {
         auto &db = reactions::pdg_database::instance();
         auto &sou = reactions::pdg_system_of_units::instance();
 
-        auto ks0_mass_gev = db("KS0").mass();
+        auto z0_mass_gev = db("Z0").mass();
 
         sou.set_energy_units(reactions::MeV);
 
-        auto ks0_pos = db("KS0");
-
-        if (ks0_pos.mass() < 400.)
+        auto z0_pos = db("Z0");
+        if (z0_pos.mass() < 100.)
           errors.push_back("Unable to change units");
 
-        auto diff = ks0_mass_gev - ks0_pos.mass() * 1e-3;
+        auto diff = z0_mass_gev - z0_pos.mass() * 1e-3;
         if ((diff > 0 ? diff : -diff) > 1e-12)
           errors.push_back("Wrong unit scale factors");
 
