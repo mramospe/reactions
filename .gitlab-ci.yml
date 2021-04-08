@@ -54,7 +54,7 @@ python:
    stage: test
    script:
       - source vpython3/bin/activate
-      - pip install -r test/python/requirements.txt
+      - pip install --force-reinstall -r test/python/requirements.txt
       - pytest
    dependencies:
       - build-python
@@ -63,7 +63,7 @@ format:
    stage: test
    script:
       - source vpython3/bin/activate
-      - pip install -r test/python/requirements.txt
+      - pip install --force-reinstall -r test/python/requirements.txt
       - python setup.py check_format --regex '(include|python|test|docs|scripts)'
       - python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
 

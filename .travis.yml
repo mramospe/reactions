@@ -16,7 +16,7 @@ before_install:
   - ${CC} --version
   - ${CXX} --version
   - cmake --version
-  - pip install -r test/python/requirements.txt
+  - pip install --force-reinstall -r test/python/requirements.txt
 
 install:
    - mkdir build
