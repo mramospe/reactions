@@ -56,21 +56,21 @@ def test_pdg_element():
         reactions.pdg_element('mu')
 
     # test LaTeX names
-    assert reactions.pdg_element("KS0").latex_name == "K_{S}^{0}"
+    assert reactions.pdg_element("K(S)0").latex_name == "K_{S}^{0}"
     assert reactions.pdg_element("K+").latex_name == "K^{+}"
     assert reactions.pdg_element("pi+").latex_name == "\\pi^{+}"
     assert reactions.pdg_element("pi-").latex_name == "\\pi^{-}"
     assert reactions.pdg_element("Lambda").latex_name == "\\Lambda"
     assert reactions.pdg_element("eta'(958)").latex_name == "\\eta^{'}(958)"
-    assert reactions.pdg_element("a_0(980)0").latex_name == "a_{0}(980)^{0}"
-    assert reactions.pdg_element("f'_2(1525)").latex_name == "f_{2}^{'}(1525)"
-    assert reactions.pdg_element("Xi'_c+").latex_name == "\\Xi_{c}^{'+}"
+    assert reactions.pdg_element("a(0)(980)0").latex_name == "a_{0}(980)^{0}"
+    assert reactions.pdg_element("f(2)'(1525)").latex_name == "f_{2}^{'}(1525)"
+    assert reactions.pdg_element("Xi(c)'+").latex_name == "\\Xi_{c}^{'+}"
     assert reactions.pdg_element(
         "Delta(1950)~-").latex_name == "\\bar{\\Delta}(1950)^{-}"
     assert reactions.pdg_element(
-        "K*_2(1430)~0").latex_name == "\\bar{K}_{2}^{*}(1430)^{0}"
+        "K(2)*(1430)~0").latex_name == "\\bar{K}_{2}^{*}(1430)^{0}"
     assert reactions.pdg_element(
-        "D*_s2(2573)+").latex_name == "D_{s2}^{*}(2573)^{+}"
+        "D(s2)*(2573)+").latex_name == "D_{s2}^{*}(2573)^{+}"
 
     for e in reactions.pdg_database.all_elements():
         # we must be able to compute all the LaTeX names

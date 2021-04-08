@@ -50,34 +50,35 @@ int main() {
       reaction_coll,
       reaction_tester<string_element>{"A B -> {C -> D E} {F G -> H I}"});
   REACTIONS_TEST_UTILS_ADD_TEST(
-      reaction_coll, reaction_tester<string_element>{"pi+ -> mu+ nu_mu"});
-  REACTIONS_TEST_UTILS_ADD_TEST(reaction_coll, reaction_tester<string_element>{
-                                                   "pi+->mu+ nu_mu"}); // spaces
-  REACTIONS_TEST_UTILS_ADD_TEST(reaction_coll,
-                                reaction_tester<string_element>{
-                                    "KS0 -> {pi+ -> mu+ nu_mu} mu- phi(1020)"});
+      reaction_coll, reaction_tester<string_element>{"pi+ -> mu+ nu(mu)"});
+  REACTIONS_TEST_UTILS_ADD_TEST(
+      reaction_coll,
+      reaction_tester<string_element>{"pi+->mu+ nu(mu)"}); // spaces
   REACTIONS_TEST_UTILS_ADD_TEST(
       reaction_coll, reaction_tester<string_element>{
-                         "KS0->{ pi+->mu+ nu_mu } mu- phi(1020)"}); // spaces
+                         "K(S)0 -> {pi+ -> mu+ nu(mu)} mu- phi(1020)"});
+  REACTIONS_TEST_UTILS_ADD_TEST(
+      reaction_coll, reaction_tester<string_element>{
+                         "K(S)0->{ pi+->mu+ nu(mu) } mu- phi(1020)"}); // spaces
 
   REACTIONS_TEST_UTILS_ADD_TEST(
-      reaction_coll, reaction_tester<pdg_element>{"pi+ -> mu+ nu_mu"});
+      reaction_coll, reaction_tester<pdg_element>{"pi+ -> mu+ nu(mu)"});
 
   // Test the decay class
   test::collector decay_coll("decay tests");
   REACTIONS_TEST_UTILS_ADD_TEST(
-      decay_coll, decay_tester<string_element>{"pi+ -> mu+ nu_mu"});
+      decay_coll, decay_tester<string_element>{"pi+ -> mu+ nu(mu)"});
   REACTIONS_TEST_UTILS_ADD_TEST(
-      decay_coll, decay_tester<string_element>{"pi+->mu+ nu_mu"}); // spaces
-  REACTIONS_TEST_UTILS_ADD_TEST(
-      decay_coll,
-      decay_tester<string_element>{"KS0 -> {pi+ -> mu+ nu_mu} mu- phi(1020)"});
+      decay_coll, decay_tester<string_element>{"pi+->mu+ nu(mu)"}); // spaces
   REACTIONS_TEST_UTILS_ADD_TEST(
       decay_coll, decay_tester<string_element>{
-                      "KS0->{ pi+->mu+ nu_mu } mu- phi(1020)"}); // spaces
+                      "K(S)0 -> {pi+ -> mu+ nu(mu)} mu- phi(1020)"});
+  REACTIONS_TEST_UTILS_ADD_TEST(
+      decay_coll, decay_tester<string_element>{
+                      "K(S)0->{ pi+->mu+ nu(mu) } mu- phi(1020)"}); // spaces
 
   REACTIONS_TEST_UTILS_ADD_TEST(decay_coll,
-                                decay_tester<pdg_element>{"pi+ -> mu+ nu_mu"});
+                                decay_tester<pdg_element>{"pi+ -> mu+ nu(mu)"});
 
   auto reaction_status = !reaction_coll.run();
   auto decay_status = !decay_coll.run();

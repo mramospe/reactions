@@ -37,21 +37,21 @@ namespace reactions {
       static constexpr const char *title = "name";
       using value_type = std::string;
       using units_type = units::none;
-      using range_type = range<0, 16>;
+      using range_type = range<0, 18>;
     };
     /// Field for the PDG ID
     struct pdg_id {
       static constexpr const char *title = "pdg_id";
       using value_type = int;
       using units_type = units::none;
-      using range_type = range<17, 27>;
+      using range_type = range<19, 29>;
     };
     /// Field the charge multiplied by three
     struct three_charge {
       static constexpr const char *title = "three_charge";
       using value_type = int;
       using units_type = units::none;
-      using range_type = range<28, 30>;
+      using range_type = range<30, 32>;
     };
     /// Field for the mass
     struct mass {
@@ -59,7 +59,7 @@ namespace reactions {
       using value_type = reactions::database::ve_double_opt;
       using units_type = units::reference<energy_units::GeV>;
       using range_type =
-          range_collection<range<31, 47>, range<48, 57>, range<58, 67>>;
+          range_collection<range<33, 49>, range<50, 59>, range<60, 69>>;
     };
     /// Field for the width
     struct width {
@@ -67,14 +67,14 @@ namespace reactions {
       using value_type = reactions::database::ve_double_opt;
       using units_type = units::reference<energy_units::GeV>;
       using range_type =
-          range_collection<range<68, 84>, range<85, 94>, range<95, 104>>;
+          range_collection<range<70, 86>, range<87, 96>, range<97, 106>>;
     };
     /// Field to store the self charge-conjugate state
     struct is_self_cc {
       static constexpr const char *title = "is_self_cc";
       using value_type = bool;
       using units_type = units::none;
-      using range_type = range<105, 106>;
+      using range_type = range<107, 108>;
     };
 
     /// Define a \ref std::tuple with the types of the fields provided
@@ -339,9 +339,6 @@ namespace reactions {
         auto match_lowercase = [](char c) {
           return reactions::tokens::match_range<'a', 'z'>(c);
         };
-        auto match_uppercase = [](char c) {
-          return reactions::tokens::match_range<'A', 'Z'>(c);
-        };
         auto match_character = [](char c) {
           return reactions::tokens::match_range<'A', 'z'>(c);
         };
@@ -415,16 +412,30 @@ namespace reactions {
 
         // ========== process additional qualifiers
 
-        if (match_uppercase(ref[count])) {
-          // KS0, KL0, ...
-          latex.append("_{");
-          do {
-            latex.push_back(ref[count++]);
-          } while (count < size && match_character(ref[count]));
+        if (ref[count] == '(' &&
+            (!match_number(ref[count + 1]) ||
+             ref.find('(', count + 1) != std::string::npos)) {
+          // unique subscript
+          latex.insert(latex.size(), "_{");
+          ++count;
+          while (ref[count] != ')') {
+
+            if (match_character(ref[count]))
+              process_characters(); // increments the counter
+            else
+              latex.push_back(ref[count++]);
+
+            if (count == size)
+              throw internal_error("Missing parenthesis in name");
+          }
+
           latex.push_back('}');
 
-          if (count == size)
+          if (++count == size) { // process the parenthesis
+            if (!superscript_buffer.empty())
+              process_superscript();
             return latex;
+          }
         }
 
         if (match_extra(ref[count])) {
@@ -447,27 +458,6 @@ namespace reactions {
           }
         }
 
-        if (ref[count] == '_') {
-          // unique subscript
-          latex.push_back(ref[count++]);
-          latex.push_back('{');
-          while (count < size) {
-            if (match_number(ref[count]))
-              latex.push_back(ref[count++]);
-            else if (match_character(ref[count]))
-              process_characters();
-            else
-              break;
-          }
-          latex.push_back('}');
-
-          if (count == size) {
-            if (!superscript_buffer.empty())
-              process_superscript();
-            return latex;
-          }
-        }
-
         // ========== process the resonance mass
 
         if (ref[count] == '(') {
@@ -478,8 +468,11 @@ namespace reactions {
 
           // parenthesized expression
           latex.push_back(ref[count++]);
-          while (count < size && ref[count] != ')')
+          while (ref[count] != ')') {
             latex.push_back(ref[count++]);
+            if (count == size)
+              throw internal_error("Missing parenthesis in name");
+          }
           latex.push_back(ref[count++]); // process ')' (no check is done)
 
           if (count == size)

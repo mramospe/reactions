@@ -7,7 +7,7 @@ import reactions
 
 def test_reaction():
 
-    reac = reactions.reaction('pi+ -> mu+ nu_mu')
+    reac = reactions.reaction('pi+ -> mu+ nu(mu)')
 
     # check sizes
     assert len(reac.reactants) == 1
@@ -19,7 +19,7 @@ def test_reaction():
         assert reactions.node_type(e) == 'element'
 
     # more complex reactions
-    reactions.reaction('p+ p~- -> {pi+ -> mu+ nu_mu} pi-')
+    reactions.reaction('p+ p~- -> {pi+ -> mu+ nu(mu)} pi-')
 
     # we can create empty reactions
     reac = reactions.reaction(kind='pdg')
@@ -30,26 +30,26 @@ def test_reaction():
     # we can append new elements
     reac.reactants.append(reactions.pdg_element('pi+'))
     reac.products.append(reactions.pdg_element('mu+'))
-    reac.products.append(reactions.pdg_element('nu_mu'))
+    reac.products.append(reactions.pdg_element('nu(mu)'))
 
     # comparison operators
     assert reac == reac
 
     with pytest.raises(TypeError):
         # different element kinds
-        reac != reactions.reaction('pi- -> mu- nu_mu~')
+        reac != reactions.reaction('pi- -> mu- nu(mu)~')
 
-    reac != reactions.reaction('pi- -> mu- nu_mu~', kind='pdg')
+    reac != reactions.reaction('pi- -> mu- nu(mu)~', kind='pdg')
 
     # order does not matter
-    assert reac == reactions.reaction('pi+ -> nu_mu~ mu-', kind='pdg')
-    reac = reactions.reaction('p+ p~- -> {pi+ -> mu+ nu_mu} pi-')
-    assert reac == reactions.reaction('p~- p+ -> pi- {pi+ -> nu_mu mu+}')
+    assert reac == reactions.reaction('pi+ -> nu(mu)~ mu-', kind='pdg')
+    reac = reactions.reaction('p+ p~- -> {pi+ -> mu+ nu(mu)} pi-')
+    assert reac == reactions.reaction('p~- p+ -> pi- {pi+ -> nu(mu) mu+}')
 
 
 def test_decay():
 
-    reac = reactions.decay('pi+ -> mu+ nu_mu')
+    reac = reactions.decay('pi+ -> mu+ nu(mu)')
 
     # check products size
     assert len(reac.products) == 2
@@ -60,7 +60,7 @@ def test_decay():
         assert reactions.node_type(e) == 'element'
 
     # more complex reactions
-    reactions.decay('p+ -> {pi+ -> mu+ nu_mu} pi-')
+    reactions.decay('p+ -> {pi+ -> mu+ nu(mu)} pi-')
 
     # we can create empty reactions
     reac = reactions.decay(kind='pdg')
@@ -71,21 +71,21 @@ def test_decay():
     # we can append new elements
     reac.head = reactions.pdg_element('pi+')
     reac.products.append(reactions.pdg_element('mu+'))
-    reac.products.append(reactions.pdg_element('nu_mu'))
+    reac.products.append(reactions.pdg_element('nu(mu)'))
 
     # comparison operators
     assert reac == reac
 
     with pytest.raises(TypeError):
         # different element kinds
-        reac != reactions.decay('pi- -> mu- nu_mu~')
+        reac != reactions.decay('pi- -> mu- nu(mu)~')
 
-    assert reac != reactions.decay('pi- -> mu- nu_mu~', kind='pdg')
+    assert reac != reactions.decay('pi- -> mu- nu(mu)~', kind='pdg')
 
     # order does not matter
-    assert reac == reactions.decay('pi+ -> nu_mu~ mu-', kind='pdg')
-    reac = reactions.decay('KS0 -> {pi+ -> mu+ nu_mu} pi-')
-    assert reac == reactions.decay('KS0 -> pi- {pi+ -> nu_mu mu+}')
+    assert reac == reactions.decay('pi+ -> nu(mu)~ mu-', kind='pdg')
+    reac = reactions.decay('K(S)0 -> {pi+ -> mu+ nu(mu)} pi-')
+    assert reac == reactions.decay('K(S)0 -> pi- {pi+ -> nu(mu) mu+}')
 
 
 def test_syntax():
