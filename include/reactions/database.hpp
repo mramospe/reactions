@@ -32,6 +32,49 @@ namespace reactions {
 /// Utilities to handle database objects and their elements
 namespace reactions::database {
 
+  /// Define a \ref std::tuple with the types of the fields provided
+  template <class Tuple> struct underlying_types;
+
+  /// \copydoc underlying_types
+  template <class... F> struct underlying_types<std::tuple<F...>> {
+    using type = std::tuple<typename F::value_type...>;
+  };
+
+  /// Check if a type represents an optional
+  template <class> struct is_optional : std::false_type {};
+
+  /// Check if a type represents an optional
+  template <class T> struct is_optional<std::optional<T>> : std::true_type {};
+
+  /// Alias to check if a type represents an optional
+  template <class T> constexpr auto is_optional_v = is_optional<T>::value;
+
+  /// Contain the information whether a field is optional or not
+  template <class F, class Enable = void>
+  struct is_optional_field : std::false_type {};
+
+  /// \copydoc is_optional_field
+  template <class F>
+  struct is_optional_field<
+      F, std::enable_if_t<is_optional_v<typename F::value_type>>>
+      : std::true_type {};
+
+  /// \copydoc is_optional_field
+  template <class F>
+  constexpr auto is_optional_field_v = is_optional_field<F>::value;
+
+  /// If the input type is an optional, get the underying type
+  template <class T> struct remove_optional { using type = T; };
+
+  /// \copydoc remove_optional
+  template <class T> struct remove_optional<std::optional<T>> {
+    using type = T;
+  };
+
+  /// \copydoc remove_optional
+  template <class T>
+  using remove_optional_t = typename remove_optional<T>::type;
+
   /// Field for a value
   struct value {};
   /// Field for an error
@@ -41,9 +84,32 @@ namespace reactions::database {
   /// Field for an lower error
   struct error_upper {};
 
-  template <class T, class Enable = void> struct value_and_errors;
+  /// Define a range with minimum and maximum indices
+  template <std::size_t Min, std::size_t Max> struct range {
+    static constexpr auto min = Min, max = Max;
+  };
+
+  /// Define a collection of ranges (a single variable with subvariables)
+  template <class... R> using range_collection = std::tuple<R...>;
+
+  /// Get the overall range for a range with/without subranges
+  template <class R> struct overall_range {
+    using type = range<R::min, R::max>;
+  };
+
+  /// Overall range of a variable (that can be a composite)
+  template <class R0, class... R, class Rn>
+  struct overall_range<range_collection<R0, R..., Rn>> {
+    using type = range<R0::min, Rn::max>;
+  };
+
+  /// Overall range of a variable (that can be a composite)
+  template <class R> using overall_range_t = typename overall_range<R>::type;
 
   /// Simple structure composed by a value and the lower and upper errors
+  template <class T, class Enable = void> struct value_and_errors;
+
+  /// \copydoc value_and_errors
   template <class T>
   struct value_and_errors<T,
                           std::enable_if_t<std::is_floating_point_v<T>, void>> {
@@ -131,49 +197,6 @@ namespace reactions::database {
   using ve_float_opt = std::optional<value_and_errors<float>>;
   /// Optional \ref value_and_errors for double-precision floating-point type
   using ve_double_opt = std::optional<value_and_errors<double>>;
-
-  /// Check if a type represents an optional
-  template <class> struct is_optional : std::false_type {};
-
-  /// Check if a type represents an optional
-  template <class T> struct is_optional<std::optional<T>> : std::true_type {};
-
-  /// Alias to check if a type represents an optional
-  template <class T> constexpr auto is_optional_v = is_optional<T>::value;
-
-  /// If the input type is an optional, get the underying type
-  template <class T> struct remove_optional { using type = T; };
-
-  /// \copydoc remove_optional
-  template <class T> struct remove_optional<std::optional<T>> {
-    using type = T;
-  };
-
-  /// \copydoc remove_optional
-  template <class T>
-  using remove_optional_t = typename remove_optional<T>::type;
-
-  /// Define a range with minimum and maximum indices
-  template <std::size_t Min, std::size_t Max> struct range {
-    static constexpr auto min = Min, max = Max;
-  };
-
-  /// Define a collection of ranges (a single variable with subvariables)
-  template <class... R> using range_collection = std::tuple<R...>;
-
-  /// Get the overall range for a range with/without subranges
-  template <class R> struct overall_range {
-    using type = range<R::min, R::max>;
-  };
-
-  /// Overall range of a variable (that can be a composite)
-  template <class R0, class... R, class Rn>
-  struct overall_range<range_collection<R0, R..., Rn>> {
-    using type = range<R0::min, Rn::max>;
-  };
-
-  /// Overall range of a variable (that can be a composite)
-  template <class R> using overall_range_t = typename overall_range<R>::type;
 
   /// Status code of a conversion to an arithmetic or \ref std::optional type
   enum conversion_status : int {
