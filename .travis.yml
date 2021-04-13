@@ -79,7 +79,7 @@ jobs:
       script: " "
       deploy:
         on:
-	  branch: devel
+          branch: devel
         provider: releases
         token:
           secure: "cO6Sa4UqRi6hvkOcFkm4yBtsnVP5xYxciFNSlG/DEu8RO42WRl6eP0z4ffoTifEtOITofXG4VgtG3wZKXYmMeD7gRZjz8GXMMpG6/Yw1g/Kb8aVnyFEXhV5+id21+c9Fh5Ms7rGt+X6x/b4Ay6pCEbMcI1D6e3rnopA9hkuz2wuUT/C5gouUR2+xXk9hKJN32uF8Xv3JerA1GOhIx2uPfCpnyNqSgCkUxP+OfzmOV6tM4yruc5/V1zPMvTW62CKFYHY4wmYgsVya7/d9r8jpIM9E+VA53MAgXdYsNP+7k91Jb8pGD2Ru8WVKMQxZulA08+2juAxHQTUp1KEPnVmoWZyqyD6WuatRrvy8r91Qv479nuGj9Tn8co3LjDaicZz5W0j+8tV5pX7eLvY5UeoLFwUDbM48S9f5wqeKfIClqcmx78xILwsgDxkmHkYalFE0fB1ojCmvM1jVUOi+fQw40MmQopB1fmcaLwGE+xJjbZ3NrVHKxE/vNZncy1x85EQeYmtSBOX4mQ89LRM5DbO2mSFRN9vIG8aV4Vp7iBX5OySqX0ZtwRZHoC+vvEA/XAzxLd67htAbvrtZj47+j7Asv3LUK3SS+sMxoRAS9T1i7xiF/4f0C+HP2UcEyju8GGkADUlm+tKxGP0O1ZhG3IlSsYedjUYnsY/oTxqxoSXHfLk="
