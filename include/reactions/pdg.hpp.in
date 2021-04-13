@@ -21,8 +21,7 @@
 
 namespace reactions {
 
-  /// Define short structures that represent the fields of a \ref
-  /// reactions::pdg_element object
+  /// Structures representing the fields of a \ref reactions::pdg_element object
   namespace pdg {
 
     /// Range of a variable in a file
@@ -87,6 +86,11 @@ namespace reactions {
     template <> std::string to_string(std::string const &v) { return v; }
   } // namespace pdg
 
+  /*\brief Defines a singleton to handle the units of PDG elements
+   *
+   * This class affects the values returned by the \ref pdg_element
+   * objects, scaling them according to the units defined by the user.
+   */
   class pdg_system_of_units final {
 
   public:
@@ -119,6 +123,7 @@ namespace reactions {
     void operator=(pdg_system_of_units const &) = delete;
   };
 
+  /// Internal utilities for the \ref reactions::pdg namespace
   namespace pdg::detail {
     /// Calculate the scale factor for a given energy field
     template <class F> auto energy_scale_factor() {
@@ -130,6 +135,7 @@ namespace reactions {
     /// Functor to process the units of a field
     template <class F, class Enable = void> struct process_units_t;
 
+    /// \copydoc process_units_t
     template <class F>
     struct process_units_t<
         F, std::enable_if_t<std::is_same_v<typename F::units_type, units::none>,
@@ -712,20 +718,16 @@ namespace reactions {
      *
      * - The name starts with a set of characters. A capital letter followed by
      * lowercase letters or a set of lowercase letters are considered as a Greek
-     * letter. Any capital letter following this is considered an eigenstate
-     * marker (like for the two mass eigenstates of the neutral kaon), and is
-     * placed as a subindex. In the latter case, no more subindices are allowed
-     * in the following.
-     * - Tha base name can be followed by an indicator that the particle has
-     * slightly variations with respect to another existing particle or if it
+     * letter.
+     * - The base name can be followed by a set of modifiers indicating the
+     * flavour, mass eigenstate or spin of the particle, between parenthesis.
+     * - After, it is possible to indicate that the particle has a sligh
+     * variation with respect to another existing particle or that it
      * corresponds to an excited state, in which it should be indicated with one
      * or various prime symbols for the first case, or an asterisk for the
      * second.
-     * - A set of subindices can be specified afterwards, that can be characters
-     * (indicating the underlying falvour) or numbers (indicating the spin),
-     * preceeded by an underscore symbol.
      * - The mass can be indicated between two parentheses as an integral
-     * number, and is mandatory if you are providing subindices.
+     * number.
      * - The last part of the name is composed by the possible anti-particle
      * marker, specified with a tilde, and the charge, which can be 0, + or -.
      *

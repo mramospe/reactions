@@ -1,8 +1,10 @@
 #pragma once
 #include <tuple>
 
+/// General utilities
 namespace reactions::utils {
 
+  /// Internal utilities for the \ref reactions::utils namespace
   namespace detail {
     /// Index corresponding to a given element
     template <std::size_t I, class Tuple, class E0, class E1>
