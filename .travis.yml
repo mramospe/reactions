@@ -73,6 +73,8 @@ jobs:
         - export GIT_NEW_TAG=$(python -c "import reactions; print(reactions.__version__)")
         - export GIT_LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
         - git tag ${GIT_NEW_TAG}
+        - sudo apt-get install ruby-full
+        - gem install github_changelog_generator
         - ./repository changelog -o changes-${GIT_NEW_TAG}.md --since-tag ${GIT_LATEST_TAG}
       before_install: " "
       install: " "
