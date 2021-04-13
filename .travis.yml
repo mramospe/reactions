@@ -87,6 +87,7 @@ jobs:
         provider: releases
         token: ${GITHUB_TOKEN}
         tag_name: ${TRAVIS_TAG}
+        name: ${TRAVIS_TAG}
         release_notes: "General update"
         file: ${TRAVIS_TAG}-changelog.md
         cleanup: false
