@@ -76,7 +76,7 @@ jobs:
         - if [[ -z ${GIT_NEW_TAG} || -z ${GIT_LATEST_TAG} ]]; then exit 1; fi
         - git tag ${GIT_NEW_TAG}
         - sudo apt-get update
-        - sudo apt-get install -y ruby-full
+        - sudo apt-get install -y ruby
         - ruby --version
         - gem install github_changelog_generator
         - ./repository changelog -o changes-${GIT_NEW_TAG}.md --since-tag ${GIT_LATEST_TAG}
