@@ -6,12 +6,18 @@ Execute actions in the current repository.
 
 Usage: ./repository options...
 
+Main arguments:
+
 -h|--help: print this message and exit
 -b|--build-cpp: build the project under a "build" directory. It can be used together with "--clean".
 -p|--build-python: build the python package in development mode (assumes to be within a virtual environment)
 -d|--build-docs: build the documentation (inside docs/build)
 -c|--clean: clean the repository of temporary files, caches, build directories, ...
---force: when specified before any number of commands described above, forces their execution, without any further interaction with the user
+-f|--force: when specified before any number of commands described above, forces their execution, without any further interaction with the user
+
+Subcommands:
+
+changelog: generate a log file of changes forwarding the arguments to github_changelog_generator (tip: specify output files with -o and reference tags with --since-tag and --due-tag)
 EOF
      )
 
@@ -96,11 +102,28 @@ while [[ $# -gt 0 ]]; do
 	    shift
 	    ;;
 
-	--force)
+	--force|-f)
 
 	    echo "Forcing the execution of the following commands"
 	    force=true
 	    shift
+	    ;;
+
+	changelog)
+
+	    hash github_changelog_generator 2>/dev/null || {
+		echo >&2 "I require github_changelog_generator but it's not installed. You can install it via
+
+sudo apt-get install ruby-full
+gem install github_changelog_generator
+
+Aborting";
+		exit 1;
+	    }
+
+	    echo "Running GitHub changelog generator"
+	    github_changelog_generator -u mramospe -p reactions $@
+	    if [ $? ]; then exit 0; else exit 1; fi
 	    ;;
 
 	*)

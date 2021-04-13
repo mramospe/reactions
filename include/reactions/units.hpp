@@ -42,8 +42,7 @@ namespace reactions {
               .c_str());
     }
 
-    /// Proxy to use the template argument as a reference to determine scale
-    /// factors
+    /// Use the template argument as a reference to determine scale factors
     template <energy_units U> struct reference {
       /// Determine the scale factor from a reference
       static constexpr auto scale_factor(energy_units u) {
