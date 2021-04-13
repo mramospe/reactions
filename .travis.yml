@@ -90,6 +90,5 @@ jobs:
         body: "Updates from version [${LATEST_TAG}](https://github.com/mramospe/reactions/releases/tag/${LATEST_TAG})."
         file: changes-${TRAVIS_TAG}.md
         cleanup: false
-        draft: true
         on:
           branch: devel
