@@ -79,7 +79,7 @@ jobs:
         - sudo apt-get install -y ruby
         - ruby --version
         - gem install github_changelog_generator
-        - ./repository changelog -o changes-${TRAVIS_TAG}.md --since-tag ${LATEST_TAG}
+        - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG}
       before_install: " "
       install: " "
       script: " "
@@ -88,7 +88,7 @@ jobs:
         token: ${GITHUB_TOKEN}
         tag_name: ${TRAVIS_TAG}
         body: "Updates from version [${LATEST_TAG}](https://github.com/mramospe/reactions/releases/tag/${LATEST_TAG})."
-        file: changes-${TRAVIS_TAG}.md
+        file: ${TRAVIS_TAG}-changelog.md
         skip_cleanup: true
         draft: true
         on:
