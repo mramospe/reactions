@@ -67,8 +67,8 @@ jobs:
       if: branch = devel
       before_deploy:
         # Set up git user name and tag this commit
-        - git config --local user.name Miguel Ramos Pernas
-        - git config --local user.email miguel.ramos.pernas@gmail.com
+        - git config --local user.name "Miguel Ramos Pernas"
+        - git config --local user.email "miguel.ramos.pernas@gmail.com"
         - export PYTHONPATH=${PYTHONPATH}:python
         - export GIT_NEW_TAG=$(python -c "import reactions; print(reactions.__version__)")
         - export GIT_LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
