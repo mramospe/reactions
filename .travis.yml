@@ -87,7 +87,7 @@ jobs:
         provider: releases
         token: ${GITHUB_TOKEN}
         tag_name: ${TRAVIS_TAG}
-        release_notes: "'Update from version ['${LATEST_TAG}'](https://github.com/mramospe/reactions/releases/tag/'${LATEST_TAG}').'"
+        release_notes: "General update"
         file: ${TRAVIS_TAG}-changelog.md
         cleanup: false
         draft: true
