@@ -80,7 +80,6 @@ jobs:
         - ruby --version
         - gem install github_changelog_generator
         - ./repository changelog -o changes-${TRAVIS_TAG}.md --since-tag ${LATEST_TAG}
-        - export BODY="$(cat changes-${TRAVIS_TAG}.md)"
       before_install: " "
       install: " "
       script: " "
@@ -88,7 +87,7 @@ jobs:
         provider: releases
         token: ${GITHUB_TOKEN}
         tag_name: ${TRAVIS_TAG}
-        body: ${BODY}
+        body: "Updates from version [${LATEST_TAG}](https://github.com/mramospe/reactions/releases/tag/${LATEST_TAG})."
         file: changes-${TRAVIS_TAG}.md
         cleanup: false
         draft: true
