@@ -80,15 +80,14 @@ jobs:
         - ruby --version
         - gem install github_changelog_generator
         - ./repository changelog -o changes-${TRAVIS_TAG}.md --since-tag ${LATEST_TAG}
-        - git tag -f -a ${TRAVIS_TAG} -m "$(cat changes-${TRAVIS_TAG}.md)"
       before_install: " "
       install: " "
       script: " "
       deploy:
-        on:
-          branch: devel
         provider: releases
         token: ${GITHUB_TOKEN}
+        tag_name: ${TRAVIS_TAG}
+        body: "$(cat changes-${TRAVIS_TAG}.md)"
         file: changes-${TRAVIS_TAG}.md
         cleanup: false
         draft: true
