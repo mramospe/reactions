@@ -10,6 +10,7 @@
 #include "reactions/pow_enum.hpp"
 #include "reactions/processes.hpp"
 #include "reactions/tokens.hpp"
+#include "reactions/utils.hpp"
 
 /*! \brief Main namespace of the **Reactions** package.
  *
