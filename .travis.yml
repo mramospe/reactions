@@ -1,90 +1,87 @@
 dist: xenial
 language: python
-
 os: linux
 addons:
   apt:
     sources:
-      - ubuntu-toolchain-r-test
+    - ubuntu-toolchain-r-test
     packages:
-      - g++-7
-      - cmake
+    - g++-7
+    - cmake
 env:
+  matrix:
   - CC=gcc-7 CXX=g++-7
-
+  global:
+    secure: rCSs0cgM/lQ9cedb305Wx7vzAk5RfQHl9eqUCYHeDPkZ1OHMfwFNEZ3YDQIuwHzx6054f3WWF4nkMFPUVmCVguqz8Skafk3zCJzBobnDXODOyfsl2TYznHIU58n56hGNNNmfe3W1YsONoI0UgbDLQNC5km2gAtH4ycVlneG2z3XiqdGoyNjS/kBJ9zTozwvpbD3Yy2qFY2QsiNl5NobsMLKmp/KspsosS6A/YMJ187jUOphA59u16g8PvuMtQj5lC9FC/6K3BEhPE7JnSzCTksZHw4DWQ3YXQswgT2a0a+crqlFB9v+UkkVXoJ+tiNSS6GxWt1dfY9NJ/u8rFirLKTJ1lwJU6PLJSCz92akqXp0i99JAYT2jP2gVoYOKLAcIMqUCAfS0gp1lscKBMZ5TMpsV2tlj8dCFvHoB8aAXgR/7PguH/AmxAs2jFut4HAgNyE3z9H2ptIgbzj6yz3lfPwDAzXKwm+coZbPzzY0xjew3FOVrKO/9Ws2h/5oAZZghv/KY+YdfU9h7+bsm3EU/2W2YxMKxchtbyPngnPCdcKGrMIEHHeTeph3XlpVYYBEouJ0/jsriqCd5fKhnKpz4HjQn2swNV1O5y3P9TZ0VVN5+v4Nn8e3ce0y2bIy7RdRtUX2lwuMH71puOyumyLFjH7xLB/IJp14faafLJ2wJwzs=
 before_install:
-  - ${CC} --version
-  - ${CXX} --version
-  - cmake --version
-  - pip install --force-reinstall -r test/python/requirements.txt
-
+- "${CC} --version"
+- "${CXX} --version"
+- cmake --version
+- pip install --force-reinstall -r test/python/requirements.txt
 install:
-   - mkdir build
-   - cd build
-   - cmake ../ -DINSTALL_TESTS=ON -DCMAKE_CXX_COMPILER=${CXX}
-   - make install
-   - cd ..
-
+- mkdir build
+- cd build
+- cmake ../ -DINSTALL_TESTS=ON -DCMAKE_CXX_COMPILER=${CXX}
+- make install
+- cd ..
 jobs:
   include:
-    - name: cpp
-      script:
-         - ./build/test/test_elements
-         - ./build/test/test_database
-         - ./build/test/test_processes
-      after_success: " "
-    - name: cmake
-      script:
-      - mkdir test/cmake/build
-      - cd test/cmake/build
-      - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../ -DCMAKE_CXX_COMPILER=${CXX}
-      - make
-      - ./main
-      after_success: " "
-    - name: format
-      python: 3.7
-      install: " "
-      script:
-      - python setup.py check_format --regex '(include|python|test|docs|scripts)'
-      - python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
-    - name: module
-      python: 3.7
-      install: pip install .
-      script:
-      - python -m reactions print-table
-      - python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
-    - name: python 3.7
-      python: 3.7
-      install: pip install .
-      script: pytest
-      after_success: codecov
-    - name: python 3.8
-      python: 3.8
-      install: pip install .
-      script: pytest
-      after_success: codecov
-    - name: deploy
-      if: branch = devel
-      language: ruby
-      before_deploy:
-        # Set up git user name and tag this commit
-        - git config --local user.name "Miguel Ramos Pernas"
-        - git config --local user.email "miguel.ramos.pernas@gmail.com"
-        - export PYTHONPATH=${PYTHONPATH}:python
-        - export GIT_NEW_TAG=$(python -c "import reactions; print(reactions.__version__)")
-        - export GIT_LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-        - git tag ${GIT_NEW_TAG}
-        - gem install github_changelog_generator
-        - ./repository changelog -o changes-${GIT_NEW_TAG}.md --since-tag ${GIT_LATEST_TAG}
-      before_install: " "
-      install: " "
-      script: " "
-      deploy:
-        on:
-          branch: devel
-        provider: releases
-        token:
-          secure: "cO6Sa4UqRi6hvkOcFkm4yBtsnVP5xYxciFNSlG/DEu8RO42WRl6eP0z4ffoTifEtOITofXG4VgtG3wZKXYmMeD7gRZjz8GXMMpG6/Yw1g/Kb8aVnyFEXhV5+id21+c9Fh5Ms7rGt+X6x/b4Ay6pCEbMcI1D6e3rnopA9hkuz2wuUT/C5gouUR2+xXk9hKJN32uF8Xv3JerA1GOhIx2uPfCpnyNqSgCkUxP+OfzmOV6tM4yruc5/V1zPMvTW62CKFYHY4wmYgsVya7/d9r8jpIM9E+VA53MAgXdYsNP+7k91Jb8pGD2Ru8WVKMQxZulA08+2juAxHQTUp1KEPnVmoWZyqyD6WuatRrvy8r91Qv479nuGj9Tn8co3LjDaicZz5W0j+8tV5pX7eLvY5UeoLFwUDbM48S9f5wqeKfIClqcmx78xILwsgDxkmHkYalFE0fB1ojCmvM1jVUOi+fQw40MmQopB1fmcaLwGE+xJjbZ3NrVHKxE/vNZncy1x85EQeYmtSBOX4mQ89LRM5DbO2mSFRN9vIG8aV4Vp7iBX5OySqX0ZtwRZHoC+vvEA/XAzxLd67htAbvrtZj47+j7Asv3LUK3SS+sMxoRAS9T1i7xiF/4f0C+HP2UcEyju8GGkADUlm+tKxGP0O1ZhG3IlSsYedjUYnsY/oTxqxoSXHfLk="
-        file: changes-${GIT_NEW_TAG}.md
-        cleanup: false
-        draft: true
+  - name: cpp
+    script:
+    - "./build/test/test_elements"
+    - "./build/test/test_database"
+    - "./build/test/test_processes"
+    after_success: " "
+  - name: cmake
+    script:
+    - mkdir test/cmake/build
+    - cd test/cmake/build
+    - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../ -DCMAKE_CXX_COMPILER=${CXX}
+    - make
+    - "./main"
+    after_success: " "
+  - name: format
+    python: 3.7
+    install: " "
+    script:
+    - python setup.py check_format --regex '(include|python|test|docs|scripts)'
+    - python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
+  - name: module
+    python: 3.7
+    install: pip install .
+    script:
+    - python -m reactions print-table
+    - python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D'
+      --kind string
+  - name: python 3.7
+    python: 3.7
+    install: pip install .
+    script: pytest
+    after_success: codecov
+  - name: python 3.8
+    python: 3.8
+    install: pip install .
+    script: pytest
+    after_success: codecov
+  - name: deploy
+    if: branch = devel
+    language: ruby
+    before_deploy:
+    - git config --local user.name "Miguel Ramos Pernas"
+    - git config --local user.email "miguel.ramos.pernas@gmail.com"
+    - export PYTHONPATH=${PYTHONPATH}:python
+    - export GIT_NEW_TAG=$(python -c "import reactions; print(reactions.__version__)")
+    - export GIT_LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+    - git tag ${GIT_NEW_TAG}
+    - gem install github_changelog_generator
+    - "./repository changelog -o changes-${GIT_NEW_TAG}.md --since-tag ${GIT_LATEST_TAG}"
+    before_install: " "
+    install: " "
+    script: " "
+    deploy:
+      on:
+        branch: devel
+      provider: releases
+      file: changes-${GIT_NEW_TAG}.md
+      cleanup: false
+      draft: true
