@@ -68,8 +68,7 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
 
     PyObject *mass = nullptr, *width = nullptr;
 
-    if (args != NULL &&
-        PyTuple_Size(args) == reactions::pdg_element::number_of_fields) {
+    if (args != NULL && PyTuple_Size(args) == reactions::pdg_element::nfields) {
 
       if (!PyArg_ParseTuple(args, parser_type::descriptor_args,
                             &std::get<0>(tup), &std::get<1>(tup),
@@ -77,8 +76,8 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
                             &std::get<5>(tup)))
         REACTIONS_PYTHON_RETURN_INVALID_ARGUMENTS(-1);
 
-    } else if (kwargs != NULL && PyDict_Size(kwargs) ==
-                                     reactions::pdg_element::number_of_fields) {
+    } else if (kwargs != NULL &&
+               PyDict_Size(kwargs) == reactions::pdg_element::nfields) {
       // the instance is built from the keyword arguments
       static const char *kwds[] = {"name",
                                    "pdg_id",
@@ -162,8 +161,8 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to get access to an attribute of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(name, check, converter)   \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    if constexpr (reactions::database::is_optional_field_v<                    \
-                      reactions::pdg::check>)                                  \
+    namespace pdg = reactions::pdg;                                            \
+    if constexpr (pdg::is_optional_field_v<pdg::check>)                        \
       if (!self->element.has_##check())                                        \
         Py_RETURN_NONE;                                                        \
       else                                                                     \

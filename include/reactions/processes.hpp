@@ -273,8 +273,7 @@ namespace reactions {
     node_object *m_ptr = nullptr;
   };
 
-  /// Internal utilities for the \ref reactions::processes namespace
-  namespace processes::detail {
+  namespace detail {
     /*! \brief Compare two nodes
      *
      * \param first node to compare
@@ -333,7 +332,7 @@ namespace reactions {
       // all of them have been matched
       return true;
     }
-  } // namespace processes::detail
+  } // namespace detail
 } // namespace reactions
 
 namespace reactions {
@@ -411,8 +410,8 @@ namespace reactions {
           m_products.size() != other.m_products.size())
         return false;
 
-      return processes::detail::check_nodes(m_reactants, other.m_reactants) &&
-             processes::detail::check_nodes(m_products, other.m_products);
+      return detail::check_nodes(m_reactants, other.m_reactants) &&
+             detail::check_nodes(m_products, other.m_products);
     }
 
     /// \copydoc reaction<Element>::operator==
@@ -534,7 +533,7 @@ namespace reactions {
         return false;
 
       return (*m_head == *other.m_head) &&
-             processes::detail::check_nodes(m_products, other.m_products);
+             detail::check_nodes(m_products, other.m_products);
     }
 
     /// Comparison operator
