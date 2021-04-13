@@ -91,3 +91,5 @@ jobs:
         file: changes-${TRAVIS_TAG}.md
         cleanup: false
         draft: true
+        on:
+          branch: devel
