@@ -9,6 +9,7 @@
 #include "reactions/pow_enum.hpp"
 #include "reactions/tokens.hpp"
 #include "reactions/units.hpp"
+#include "reactions/utils.hpp"
 
 #include <cmath>
 #include <fstream>
@@ -20,8 +21,7 @@
 
 namespace reactions {
 
-  /// Define short structures that represent the fields of a \ref
-  /// reactions::pdg_element object
+  /// Structures representing the fields of a \ref reactions::pdg_element object
   namespace pdg {
 
     /// Range of a variable in a file
@@ -77,76 +77,6 @@ namespace reactions {
       using range_type = range<107, 108>;
     };
 
-    /// Define a \ref std::tuple with the types of the fields provided
-    template <class Tuple> struct underlying_types;
-
-    /// \copydoc underlying_types
-    template <class... F> struct underlying_types<std::tuple<F...>> {
-      using type = std::tuple<typename F::value_type...>;
-    };
-
-    /// Base class of a PDG element
-    struct base_element {
-
-      /// Fields of the element
-      using fields =
-          std::tuple<name, pdg_id, three_charge, mass, width, is_self_cc>;
-
-      /// Underlying types of the fields, as a tuple
-      using type = typename underlying_types<fields>::type;
-
-      /// Number of fields
-      static constexpr auto size = std::tuple_size_v<fields>;
-
-      /// Field type at the given index
-      template <std::size_t I> using field_t = std::tuple_element_t<I, fields>;
-
-      /// Underlying type of a field
-      template <std::size_t I>
-      using field_underlying_type_t = std::tuple_element_t<I, type>;
-
-      /// Index corresponding to a given field
-      template <std::size_t I, class F0, class F1> struct field_index_impl {
-        static constexpr auto value = field_index_impl<
-            I + 1, F0,
-            std::tuple_element_t<I + 1, base_element::fields>>::value;
-      };
-
-      /// \copydoc field_index_impl
-      template <std::size_t I, class F> struct field_index_impl<I, F, F> {
-        static constexpr auto value = I;
-      };
-
-      /// \copydoc field_index_impl
-      template <class F> struct field_index {
-        static constexpr auto value = field_index_impl<
-            0, F, std::tuple_element_t<0, base_element::fields>>::value;
-      };
-
-      /// \copydoc field_index
-      template <class F>
-      static constexpr auto field_index_v = field_index<F>::value;
-
-      /// Size of the line (in characters) associated to this class
-      static constexpr auto line_size = reactions::database::overall_range_t<
-          field_t<size - 1>::range_type>::max;
-    };
-
-    /// Contain the information whether a field is optional or not
-    template <class F, class Enable = void>
-    struct is_optional_field : std::false_type {};
-
-    /// \copydoc is_optional_field
-    template <class F>
-    struct is_optional_field<
-        F, std::enable_if_t<
-               reactions::database::is_optional_v<typename F::value_type>>>
-        : std::true_type {};
-
-    /// \copydoc is_optional_field
-    template <class F>
-    constexpr auto is_optional_field_v = is_optional_field<F>::value;
-
     /// Convert the given object to a string
     template <class T> std::string to_string(T const &v) {
       return std::to_string(v);
@@ -156,6 +86,11 @@ namespace reactions {
     template <> std::string to_string(std::string const &v) { return v; }
   } // namespace pdg
 
+  /*! \brief Defines a singleton to handle the units of PDG elements
+   *
+   * This class affects the values returned by the \ref pdg_element
+   * objects, scaling them according to the units defined by the user.
+   */
   class pdg_system_of_units final {
 
   public:
@@ -188,6 +123,7 @@ namespace reactions {
     void operator=(pdg_system_of_units const &) = delete;
   };
 
+  /// Internal utilities for the \ref reactions::pdg namespace
   namespace pdg::detail {
     /// Calculate the scale factor for a given energy field
     template <class F> auto energy_scale_factor() {
@@ -199,6 +135,7 @@ namespace reactions {
     /// Functor to process the units of a field
     template <class F, class Enable = void> struct process_units_t;
 
+    /// \copydoc process_units_t
     template <class F>
     struct process_units_t<
         F, std::enable_if_t<std::is_same_v<typename F::units_type, units::none>,
@@ -239,54 +176,33 @@ namespace reactions {
 
   } // namespace pdg::detail
 
-  // Forward declaration
-  class pdg_element;
+  /// Field types of a PDG element
+  using pdg_element_fields =
+      std::tuple<pdg::name, pdg::pdg_id, pdg::three_charge, pdg::mass,
+                 pdg::width, pdg::is_self_cc>;
 
-  namespace pdg::detail {
-    /// Access a field of a PDG element
-    template <class F, class S = void>
-    pdg::detail::return_type_t<F, S> get(pdg_element const &element) {
-      if constexpr (std::is_same_v<S, void>)
-        return pdg::detail::process_units<F>(
-            std::get<pdg::base_element::field_index_v<F>>(element));
-      else
-        return pdg::detail::process_units<F>(database::get<S>(
-            std::get<pdg::base_element::field_index_v<F>>(element).value()));
-    }
-  } // namespace pdg::detail
+  /// Base class of a PDG element
+  using pdg_element_base =
+      typename database::underlying_types<pdg_element_fields>::type;
 
   /*! \brief A PDG particle, based on the fields of a particle in the PDG
    * database.
    */
-  class pdg_element final : protected pdg::base_element::type {
-
-  private:
-    /*! \brief Get an element using an accessor.
-     *
-     * For fields of \ref std::optional type, the validity of the content
-     * must be checked before calling this function using the
-     * \ref pdg_element::has member function. Otherwise the
-     * \ref reactions::missing_fields_error exception is thrown,
-     * if missing.
-     */
-    template <class F, class S>
-    friend pdg::detail::return_type_t<F, S>
-    pdg::detail::get(pdg_element const &);
-
-    /// Check whether the given field information is missing or not
-    template <class F> constexpr bool has() const {
-      if constexpr (pdg::is_optional_field_v<F>)
-        return std::get<pdg::base_element::field_index_v<F>>(*this).has_value();
-      else
-        return true;
-    }
+  class pdg_element final : protected pdg_element_base {
 
   public:
     /// Base class
-    using base_type = pdg::base_element::type;
+    using base_type = pdg_element_base;
+
+    /// Fields of the element
+    using fields = pdg_element_fields;
 
     /// Number of data fields
-    static const size_t nfields = std::tuple_size_v<base_type>;
+    static const size_t number_of_fields = std::tuple_size_v<base_type>;
+
+    /// Size of the line (in characters) associated to this class
+    static constexpr auto line_size = reactions::database::overall_range_t<
+        std::tuple_element_t<number_of_fields - 1, fields>::range_type>::max;
 
     pdg_element() = delete;
     explicit pdg_element(pdg_element const &) = default;
@@ -313,6 +229,33 @@ namespace reactions {
     /// \copydoc pdg_element::operator==
     bool operator!=(pdg_element const &other) const {
       return pdg_id() != other.pdg_id();
+    }
+
+    /*! \brief Get an element using an accessor.
+     *
+     * For fields of \ref std::optional type, the validity of the content
+     * must be checked before calling this function using the
+     * \ref pdg_element::has member function. Otherwise the
+     * \ref reactions::missing_fields_error exception is thrown,
+     * if missing.
+     *
+     * The return type is a constant reference for values without units and
+     * a value for those with units.
+     */
+    template <class F, class S = void>
+    pdg::detail::return_type_t<F, S> get() const {
+      if constexpr (std::is_same_v<S, void>)
+        return pdg::detail::process_units<F>(
+            std::get<utils::tuple_index_v<fields, F>>(*this));
+      else
+        return pdg::detail::process_units<F>(database::get<S>(
+            std::get<utils::tuple_index_v<fields, F>>(*this).value()));
+    }
+
+    /// Check whether the given field information is missing or not
+    template <class F> constexpr bool has() const {
+      return !database::is_optional_field_v<F> ||
+             std::get<utils::tuple_index_v<fields, F>>(*this).has_value();
     }
 
     /// Representation of the element name as a LaTeX string
@@ -512,25 +455,19 @@ namespace reactions {
     }
 
     /// Name of the particle
-    std::string const &name() const {
-      return pdg::detail::get<pdg::name>(*this);
-    }
+    std::string const &name() const { return get<pdg::name>(); }
 
     /// PDG ID
-    int pdg_id() const { return pdg::detail::get<pdg::pdg_id>(*this); }
+    int pdg_id() const { return get<pdg::pdg_id>(); }
 
     /// Three times the charge, as an integer
-    int three_charge() const {
-      return pdg::detail::get<pdg::three_charge>(*this);
-    }
+    int three_charge() const { return get<pdg::three_charge>(); }
 
     /// Charge as a doubleing point number
-    double charge() const {
-      return pdg::detail::get<pdg::three_charge>(*this) / 3.;
-    }
+    double charge() const { return get<pdg::three_charge>() / 3.; }
 
     /// Whether the element is its own charge-conjugate
-    bool is_self_cc() const { return pdg::detail::get<pdg::is_self_cc>(*this); }
+    bool is_self_cc() const { return get<pdg::is_self_cc>(); }
 
     /*! Get the mass of the element
      *
@@ -538,9 +475,7 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double mass() const {
-      return pdg::detail::get<pdg::mass, database::value>(*this);
-    }
+    double mass() const { return get<pdg::mass, database::value>(); }
 
     /// Whether the mass and its errors are defined or not
     bool has_mass() const { return has<pdg::mass>(); }
@@ -552,7 +487,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double mass_error_lower() const {
-      return pdg::detail::get<pdg::mass, database::error_lower>(*this);
+      return get<pdg::mass, database::error_lower>();
     }
 
     /*! \brief Upper mass error
@@ -562,7 +497,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double mass_error_upper() const {
-      return pdg::detail::get<pdg::mass, database::error_lower>(*this);
+      return get<pdg::mass, database::error_lower>();
     }
 
     /* \brief Calculate the mass error
@@ -599,9 +534,7 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double width() const {
-      return pdg::detail::get<pdg::width, database::value>(*this);
-    }
+    double width() const { return get<pdg::width, database::value>(); }
 
     /// Whether the width and its errors are defined or not
     bool has_width() const { return has<pdg::width>(); }
@@ -613,7 +546,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double width_error_lower() const {
-      return pdg::detail::get<pdg::width, database::error_lower>(*this);
+      return get<pdg::width, database::error_lower>();
     }
 
     /*! \brief Get the upper width error
@@ -623,7 +556,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double width_error_upper() const {
-      return pdg::detail::get<pdg::width, database::error_upper>(*this);
+      return get<pdg::width, database::error_upper>();
     }
 
     /*! Calculate the width error
@@ -690,8 +623,7 @@ namespace reactions {
         auto start = skip_commented_lines(file);
 
         std::size_t count = 0;
-        while (file.ignore(pdg::base_element::line_size +
-                           1)) // include end-of-line
+        while (file.ignore(pdg_element::line_size + 1)) // include end-of-line
           ++count;
 
         file.clear(); // we reached the end of the file
@@ -739,8 +671,7 @@ namespace reactions {
       auto start = skip_commented_lines(file);
 
       std::size_t count = 0;
-      while (
-          file.ignore(pdg::base_element::line_size + 1)) // include end-of-line
+      while (file.ignore(pdg_element::line_size + 1)) // include end-of-line
         ++count;
 
       file.clear(); // we reached the end of the file
@@ -787,20 +718,16 @@ namespace reactions {
      *
      * - The name starts with a set of characters. A capital letter followed by
      * lowercase letters or a set of lowercase letters are considered as a Greek
-     * letter. Any capital letter following this is considered an eigenstate
-     * marker (like for the two mass eigenstates of the neutral kaon), and is
-     * placed as a subindex. In the latter case, no more subindices are allowed
-     * in the following.
-     * - Tha base name can be followed by an indicator that the particle has
-     * slightly variations with respect to another existing particle or if it
+     * letter.
+     * - The base name can be followed by a set of modifiers indicating the
+     * flavour, mass eigenstate or spin of the particle, between parenthesis.
+     * - After, it is possible to indicate that the particle has a sligh
+     * variation with respect to another existing particle or that it
      * corresponds to an excited state, in which it should be indicated with one
      * or various prime symbols for the first case, or an asterisk for the
      * second.
-     * - A set of subindices can be specified afterwards, that can be characters
-     * (indicating the underlying falvour) or numbers (indicating the spin),
-     * preceeded by an underscore symbol.
      * - The mass can be indicated between two parentheses as an integral
-     * number, and is mandatory if you are providing subindices.
+     * number.
      * - The last part of the name is composed by the possible anti-particle
      * marker, specified with a tilde, and the charge, which can be 0, + or -.
      *
@@ -1081,9 +1008,9 @@ namespace reactions {
     bool read_field(pdg_element::base_type &tuple,
                     std::string const &line) const {
 
-      using field = pdg::base_element::field_t<I>;
+      using field = std::tuple_element_t<I, pdg_element::fields>;
 
-      if constexpr (pdg::is_optional_field_v<field>) {
+      if constexpr (database::is_optional_field_v<field>) {
 
         typename field::value_type::value_type value;
 
@@ -1110,8 +1037,9 @@ namespace reactions {
     /// Read all the fields from a line
     bool read_line(pdg_element::base_type &tuple,
                    std::string const &line) const {
-      return read_line(tuple, line,
-                       std::make_index_sequence<pdg_element::nfields>());
+      return read_line(
+          tuple, line,
+          std::make_index_sequence<pdg_element::number_of_fields>());
     }
 
     /// Advance to the next element in the file and read it
@@ -1133,7 +1061,7 @@ namespace reactions {
       case (cache::full): // the full database is loaded
 
         for (auto const &el : m_cache)
-          if (pdg::detail::get<F>(el) == v)
+          if (el.get<F>() == v)
             return el;
 
         break; // throws an exception
@@ -1141,7 +1069,7 @@ namespace reactions {
       case (cache::user): // only user-registered entries exist
 
         for (auto const &el : m_cache)
-          if (pdg::detail::get<F>(el) == v)
+          if (el.get<F>() == v)
             return el;
 
         [[fallthrough]]; // continue as if we had no cache
