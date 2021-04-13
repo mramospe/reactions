@@ -86,7 +86,7 @@ namespace reactions {
     template <> std::string to_string(std::string const &v) { return v; }
   } // namespace pdg
 
-  /*\brief Defines a singleton to handle the units of PDG elements
+  /*! \brief Defines a singleton to handle the units of PDG elements
    *
    * This class affects the values returned by the \ref pdg_element
    * objects, scaling them according to the units defined by the user.
