@@ -68,6 +68,7 @@ jobs:
       language: ruby
       before_deploy:
         # Set up git user name and tag this commit
+        - ruby --version
         - git config --local user.name "Miguel Ramos Pernas"
         - git config --local user.email "miguel.ramos.pernas@gmail.com"
         - export PYTHONPATH=${PYTHONPATH}:python
