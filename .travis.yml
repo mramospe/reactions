@@ -71,15 +71,16 @@ jobs:
         - git config --local user.name "Miguel Ramos Pernas"
         - git config --local user.email "miguel.ramos.pernas@gmail.com"
         - export PYTHONPATH=${PYTHONPATH}:python
-        - export GIT_NEW_TAG=$(python -c "import reactions; print(reactions.__version__)")
-        - export GIT_LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-        - if [[ -z ${GIT_NEW_TAG} || -z ${GIT_LATEST_TAG} ]]; then exit 1; fi
-        - git tag ${GIT_NEW_TAG}
+        - export TRAVIS_TAG=v$(python -c "import reactions; print(reactions.__version__)")
+        - export LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+        - if [[ -z ${TRAVIS_TAG} || -z ${LATEST_TAG} ]]; then exit 1; fi
+        - git tag ${TRAVIS_TAG}
         - sudo apt-get update
         - sudo apt-get install -y ruby
         - ruby --version
         - gem install github_changelog_generator
-        - ./repository changelog -o changes-${GIT_NEW_TAG}.md --since-tag ${GIT_LATEST_TAG}
+        - ./repository changelog -o changes-${TRAVIS_TAG}.md --since-tag ${LATEST_TAG}
+        - git tag ${TRAVIS_TAG} -f -m $(cat changes-${TRAVIS_TAG}.md)
       before_install: " "
       install: " "
       script: " "
@@ -88,6 +89,6 @@ jobs:
           branch: devel
         provider: releases
         token: ${GITHUB_TOKEN}
-        file: changes-${GIT_NEW_TAG}.md
+        file: changes-${TRAVIS_TAG}.md
         cleanup: false
         draft: true
