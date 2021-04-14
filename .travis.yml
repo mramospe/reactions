@@ -5,92 +5,106 @@ os: linux
 addons:
   apt:
     sources:
-      - ubuntu-toolchain-r-test
+    - ubuntu-toolchain-r-test
     packages:
-      - g++-7
-      - cmake
+    - g++-7
+    - cmake
 env:
-  - CC=gcc-7 CXX=g++-7
+- CC=gcc-7 CXX=g++-7
 
 before_install:
-  - ${CC} --version
-  - ${CXX} --version
-  - cmake --version
-  - pip install --force-reinstall -r test/python/requirements.txt
+- ${CC} --version
+- ${CXX} --version
+- cmake --version
+- pip install --force-reinstall -r test/python/requirements.txt
 
 install:
-   - mkdir build
-   - cd build
-   - cmake ../ -DINSTALL_TESTS=ON -DCMAKE_CXX_COMPILER=${CXX}
-   - make install
-   - cd ..
+- mkdir build
+- cd build
+- cmake ../ -DINSTALL_TESTS=ON -DCMAKE_CXX_COMPILER=${CXX}
+- make install
+- cd ..
 
 jobs:
   include:
-    - name: cpp
-      script:
-         - ./build/test/test_elements
-         - ./build/test/test_database
-         - ./build/test/test_processes
-      after_success: " "
-    - name: cmake
-      script:
-      - mkdir test/cmake/build
-      - cd test/cmake/build
-      - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../ -DCMAKE_CXX_COMPILER=${CXX}
-      - make
-      - ./main
-      after_success: " "
-    - name: format
-      python: 3.7
-      install: " "
-      script:
-      - python setup.py check_format --regex '(include|python|test|docs|scripts)'
-      - python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
-    - name: module
-      python: 3.7
-      install: pip install .
-      script:
-      - python -m reactions print-table
-      - python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
-    - name: python 3.7
-      python: 3.7
-      install: pip install .
-      script: pytest
-      after_success: codecov
-    - name: python 3.8
-      python: 3.8
-      install: pip install .
-      script: pytest
-      after_success: codecov
-    - name: deploy
-      if: branch = devel
-      python: 3.7
-      before_deploy:
-        # Set up git user name and tag this commit
-        - git config --local user.name "Miguel Ramos Pernas"
-        - git config --local user.email "miguel.ramos.pernas@gmail.com"
-        - export PYTHONPATH=${PYTHONPATH}:python
-        - export TRAVIS_TAG=v$(python -c "import reactions; print(reactions.__version__)")
-        - export LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
-        - if [[ -z ${TRAVIS_TAG} || -z ${LATEST_TAG} ]]; then exit 1; fi
-        - git tag ${TRAVIS_TAG}
-        - sudo apt-get update
-        - sudo apt-get install -y ruby
-        - ruby --version
-        - gem install github_changelog_generator
-        - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG}
-      before_install: " "
-      install: " "
-      script: " "
-      deploy:
-        provider: releases
+  - name: cpp
+    script:
+    - ./build/test/test_elements
+    - ./build/test/test_database
+    - ./build/test/test_processes
+    after_success: " "
+  - name: cmake
+    script:
+    - mkdir test/cmake/build
+    - cd test/cmake/build
+    - CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:../../../build cmake ../ -DCMAKE_CXX_COMPILER=${CXX}
+    - make
+    - ./main
+    after_success: " "
+  - name: format
+    python: 3.7
+    install: " "
+    script:
+    - python setup.py check_format --regex '(include|python|test|docs|scripts)'
+    - python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
+  - name: module
+    python: 3.7
+    install: pip install .
+    script:
+    - python -m reactions print-table
+    - python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
+  - name: python 3.7
+    python: 3.7
+    install: pip install .
+    script: pytest
+    after_success: codecov
+  - name: python 3.8
+    python: 3.8
+    install: pip install .
+    script: pytest
+    after_success: codecov
+  - name: deploy
+    if: branch = devel
+    python: 3.7
+    before_deploy:
+    # Define the Git configuration
+    - git config --local user.name "Miguel Ramos Pernas"
+    - git config --local user.email "miguel.ramos.pernas@gmail.com"
+    # Export the path to the package
+    - export PYTHONPATH=${PYTHONPATH}:python
+    # Define the new and previous tags
+    - export TRAVIS_TAG=v$(python -c "import reactions; print(reactions.__version__)")
+    - export LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+    - if [[ -z ${TRAVIS_TAG} || -z ${LATEST_TAG} ]]; then exit 1; fi
+    # Create the new tag
+    - git tag ${TRAVIS_TAG}
+    # Install Ruby and github_changelog_generator
+    - sudo apt-get update
+    - sudo apt-get install -y ruby
+    - ruby --version
+    - gem install github_changelog_generator
+    # Generate the changelog file
+    - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG}
+    # Recreate the tag with the changelog in the description
+    - git tag -f -a ${TRAVIS_TAG} -m "$(cat ${TRAVIS_TAG}-changelog.md)"
+    before_install: " "
+    install: " "
+    script: " "
+    deploy:
+      - provider: releases
         token: ${GITHUB_TOKEN}
         tag_name: ${TRAVIS_TAG}
         name: ${TRAVIS_TAG}
-        release_notes: "General update"
         file: ${TRAVIS_TAG}-changelog.md
         cleanup: false
         draft: true
         on:
           branch: devel
+      - provider: releases
+        token: ${GITHUB_TOKEN}
+        tag_name: ${TRAVIS_TAG}
+        name: ${TRAVIS_TAG}
+        file: ${TRAVIS_TAG}-changelog.md
+        cleanup: false
+        on:
+          branch: master
