@@ -97,8 +97,8 @@ jobs:
         name: ${TRAVIS_TAG}
         file: ${TRAVIS_TAG}-changelog.md
         skip_cleanup: true
-	draft: false
+        draft: false
         on:
           branch:
-	  - devel
-	  - master
+          - devel
+          - master
