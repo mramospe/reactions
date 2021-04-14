@@ -97,6 +97,5 @@ jobs:
         name: ${TRAVIS_TAG}
         file: ${TRAVIS_TAG}-changelog.md
         cleanup: false
-        draft: true
         on:
           branch: devel
