@@ -91,7 +91,7 @@ jobs:
     install: " "
     script: " "
     deploy:
-      - provider: releases
+        provider: releases
         token: ${GITHUB_TOKEN}
         tag_name: ${TRAVIS_TAG}
         name: ${TRAVIS_TAG}
@@ -100,11 +100,3 @@ jobs:
         draft: true
         on:
           branch: devel
-      - provider: releases
-        token: ${GITHUB_TOKEN}
-        tag_name: ${TRAVIS_TAG}
-        name: ${TRAVIS_TAG}
-        file: ${TRAVIS_TAG}-changelog.md
-        cleanup: false
-        on:
-          branch: master
