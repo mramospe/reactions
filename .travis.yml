@@ -96,7 +96,7 @@ jobs:
         tag_name: ${TRAVIS_TAG}
         name: ${TRAVIS_TAG}
         file: ${TRAVIS_TAG}-changelog.md
-        skip_cleanup: true
+        cleanup: false
         draft: true
         on:
           branch:
