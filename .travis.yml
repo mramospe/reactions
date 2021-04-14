@@ -64,7 +64,7 @@ jobs:
     script: pytest
     after_success: codecov
   - name: deploy
-    if: branch = devel
+    if: branch = devel || branch = master
     python: 3.7
     before_deploy:
     # Define the Git configuration
@@ -85,8 +85,6 @@ jobs:
     - gem install github_changelog_generator
     # Generate the changelog file
     - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG}
-    # Recreate the tag with the changelog in the description
-    - git tag -f -a ${TRAVIS_TAG} -m "$(cat ${TRAVIS_TAG}-changelog.md)"
     before_install: " "
     install: " "
     script: " "
@@ -97,5 +95,8 @@ jobs:
         name: ${TRAVIS_TAG}
         file: ${TRAVIS_TAG}-changelog.md
         skip_cleanup: true
+	draft: true
         on:
-          branch: devel
+          branch:
+	  - devel
+	  - master
