@@ -85,6 +85,8 @@ jobs:
     - gem install github_changelog_generator
     # Generate the changelog file
     - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG}
+    # Recreate the tag
+    - git tag -f -a ${TRAVIS_TAG} -m "$(cat ${TRAVIS_TAG}-changelog.md)"
     before_install: " "
     install: " "
     script: " "
@@ -95,7 +97,7 @@ jobs:
         name: ${TRAVIS_TAG}
         file: ${TRAVIS_TAG}-changelog.md
         skip_cleanup: true
-	draft: true
+	draft: false
         on:
           branch:
 	  - devel
