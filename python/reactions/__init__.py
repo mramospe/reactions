@@ -1,5 +1,5 @@
 # Place where the project version is specified
-__version__ = '0.0.0'
+__version__ = '0.0.1'
 
 try:
 
