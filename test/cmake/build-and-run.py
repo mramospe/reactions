@@ -14,10 +14,14 @@ import sys
 if __name__ == '__main__':
 
     pwd = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))))
     env = dict(os.environ)
 
-    env['CMAKE_PREFIX_PATH'] = env.get(
-        'CMAKE_PREFIX_PATH') + ':$CMAKE_PREFIX_PATH:../../../build'
+    env['CMAKE_PREFIX_PATH'] = ':'.join([
+        env.get('CMAKE_PREFIX_PATH', ''),
+        os.path.join(root, 'build')
+    ])
 
     build_dir = os.path.join(pwd, 'build')
 
@@ -32,8 +36,6 @@ if __name__ == '__main__':
                                            encoding='utf-8')
 
     # check the CMake version
-    root = os.path.dirname(os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))))
     sys.path.append(os.path.join(root, 'python'))
     import reactions
 
