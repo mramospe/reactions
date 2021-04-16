@@ -72,7 +72,8 @@ jobs:
     - export PYTHONPATH=${PYTHONPATH}:python
     # Define the new and previous tags
     - export TRAVIS_TAG=v$(python -c "import reactions; print(reactions.__version__)")
-    - export LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+    - if [[ ! ${TRAVIS_TAG} ~= "dev" ]]; then export EXCLUDE_PATTERN='*dev*'; fi
+    - export LATEST_TAG=$(git describe --tags $(git rev-list --exclude=${EXCLUDE_PATTERN} --tags --max-count=1))
     - if [[ -z ${TRAVIS_TAG} || -z ${LATEST_TAG} ]]; then exit 1; fi
     # Change the name of the tag if we are not in master
     - if [ ${TRAVIS_BRANCH} != master ]; then export TRAVIS_TAG=devel-${TRAVIS_TAG}; fi
