@@ -186,6 +186,18 @@ namespace reactions::database {
     }
   };
 
+  /// Multiplication of values and errors by a constant
+  template <class T>
+  value_and_errors<T> operator*(value_and_errors<T> const &vae, T f) {
+    return {f * vae.value, f * vae.error_lower, f * vae.error_upper};
+  }
+
+  /// Multiplication of values and errors by a constant
+  template <class T>
+  value_and_errors<T> operator*(T f, value_and_errors<T> const &vae) {
+    return vae * f;
+  }
+
   /// Accessor to a value/error field
   template <class F> static constexpr get_t<F> get;
 

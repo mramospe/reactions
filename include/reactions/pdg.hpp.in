@@ -142,7 +142,10 @@ namespace reactions {
                             void>> {
       template <class T>
       constexpr auto const &operator()(T const &value) const {
-        return value;
+        if constexpr (database::is_optional_v<std::decay_t<T>>)
+          return value.value();
+        else
+          return value;
       }
     };
 
@@ -152,22 +155,41 @@ namespace reactions {
         F, std::enable_if_t<
                !std::is_same_v<typename F::units_type, units::none>, void>> {
       template <class T> constexpr auto operator()(T &&value) const {
-        return energy_scale_factor<F>() * value;
+        if constexpr (database::is_optional_v<std::decay_t<T>>)
+          return energy_scale_factor<F>() * value.value();
+        else
+          return energy_scale_factor<F>() * value;
       }
     };
 
     /// \copydoc process_units_t
     template <class F> static constexpr process_units_t<F> process_units;
 
+    template <class F, class T, class Enable = void> struct units_constness {
+      using type = std::decay_t<T>;
+    };
+
+    template <class F, class T>
+    struct units_constness<
+        F, T,
+        std::enable_if_t<std::is_same_v<typename F::units_type, units::none>>> {
+      using type = T;
+    };
+
+    template <class F, class T>
+    using units_constness_t = typename units_constness<F, T>::type;
+
     /// Return type of the accessor of a field
     template <class F, class S> struct return_type {
-      using type = typename database::remove_optional_t<
-          typename F::value_type>::value_type;
+      using type =
+          units_constness_t<F, typename database::remove_optional_t<
+                                   typename F::value_type>::value_type>;
     };
 
     /// \copydoc return_type
     template <class F> struct return_type<F, void> {
-      using type = database::remove_optional_t<typename F::value_type> const &;
+      using type = units_constness_t<
+          F, database::remove_optional_t<typename F::value_type> const &>;
     };
 
     /// \copydoc return_type
@@ -197,6 +219,21 @@ namespace reactions {
     /// Fields of the element
     using fields = pdg_element_fields;
 
+  private:
+    /*!\brief Access the value of the field at the given position
+     *
+     * If the value is an optional it accesses the value without checking
+     * its validity.
+     */
+    template <std::size_t I> auto const &get_at() const {
+      if constexpr (database::is_optional_field_v<
+                        std::tuple_element_t<I, fields>>)
+        return std::get<I>(*this).value();
+      else
+        return std::get<I>(*this);
+    }
+
+  public:
     /// Number of data fields
     static const size_t number_of_fields = std::tuple_size_v<base_type>;
 
@@ -246,16 +283,18 @@ namespace reactions {
     pdg::detail::return_type_t<F, S> get() const {
       if constexpr (std::is_same_v<S, void>)
         return pdg::detail::process_units<F>(
-            std::get<utils::tuple_index_v<fields, F>>(*this));
+            get_at<utils::tuple_index_v<fields, F>>());
       else
-        return pdg::detail::process_units<F>(database::get<S>(
-            std::get<utils::tuple_index_v<fields, F>>(*this).value()));
+        return pdg::detail::process_units<F>(
+            database::get<S>(get_at<utils::tuple_index_v<fields, F>>()));
     }
 
     /// Check whether the given field information is missing or not
     template <class F> constexpr bool has() const {
-      return !database::is_optional_field_v<F> ||
-             std::get<utils::tuple_index_v<fields, F>>(*this).has_value();
+      if constexpr (database::is_optional_field_v<F>)
+        return std::get<utils::tuple_index_v<fields, F>>(*this).has_value();
+      else
+        return true;
     }
 
     /// Representation of the element name as a LaTeX string

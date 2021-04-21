@@ -31,6 +31,9 @@ int main() {
           "a", 0, 0, reactions::missing, reactions::missing, false};
       pdg_element a = std::move(ta);
 
+      if ( !a.has<pdg::name>() || !a.has<pdg::pdg_id>() || a.has<pdg::mass>() )
+	errors.push_back("Errors checking the presence of values");
+
       pdg_element::base_type tb = {
           "b", 0, 0, reactions::missing, reactions::missing, false};
       pdg_element b{std::move(tb)};

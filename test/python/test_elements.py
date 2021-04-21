@@ -28,10 +28,16 @@ def test_pdg_element():
         0., 0., 0.), width_and_errors=(0., 0., 0.), is_self_cc=True)
     reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0,
                           mass_and_errors=None, width_and_errors=(0., 0., 0.), is_self_cc=True)
-    reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0, mass_and_errors=(
-        0., 0., 0.), width_and_errors=None, is_self_cc=True)
-    reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0,
-                          mass_and_errors=None, width_and_errors=None, is_self_cc=True)
+    g0 = reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0, mass_and_errors=(
+        0., 0., 0.), width_and_errors=None, is_self_cc=False)
+
+    assert str(g0) == g0.__repr__()
+
+    g1 = reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0,
+                               mass_and_errors=None, width_and_errors=None, is_self_cc=True)
+
+    assert str(g1) == 'pdg_element(name="gamma", pdg_id=1, three_charge=0, mass_and_errors=None, width_and_errors=None, is_self_cc=True)'
+    assert str(g1) == g1.__repr__()
 
     # all these constructors must fail
     with pytest.raises(TypeError):
@@ -86,3 +92,5 @@ def test_string_element():
         'custom') == reactions.string_element('custom')
     assert reactions.string_element(
         'custom') != reactions.string_element('other')
+    assert str(el) == 'custom'
+    assert str(el) == el.name

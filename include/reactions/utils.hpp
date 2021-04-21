@@ -30,4 +30,17 @@ namespace reactions::utils {
   /// \copydoc tuple_index
   template <class Tuple, class E>
   static constexpr auto tuple_index_v = tuple_index<Tuple, E>::value;
+
+  /// Check whether a type is a specialization of a template
+  template <class Type, template <class...> class Template>
+  struct is_template_specialization : std::false_type {};
+
+  /// \copydoc is_template_specialization
+  template <template <class...> class Template, class... T>
+  struct is_template_specialization<Template<T...>, Template> : std::true_type {
+  };
+
+  template <class Type, template <class...> class Template>
+  static constexpr auto is_template_specialization_v =
+      is_template_specialization<Type, Template>::value;
 } // namespace reactions::utils
