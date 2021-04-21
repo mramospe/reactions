@@ -42,8 +42,9 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
     shutil.copyfile(ori_doxyfile, tmp_doxyfile)
 
-    intro_file = os.path.join(root, 'docs', 'source',
-                              '_static', 'CPP_INTRODUCTION.md')
+    auxiliar_dir = os.path.join(root, 'docs', 'source', 'auxiliar')
+
+    intro_file = os.path.join(auxiliar_dir, 'CPP_INTRODUCTION.md')
 
     static_doc_dir = os.path.join(os.path.dirname(__file__), '_static')
     cpp_doc_dir = os.path.join(static_doc_dir, 'cpp')
@@ -58,11 +59,19 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
 ''')
     subprocess.check_call(['doxygen'], cwd=tmpdir)
 
-# Generate additional documents needed by the documentation, like tables, plots, ...
-pdg_table = os.path.join(static_doc_dir, 'pdg_table.pdf')
+    # Generate additional documents needed by the documentation, like tables, plots, ...
+    auxiliar_tmp_dir = os.path.join(auxiliar_dir, 'tmp')
 
-subprocess.check_call(['python', os.path.join(
-    root, 'scripts', 'display-pdg-table.py'), '--output', pdg_table])
+    os.makedirs(auxiliar_tmp_dir, exist_ok=True)
+
+    subprocess.check_call(['python', os.path.join(
+        root, 'scripts', 'display-pdg-table.py'), '--output', os.path.join(static_doc_dir, 'pdg_table.pdf')])
+
+    tmp_changelog = os.path.join(tmpdir, 'changelog.md')
+    subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
+                           '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
+    subprocess.check_call(['pandoc', tmp_changelog, '-o',
+                           os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
 
 # -- General configuration ------------------------------------------------
 
