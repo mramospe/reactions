@@ -196,17 +196,9 @@ static PyObject *Reaction_get_products(Reaction *self, void *) {
 /// Properties of the Reaction class
 static PyGetSetDef Reaction_getsetters[] = {
     {"reactants", (getter)Reaction_get_reactants, NULL,
-     R"(Objects at the left hand-side of a reaction
-
-:type: list(node)
-)",
-     NULL},
+     "list(node): Objects at the left hand-side of a reaction", NULL},
     {"products", (getter)Reaction_get_products, NULL,
-     R"(Objects at the right hand-side of a reaction
-
-:type: list(node)
-)",
-     NULL},
+     "list(node): Objects at the right hand-side of a reaction", NULL},
     {NULL},
 };
 
@@ -484,17 +476,10 @@ static PyObject *Decay_get_products(Decay *self, void *) {
 /// Properties of the Decay class
 static PyGetSetDef Decay_getsetters[] = {
     {"head", (getter)Decay_get_head, (setter)Decay_set_head,
-     R"(Element at the left hand-side of a decay
-
-:type: pdg_element or string_element
-)",
+     "pdg_element or string_element: Element at the left hand-side of a decay",
      NULL},
     {"products", (getter)Decay_get_products, NULL,
-     R"(Objects at the right hand-side of a decay
-
-:type: list(node)
-)",
-     NULL},
+     "list(node): Objects at the right hand-side of a decay", NULL},
     {NULL},
 };
 

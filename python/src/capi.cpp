@@ -46,20 +46,37 @@ PyObject *node_type(PyObject *module, PyObject *args) {
 // Module global functions
 static PyMethodDef capi_methods[] = {
     {"is_element", (PyCFunction)is_element, METH_VARARGS,
-     R"(Check if an object is of element type
+     R"(is_element(obj)
+Check if an object is of element type
 
-:param obj: input object
-:returns: whether the object is an element
-:rtype: bool
+Parameters
+----------
+obj :
+    Object to check
+
+Returns
+-------
+bool
+    whether the object is an element or not
 )"},
     {"node_type", (PyCFunction)node_type, METH_VARARGS,
-     R"(Get the node type as a string (`decay`, `reaction` or `element`)
+     R"(node_type(n)
+Get the node type as a string (`decay`, `reaction` or `element`)
 
-:param obj: input node
-:type obj: node
-:returns: node type as a string
-:rtype: str
-:raises TypeError: if the input object is not a :class:`node` object.
+Parameters
+----------
+n : node
+    Node to check
+
+Returns
+-------
+str
+    Node type as a string
+
+Raises
+------
+TypeError
+    If the input object is not a :class:`node` object.
 )"},
     {NULL, NULL, 0, NULL}};
 
