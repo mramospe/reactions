@@ -165,36 +165,82 @@ namespace reactions {
     /// \copydoc process_units_t
     template <class F> static constexpr process_units_t<F> process_units;
 
-    template <class F, class T, class Enable = void> struct units_constness {
-      using type = std::decay_t<T>;
+    /// Determine the type to be returned after processing the units of a field
+    template <class F, class T, class Enable = void>
+    struct return_type_after_parsing_units {
+      using type = std::decay_t<database::remove_optional_t<T>>;
     };
 
+    /// \copydoc return_type_after_parsing_units
     template <class F, class T>
-    struct units_constness<
+    struct return_type_after_parsing_units<
         F, T,
         std::enable_if_t<std::is_same_v<typename F::units_type, units::none>>> {
-      using type = T;
+      using type = std::decay_t<database::remove_optional_t<T>> const &;
     };
 
+    /// \copydoc return_type_after_parsing_units
     template <class F, class T>
-    using units_constness_t = typename units_constness<F, T>::type;
+    using return_type_after_parsing_units_t =
+        typename return_type_after_parsing_units<F, T>::type;
+
+    /// Acess the subtype of a set of fields
+    template <class F, class... S> struct field_subtype;
+
+    /// \copydoc field_subtype
+    template <class F, class S0, class... S> struct field_subtype<F, S0, S...> {
+      using type = typename field_subtype<
+          typename database::remove_optional_t<F>::value_type, S...>::type;
+    };
+
+    /// \copydoc field_subtype
+    template <class F> struct field_subtype<F> {
+      using type = database::remove_optional_t<F>;
+    };
+
+    /// \copydoc field_subtype
+    template <class F, class... S>
+    using field_subtype_t = typename field_subtype<F, S...>::type;
 
     /// Return type of the accessor of a field
-    template <class F, class S> struct return_type {
-      using type =
-          units_constness_t<F, typename database::remove_optional_t<
-                                   typename F::value_type>::value_type>;
+    template <class F, class... S> struct return_type {
+      using type = return_type_after_parsing_units_t<
+          F, field_subtype_t<typename F::value_type, S...>>;
     };
 
     /// \copydoc return_type
-    template <class F> struct return_type<F, void> {
-      using type = units_constness_t<
-          F, database::remove_optional_t<typename F::value_type> const &>;
+    template <class F, class... S>
+    using return_type_t = typename return_type<F, S...>::type;
+
+    /// Object to access fields
+    template <class F, class... S> struct accessor_t;
+
+    /// Static object to access the fields of a tuple-like object
+    template <class F, class... S>
+    static constexpr accessor_t<F, S...> accessor;
+
+    /// \copydoc accessor_t
+    template <class F> struct accessor_t<F> {
+      /// Access a value and process the units
+      template <class T>
+      constexpr return_type_after_parsing_units_t<F, T>
+      operator()(T const &f) const {
+        return process_units<F>(f);
+      }
     };
 
-    /// \copydoc return_type
-    template <class F, class S = void>
-    using return_type_t = typename return_type<F, S>::type;
+    /// \copydoc accessor_t
+    template <class F, class S0, class... S> struct accessor_t<F, S0, S...> {
+      /// \copydoc accessor_t::operator()
+      template <class T>
+      constexpr return_type_t<F, S0, S...> operator()(T const &f) const {
+
+        if constexpr (database::is_optional_v<T>)
+          return accessor<F, S...>(database::get<S0>(f.value()));
+        else
+          return accessor<F, S...>(database::get<S0>(f));
+      }
+    };
 
   } // namespace pdg::detail
 
@@ -219,21 +265,6 @@ namespace reactions {
     /// Fields of the element
     using fields = pdg_element_fields;
 
-  private:
-    /*!\brief Access the value of the field at the given position
-     *
-     * If the value is an optional it accesses the value without checking
-     * its validity.
-     */
-    template <std::size_t I> auto const &get_at() const {
-      if constexpr (database::is_optional_field_v<
-                        std::tuple_element_t<I, fields>>)
-        return std::get<I>(*this).value();
-      else
-        return std::get<I>(*this);
-    }
-
-  public:
     /// Number of data fields
     static const size_t number_of_fields = std::tuple_size_v<base_type>;
 
@@ -279,14 +310,10 @@ namespace reactions {
      * The return type is a constant reference for values without units and
      * a value for those with units.
      */
-    template <class F, class S = void>
-    pdg::detail::return_type_t<F, S> get() const {
-      if constexpr (std::is_same_v<S, void>)
-        return pdg::detail::process_units<F>(
-            get_at<utils::tuple_index_v<fields, F>>());
-      else
-        return pdg::detail::process_units<F>(
-            database::get<S>(get_at<utils::tuple_index_v<fields, F>>()));
+    template <class F, class... S>
+    pdg::detail::return_type_t<F, S...> get() const {
+      return pdg::detail::accessor<F, S...>(
+          std::get<utils::tuple_index_v<fields, F>>(*this));
     }
 
     /// Check whether the given field information is missing or not
