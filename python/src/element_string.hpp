@@ -52,7 +52,8 @@ static PyObject *ElementString_get_name(ElementString *self, void *) {
 
 /// Properties of the Reaction class
 static PyGetSetDef ElementString_getsetters[] = {
-    {"name", (getter)ElementString_get_name, NULL, "Get the name", NULL},
+    {"name", (getter)ElementString_get_name, NULL, "str: Underlying name",
+     NULL},
 };
 
 /// Comparison operator(s)

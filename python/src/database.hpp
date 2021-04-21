@@ -170,30 +170,48 @@ static PyObject *DatabasePDG_all_elements(DatabasePDG *self) {
 // Methods of the DatabasePDG class
 static PyMethodDef DatabasePDG_methods[] = {
     {"__call__", (PyCFunction)DatabasePDG_call, METH_VARARGS | METH_COEXIST,
-     R"(Access an element of the database by name or PDG ID
+     R"(__call__(arg)
 
-:param arg: element name or PDG ID
-:type arg: str or int
-:returns: corresponding element
-:rtype: pdg_element
-:raises reactions.LookupError: if the element is not found
+Access an element of the database by name or PDG ID
+
+Parameters
+----------
+arg : str or int
+    Element name or PDG ID
+
+Returns
+-------
+pdg_element
+    Corresponding element
+
+Raises
+------
+reactions.LookupError
+    If the element is not found
 )"},
     {"all_elements", (PyCFunction)DatabasePDG_all_elements, METH_NOARGS,
      R"(Extract all the elements to a list. This includes all those elements
 registered by the user.
 
-:returns: all the elements
-:rtype: list(pdg_element)
+Returns
+-------
+list(pdg_element)
+    All the elements
 )"},
     {"clear_cache", (PyCFunction)DatabasePDG_clear_cache, METH_NOARGS,
      "Clear the internal cache, removing also user-registered elements"},
     {"charge_conjugate", (PyCFunction)DatabasePDG_charge_conjugate,
      METH_VARARGS, R"(Get the charge-conjugate of an element.
 
-:param element: element to calculate the charge-conjugate
-:type element: pdg_element
-:returns: charge-conjugate of the given element
-:rtype: pdg_element
+Parameters
+----------
+pdg_element:
+    element to calculate the charge-conjugate
+
+Returns
+-------
+pdg_element
+    Charge-conjugate of the given element
 )"},
     {"disable_cache", (PyCFunction)DatabasePDG_disable_cache, METH_NOARGS,
      "Disable the internal cache"},
@@ -202,8 +220,10 @@ registered by the user.
     {"get_database_path", (PyCFunction)DatabasePDG_get_database_path,
      METH_NOARGS, R"(Get the path to the database file
 
-:returns: path to the database file
-:rtype: str
+Returns
+-------
+str
+    Path to the database file
 )"},
     {"register_element", (PyCFunction)DatabasePDG_register_element,
      METH_VARARGS | METH_KEYWORDS,
@@ -212,11 +232,15 @@ can be either a single PDG element object or the arguments to the constructor
 of :class:`reactions.pdg_element`.)"},
     {"set_database_path", (PyCFunction)DatabasePDG_set_database_path,
      METH_VARARGS,
-     R"(Set the path to the database file. If the cache is enabled, reloads the
+     R"(set_database_path(path)
+
+Set the path to the database file. If the cache is enabled, reloads the
 data. If the cache is enabled, elements are reloaded in memory.
 
-:param path: path to the database file
-:type path: str
+Parameters
+----------
+path:
+    Path to the database file.
 )"},
     {NULL, NULL, 0, NULL}};
 
@@ -345,16 +369,26 @@ static PyMethodDef SystemOfUnitsPDG_methods[] = {
      METH_NOARGS,
      R"(Get the current units of energy for the masses and widths of PDG elements
 
-:returns: units of energy
-:rtype: str
+Returns
+-------
+str
+    Units of energy
 )"},
     {"set_energy_units", (PyCFunction)SystemOfUnitsPDG_set_energy_units,
      METH_VARARGS,
-     R"(Set the units of energy for the masses and widths of PDG elements
+     R"(set_energy_units(units)
 
-:param units: units of energy to use
-:type units: str
-:raises reactions.ValueError: if the provided units are unknown
+Set the units of energy for the masses and widths of PDG elements
+
+Parameters
+----------
+str:
+    Units of energy to use.
+
+Raises
+------
+reactions.ValueError
+    If the provided units are unknown
 )"},
     {NULL, NULL, 0, NULL}};
 
