@@ -22,14 +22,14 @@ namespace reactions::utils {
   } // namespace detail
 
   /// \copydoc detail::tuple_index
-  template <class Tuple, class E> struct tuple_index {
+  template <class E, class Tuple> struct tuple_index {
     static constexpr auto value =
         detail::tuple_index<0, Tuple, E, std::tuple_element_t<0, Tuple>>::value;
   };
 
   /// \copydoc tuple_index
-  template <class Tuple, class E>
-  static constexpr auto tuple_index_v = tuple_index<Tuple, E>::value;
+  template <class E, class Tuple>
+  static constexpr auto tuple_index_v = tuple_index<E, Tuple>::value;
 
   /// Check whether a type is a specialization of a template
   template <class Type, template <class...> class Template>

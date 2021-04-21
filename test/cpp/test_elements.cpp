@@ -31,13 +31,14 @@ int main() {
           "a", 0, 0, reactions::missing, reactions::missing, false};
       pdg_element a = std::move(ta);
 
-      if ( !a.has<pdg::name>() || !a.has<pdg::pdg_id>() || a.has<pdg::mass>() )
-	errors.push_back("Errors checking the presence of values");
+      if (!a.has<pdg::name>() || !a.has<pdg::pdg_id>() || a.has<pdg::mass>())
+        errors.push_back("Errors checking the presence of values");
 
-      auto const& name = a.get<pdg::name>();
+      auto const &name = a.get<pdg::name>();
 
-      if ( name != a.name() )
-	errors.push_back("Name accessed with the \"name\" member function and with \"get<pdg::name>\" do not coincide");
+      if (name != a.name())
+        errors.push_back("Name accessed with the \"name\" member function and "
+                         "with \"get<pdg::name>\" do not coincide");
 
       a.get<pdg::mass>(); // simply try to get it
 

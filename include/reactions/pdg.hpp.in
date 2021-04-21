@@ -313,13 +313,13 @@ namespace reactions {
     template <class F, class... S>
     pdg::detail::return_type_t<F, S...> get() const {
       return pdg::detail::accessor<F, S...>(
-          std::get<utils::tuple_index_v<fields, F>>(*this));
+          std::get<utils::tuple_index_v<F, fields>>(*this));
     }
 
     /// Check whether the given field information is missing or not
     template <class F> constexpr bool has() const {
       if constexpr (database::is_optional_field_v<F>)
-        return std::get<utils::tuple_index_v<fields, F>>(*this).has_value();
+        return std::get<utils::tuple_index_v<F, fields>>(*this).has_value();
       else
         return true;
     }
