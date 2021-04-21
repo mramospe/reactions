@@ -180,18 +180,24 @@ std::string ElementPDG_field_to_string(reactions::pdg_element const &el) {
 template <std::size_t... I>
 std::string ElementPDG_to_string_impl(reactions::pdg_element const &el,
                                       std::index_sequence<I...>) {
-  return std::string{"pdg_element("} +
-         (ElementPDG_field_to_string<I>(el) + ...) + ')';
+  return (ElementPDG_field_to_string<I>(el) + ...);
 }
 
 /// Representation of the class as a string
 static PyObject *ElementPDG_to_string(ElementPDG *self) {
-  return PyUnicode_FromString(
+
+  PyTypeObject *type = (PyTypeObject *)PyObject_Type((PyObject *)self);
+  if (!type)
+    return NULL;
+
+  auto const str =
+      std::string{type->tp_name} + '(' +
       ElementPDG_to_string_impl(
           self->element,
           std::make_index_sequence<
-              std::tuple_size_v<reactions::pdg_element::fields>>())
-          .c_str());
+              std::tuple_size_v<reactions::pdg_element::fields>>()) +
+      ')';
+  return PyUnicode_FromString(str.c_str());
 }
 
 /// Comparison operator(s)

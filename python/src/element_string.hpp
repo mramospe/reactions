@@ -58,7 +58,15 @@ static PyGetSetDef ElementString_getsetters[] = {
 
 /// Represent the class as a string
 static PyObject *ElementString_to_string(ElementString *self) {
-  return PyUnicode_FromString(self->element.c_str());
+
+  PyTypeObject *type = (PyTypeObject *)PyObject_Type((PyObject *)self);
+  if (!type)
+    return NULL;
+
+  std::string const str =
+      std::string{type->tp_name} + "(name=\"" + self->element + "\")";
+
+  return PyUnicode_FromString(str.c_str());
 }
 
 /// Comparison operator(s)

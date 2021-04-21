@@ -36,7 +36,7 @@ def test_pdg_element():
     g1 = reactions.pdg_element(name='gamma', pdg_id=1, three_charge=0,
                                mass_and_errors=None, width_and_errors=None, is_self_cc=True)
 
-    assert str(g1) == 'pdg_element(name="gamma", pdg_id=1, three_charge=0, mass_and_errors=None, width_and_errors=None, is_self_cc=True)'
+    assert str(g1) == 'reactions.pdg_element(name="gamma", pdg_id=1, three_charge=0, mass_and_errors=None, width_and_errors=None, is_self_cc=True)'
     assert str(g1) == g1.__repr__()
 
     # all these constructors must fail
@@ -92,5 +92,4 @@ def test_string_element():
         'custom') == reactions.string_element('custom')
     assert reactions.string_element(
         'custom') != reactions.string_element('other')
-    assert str(el) == 'custom'
-    assert str(el) == el.name
+    assert str(el) == 'reactions.string_element(name="custom")'
