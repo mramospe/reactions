@@ -171,6 +171,7 @@ static PyObject *DatabasePDG_all_elements(DatabasePDG *self) {
 static PyMethodDef DatabasePDG_methods[] = {
     {"__call__", (PyCFunction)DatabasePDG_call, METH_VARARGS | METH_COEXIST,
      R"(__call__(arg)
+
 Access an element of the database by name or PDG ID
 
 Parameters
@@ -232,6 +233,7 @@ of :class:`reactions.pdg_element`.)"},
     {"set_database_path", (PyCFunction)DatabasePDG_set_database_path,
      METH_VARARGS,
      R"(set_database_path(path)
+
 Set the path to the database file. If the cache is enabled, reloads the
 data. If the cache is enabled, elements are reloaded in memory.
 
@@ -375,6 +377,7 @@ str
     {"set_energy_units", (PyCFunction)SystemOfUnitsPDG_set_energy_units,
      METH_VARARGS,
      R"(set_energy_units(units)
+
 Set the units of energy for the masses and widths of PDG elements
 
 Parameters

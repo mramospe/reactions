@@ -47,6 +47,7 @@ PyObject *node_type(PyObject *module, PyObject *args) {
 static PyMethodDef capi_methods[] = {
     {"is_element", (PyCFunction)is_element, METH_VARARGS,
      R"(is_element(obj)
+
 Check if an object is of element type
 
 Parameters
@@ -61,6 +62,7 @@ bool
 )"},
     {"node_type", (PyCFunction)node_type, METH_VARARGS,
      R"(node_type(n)
+
 Get the node type as a string (`decay`, `reaction` or `element`)
 
 Parameters
@@ -76,7 +78,7 @@ str
 Raises
 ------
 TypeError
-    If the input object is not a :class:`node` object.
+    If the input object is not a node object.
 )"},
     {NULL, NULL, 0, NULL}};
 
