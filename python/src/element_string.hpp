@@ -56,6 +56,19 @@ static PyGetSetDef ElementString_getsetters[] = {
      NULL},
 };
 
+/// Represent the class as a string
+static PyObject *ElementString_to_string(ElementString *self) {
+
+  PyTypeObject *type = (PyTypeObject *)PyObject_Type((PyObject *)self);
+  if (!type)
+    return NULL;
+
+  std::string const str =
+      std::string{type->tp_name} + "(name=\"" + self->element + "\")";
+
+  return PyUnicode_FromString(str.c_str());
+}
+
 /// Comparison operator(s)
 static PyObject *ElementString_richcompare(PyObject *obj1, PyObject *obj2,
                                            int op);
@@ -75,13 +88,13 @@ static PyTypeObject ElementStringType = {
     0,                                        /* tp_getattr */
     0,                                        /* tp_setattr */
     0,                                        /* tp_as_async */
-    0,                                        /* tp_repr */
+    (reprfunc)ElementString_to_string,        /* tp_repr */
     0,                                        /* tp_as_number */
     0,                                        /* tp_as_sequence */
     0,                                        /* tp_as_mapping */
     0,                                        /* tp_hash */
     0,                                        /* tp_call */
-    0,                                        /* tp_str */
+    (reprfunc)ElementString_to_string,        /* tp_str */
     0,                                        /* tp_getattro */
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */

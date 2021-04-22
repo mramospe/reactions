@@ -1,10 +1,13 @@
 #pragma once
 
+#include <tuple>
+
+#include "reactions/pdg.hpp"
+
 #include "errors.hpp"
 #include "node.hpp"
 #include "types.hpp"
-
-#include "reactions/pdg.hpp"
+#include "utils.hpp"
 
 // Wrapper for a PDG element
 typedef struct {
@@ -145,6 +148,58 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
   return 0;
 }
 
+// Represent the field of a PDG element as a string
+template <std::size_t I>
+std::string ElementPDG_field_to_string(reactions::pdg_element const &el) {
+
+  using field_type = std::tuple_element_t<I, reactions::pdg_element::fields>;
+  using underlying_type_no_opt =
+      reactions::database::remove_optional_t<typename field_type::value_type>;
+
+  std::string title =
+      reactions::utils::is_template_specialization_v<
+          underlying_type_no_opt, reactions::database::value_and_errors>
+          ? std::string{field_type::title} + "_and_errors"
+          : field_type::title;
+
+  if constexpr (I == 0) {
+    if (el.has<field_type>())
+      return title + '=' + reactions::python::to_string(el.get<field_type>());
+    else
+      return title + "=None";
+  } else {
+    if (el.has<field_type>())
+      return std::string{", "} + title + '=' +
+             reactions::python::to_string(el.get<field_type>());
+    else
+      return std::string{", "} + title + "=None";
+  }
+}
+
+// Represent a PDG element as a string (implementation)
+template <std::size_t... I>
+std::string ElementPDG_to_string_impl(reactions::pdg_element const &el,
+                                      std::index_sequence<I...>) {
+  return (ElementPDG_field_to_string<I>(el) + ...);
+}
+
+/// Representation of the class as a string
+static PyObject *ElementPDG_to_string(ElementPDG *self) {
+
+  PyTypeObject *type = (PyTypeObject *)PyObject_Type((PyObject *)self);
+  if (!type)
+    return NULL;
+
+  auto const str =
+      std::string{type->tp_name} + '(' +
+      ElementPDG_to_string_impl(
+          self->element,
+          std::make_index_sequence<
+              std::tuple_size_v<reactions::pdg_element::fields>>()) +
+      ')';
+  return PyUnicode_FromString(str.c_str());
+}
+
 /// Comparison operator(s)
 static PyObject *ElementPDG_richcompare(PyObject *obj1, PyObject *obj2, int op);
 
@@ -260,13 +315,13 @@ static PyTypeObject ElementPDGType = {
     0,                                        /* tp_getattr */
     0,                                        /* tp_setattr */
     0,                                        /* tp_as_async */
-    0,                                        /* tp_repr */
+    (reprfunc)ElementPDG_to_string,           /* tp_repr */
     0,                                        /* tp_as_number */
     0,                                        /* tp_as_sequence */
     0,                                        /* tp_as_mapping */
     0,                                        /* tp_hash */
     0,                                        /* tp_call */
-    0,                                        /* tp_str */
+    (reprfunc)ElementPDG_to_string,           /* tp_str */
     0,                                        /* tp_getattro */
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */

@@ -35,7 +35,7 @@ namespace reactions::element_traits {
     static constexpr auto builder = [](std::string const &s) { return s; };
   };
 
-  /// Actual C++ type for the given kind of element
+  /// Actual `C++` type for the given kind of element
   template <class T> using element_t = typename properties<T>::type;
 
   /// Default builder for a given kind of element

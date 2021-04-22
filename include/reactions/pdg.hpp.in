@@ -36,28 +36,29 @@ namespace reactions {
     struct name {
       static constexpr const char *title = "name";
       using value_type = std::string;
-      using units_type = units::none;
+      using units_reference_type = units::none;
       using range_type = range<0, 18>;
     };
     /// Field for the PDG ID
     struct pdg_id {
       static constexpr const char *title = "pdg_id";
       using value_type = int;
-      using units_type = units::none;
+      using units_reference_type = units::none;
       using range_type = range<19, 29>;
     };
     /// Field the charge multiplied by three
     struct three_charge {
       static constexpr const char *title = "three_charge";
       using value_type = int;
-      using units_type = units::none;
+      using units_reference_type = units::none;
       using range_type = range<30, 32>;
     };
     /// Field for the mass
     struct mass {
       static constexpr const char *title = "mass";
       using value_type = reactions::database::ve_double_opt;
-      using units_type = units::reference<energy_units::GeV>;
+      using units_reference_type =
+          units::reference<energy_units, energy_units::GeV>;
       using range_type =
           range_collection<range<33, 49>, range<50, 59>, range<60, 69>>;
     };
@@ -65,7 +66,8 @@ namespace reactions {
     struct width {
       static constexpr const char *title = "width";
       using value_type = reactions::database::ve_double_opt;
-      using units_type = units::reference<energy_units::GeV>;
+      using units_reference_type =
+          units::reference<energy_units, energy_units::GeV>;
       using range_type =
           range_collection<range<70, 86>, range<87, 96>, range<97, 106>>;
     };
@@ -73,7 +75,7 @@ namespace reactions {
     struct is_self_cc {
       static constexpr const char *title = "is_self_cc";
       using value_type = bool;
-      using units_type = units::none;
+      using units_reference_type = units::none;
       using range_type = range<107, 108>;
     };
 
@@ -103,6 +105,16 @@ namespace reactions {
     /// Get the energy units
     energy_units const &get_energy_units() const { return m_energy_units; }
 
+    /// Access the given units
+    template <class Units> Units const &units() const {
+      if constexpr (std::is_same_v<Units, energy_units>)
+        return get_energy_units();
+      else
+        // can not use "false" directly because it would be ill-formed
+        static_assert(reactions::utils::dependent_false_v<Units>,
+                      "Invalid units");
+    }
+
     /// Set the energy units
     void set_energy_units(energy_units u) {
 
@@ -122,59 +134,6 @@ namespace reactions {
     void operator=(pdg_system_of_units &&) = delete;
     void operator=(pdg_system_of_units const &) = delete;
   };
-
-  /// Internal utilities for the \ref reactions::pdg namespace
-  namespace pdg::detail {
-    /// Calculate the scale factor for a given energy field
-    template <class F> auto energy_scale_factor() {
-      using units_type_t = typename F::units_type;
-      return units_type_t::reference::scale_factor(
-          pdg_system_of_units::instance().get_energy_units());
-    }
-
-    /// Functor to process the units of a field
-    template <class F, class Enable = void> struct process_units_t;
-
-    /// \copydoc process_units_t
-    template <class F>
-    struct process_units_t<
-        F, std::enable_if_t<std::is_same_v<typename F::units_type, units::none>,
-                            void>> {
-      template <class T>
-      constexpr auto const &operator()(T const &value) const {
-        return value;
-      }
-    };
-
-    /// \copydoc process_units_t
-    template <class F>
-    struct process_units_t<
-        F, std::enable_if_t<
-               !std::is_same_v<typename F::units_type, units::none>, void>> {
-      template <class T> constexpr auto operator()(T &&value) const {
-        return energy_scale_factor<F>() * value;
-      }
-    };
-
-    /// \copydoc process_units_t
-    template <class F> static constexpr process_units_t<F> process_units;
-
-    /// Return type of the accessor of a field
-    template <class F, class S> struct return_type {
-      using type = typename database::remove_optional_t<
-          typename F::value_type>::value_type;
-    };
-
-    /// \copydoc return_type
-    template <class F> struct return_type<F, void> {
-      using type = database::remove_optional_t<typename F::value_type> const &;
-    };
-
-    /// \copydoc return_type
-    template <class F, class S = void>
-    using return_type_t = typename return_type<F, S>::type;
-
-  } // namespace pdg::detail
 
   /// Field types of a PDG element
   using pdg_element_fields =
@@ -242,20 +201,19 @@ namespace reactions {
      * The return type is a constant reference for values without units and
      * a value for those with units.
      */
-    template <class F, class S = void>
-    pdg::detail::return_type_t<F, S> get() const {
-      if constexpr (std::is_same_v<S, void>)
-        return pdg::detail::process_units<F>(
-            std::get<utils::tuple_index_v<fields, F>>(*this));
-      else
-        return pdg::detail::process_units<F>(database::get<S>(
-            std::get<utils::tuple_index_v<fields, F>>(*this).value()));
+    template <class Field, class... Subfield>
+    units::return_type_t<Field, Subfield...> get() const {
+      return units::accessor<Field, Subfield...>(
+          pdg_system_of_units::instance(),
+          std::get<utils::tuple_index_v<Field, fields>>(*this));
     }
 
     /// Check whether the given field information is missing or not
-    template <class F> constexpr bool has() const {
-      return !database::is_optional_field_v<F> ||
-             std::get<utils::tuple_index_v<fields, F>>(*this).has_value();
+    template <class Field> constexpr bool has() const {
+      if constexpr (database::is_optional_field_v<Field>)
+        return std::get<utils::tuple_index_v<Field, fields>>(*this).has_value();
+      else
+        return true;
     }
 
     /// Representation of the element name as a LaTeX string
@@ -1055,13 +1013,13 @@ namespace reactions {
     }
 
     /// Access an element using the field accessor
-    template <class F, class T> pdg_element access(T const &v) const {
+    template <class Field, class T> pdg_element access(T const &v) const {
 
       switch (m_cache.status()) {
       case (cache::full): // the full database is loaded
 
         for (auto const &el : m_cache)
-          if (el.get<F>() == v)
+          if (el.get<Field>() == v)
             return el;
 
         break; // throws an exception
@@ -1069,7 +1027,7 @@ namespace reactions {
       case (cache::user): // only user-registered entries exist
 
         for (auto const &el : m_cache)
-          if (el.get<F>() == v)
+          if (el.get<Field>() == v)
             return el;
 
         [[fallthrough]]; // continue as if we had no cache
@@ -1084,8 +1042,8 @@ namespace reactions {
 
         while (std::getline(file, line)) {
 
-          typename F::value_type ref;
-          auto sc = reactions::database::read_field<typename F::range_type>(
+          typename Field::value_type ref;
+          auto sc = reactions::database::read_field<typename Field::range_type>(
               ref, line);
 
           if (sc == reactions::database::failed)
@@ -1103,7 +1061,7 @@ namespace reactions {
       }
 
       throw reactions::lookup_error(
-          (std::string{"Unable to find element with "} + F::title + " \"" +
+          (std::string{"Unable to find element with "} + Field::title + " \"" +
            pdg::to_string(v) + '"')
               .c_str());
     }

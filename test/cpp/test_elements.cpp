@@ -31,6 +31,9 @@ int main() {
           "a", 0, 0, reactions::missing, reactions::missing, false};
       pdg_element a = std::move(ta);
 
+      if (!a.has<pdg::name>() || !a.has<pdg::pdg_id>() || a.has<pdg::mass>())
+        errors.push_back("Errors checking the presence of values");
+
       pdg_element::base_type tb = {
           "b", 0, 0, reactions::missing, reactions::missing, false};
       pdg_element b{std::move(tb)};
@@ -42,6 +45,14 @@ int main() {
       pdg_element c3 = {
           "c3", 0, 0, reactions::fill{0., 0., 0.}, reactions::fill{0., 0., 0.},
           false};
+
+      auto const &name = c3.get<pdg::name>();
+
+      if (name != c3.name())
+        errors.push_back("Name accessed with the \"name\" member function and "
+                         "with \"get<pdg::name>\" do not coincide");
+
+      c3.get<pdg::mass>(); // simply try to get it
 
       if (c1.has_mass() || c1.has_width() || !c2.has_mass() || c2.has_width() ||
           !c3.has_mass() || !c3.has_width())

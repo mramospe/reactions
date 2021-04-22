@@ -29,15 +29,41 @@ namespace reactions {
   static constexpr auto missing = std::nullopt;
 } // namespace reactions
 
-/// Utilities to handle database objects and their elements
+/*!\brief Utilities to handle database objects and their elements.
+
+  Databases return elements with *fields*. The template argument name *Field*
+  designates an object with the following properties:
+
+  - **title**: a string representing the name of the field.
+
+  - **value_type**: a type representing the object that is stored (can be a
+  \ref std::optional).
+
+  - **units_reference_type**: a resolved type of the \ref database::reference
+  template, containing the units of the field and the associated units in the
+  database. If the field has no units, \ref units::none must be used.
+
+  - **range_type**: a resolved type of the \ref database::range template,
+  indicating the position of the field in the database (can be a set of ranges).
+
+  On the other hand, the members of a field can be accessed using the \ref
+  database::get function, using as a template argument the structure
+  (*Subfield*) that identifies the member.
+
+  The access to a value of a field (or a member of a field) is handled by
+  \ref database::accessor, which automatically handles the system of units
+  and the access to members of a field. If at some point the associated
+  type is a \ref std::optional, the value is accessed without checking its
+  validity.
+ */
 namespace reactions::database {
 
   /// Define a \ref std::tuple with the types of the fields provided
   template <class Tuple> struct underlying_types;
 
   /// \copydoc underlying_types
-  template <class... F> struct underlying_types<std::tuple<F...>> {
-    using type = std::tuple<typename F::value_type...>;
+  template <class... Field> struct underlying_types<std::tuple<Field...>> {
+    using type = std::tuple<typename Field::value_type...>;
   };
 
   /// Check if a type represents an optional
@@ -50,18 +76,18 @@ namespace reactions::database {
   template <class T> constexpr auto is_optional_v = is_optional<T>::value;
 
   /// Contain the information whether a field is optional or not
-  template <class F, class Enable = void>
+  template <class Field, class Enable = void>
   struct is_optional_field : std::false_type {};
 
   /// \copydoc is_optional_field
-  template <class F>
+  template <class Field>
   struct is_optional_field<
-      F, std::enable_if_t<is_optional_v<typename F::value_type>>>
+      Field, std::enable_if_t<is_optional_v<typename Field::value_type>>>
       : std::true_type {};
 
   /// \copydoc is_optional_field
-  template <class F>
-  constexpr auto is_optional_field_v = is_optional_field<F>::value;
+  template <class Field>
+  constexpr auto is_optional_field_v = is_optional_field<Field>::value;
 
   /// If the input type is an optional, get the underying type
   template <class T> struct remove_optional { using type = T; };
@@ -156,7 +182,7 @@ namespace reactions::database {
   }
 
   /// Type defining an accessor to a value/error field
-  template <class F> struct get_t;
+  template <class Field> struct get_t;
 
   /// Accessor to the value
   template <> struct get_t<value> {
@@ -186,8 +212,20 @@ namespace reactions::database {
     }
   };
 
+  /// Multiplication of values and errors by a constant
+  template <class T>
+  value_and_errors<T> operator*(value_and_errors<T> const &vae, T f) {
+    return {f * vae.value, f * vae.error_lower, f * vae.error_upper};
+  }
+
+  /// Multiplication of values and errors by a constant
+  template <class T>
+  value_and_errors<T> operator*(T f, value_and_errors<T> const &vae) {
+    return vae * f;
+  }
+
   /// Accessor to a value/error field
-  template <class F> static constexpr get_t<F> get;
+  template <class Field> static constexpr get_t<Field> get;
 
   /// Optional for \ref float type
   using float_opt = std::optional<float>;
@@ -325,4 +363,24 @@ namespace reactions::database {
     else
       return success;
   }
+
+  /// Access the subtype of a set of fields
+  template <class Field, class... Subfield> struct field_member_type;
+
+  /// \copydoc field_member_type
+  template <class Field, class S, class... Subfield>
+  struct field_member_type<Field, S, Subfield...> {
+    using type = typename field_member_type<
+        typename remove_optional_t<Field>::value_type, Subfield...>::type;
+  };
+
+  /// \copydoc field_member_type
+  template <class Field> struct field_member_type<Field> {
+    using type = remove_optional_t<Field>;
+  };
+
+  /// \copydoc field_member_type
+  template <class Field, class... Subfield>
+  using field_member_type_t =
+      typename field_member_type<Field, Subfield...>::type;
 } // namespace reactions::database
