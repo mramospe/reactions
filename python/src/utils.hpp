@@ -24,7 +24,7 @@ namespace reactions::python {
 
       std::stringstream ss;
 
-      if (t > 100 || t < 1e-2)
+      if (t >= 10000 || t < 0.01)
         ss << std::scientific << t;
       else
         ss << t;
