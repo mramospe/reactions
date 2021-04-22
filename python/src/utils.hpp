@@ -1,5 +1,6 @@
 #pragma once
 #include <optional>
+#include <sstream>
 #include <string>
 
 #include "reactions/database.hpp"
@@ -10,9 +11,26 @@ namespace reactions::python {
   template <class T> std::string to_string(T const &t);
 
   /// Type to convert fields to strings
-  template <class T> struct to_string_t {
+  template <class T, class Enable = void> struct to_string_t {
     /// Convert the value to a string
     std::string operator()(T const &t) const { return std::to_string(t); }
+  };
+
+  /// \copydoc to_string_t
+  template <class T>
+  struct to_string_t<T, std::enable_if_t<std::is_floating_point_v<T>>> {
+    /// \copydoc to_string_t::operator()
+    std::string operator()(T const &t) const {
+
+      std::stringstream ss;
+
+      if (t > 100 || t < 1e-2)
+        ss << std::scientific << t;
+      else
+        ss << t;
+
+      return ss.str();
+    }
   };
 
   /// \copydoc to_string_t
