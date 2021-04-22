@@ -36,6 +36,10 @@ while [[ $# -gt 0 ]]; do
 	    cmake ../ -DINSTALL_TESTS=ON
 	    make -j $[$(($(nproc) - 1)) | 1] install
 	    cd ..
+	    if [ ! $? -eq 0 ]; then
+		echo "ERROR: compilation failed"
+		exit 1
+	    fi
 	    shift
 	    ;;
 	-c|--clean)
@@ -90,6 +94,10 @@ while [[ $# -gt 0 ]]; do
 
 	    echo "Build python package"
 	    pip install --force-reinstall -e .
+	    if [ ! $? -eq 0 ]; then
+		echo "ERROR: Unable to install as a python package"
+		exit 1
+	    fi
 	    shift
 	    ;;
 
@@ -99,6 +107,10 @@ while [[ $# -gt 0 ]]; do
 	    cd docs
 	    make html
 	    cd -
+	    if [ ! $? -eq 0 ]; then
+		echo "ERROR: Failed to build the documentation"
+		exit 1
+	    fi
 	    shift
 	    ;;
 

@@ -201,16 +201,17 @@ namespace reactions {
      * The return type is a constant reference for values without units and
      * a value for those with units.
      */
-    template <class F, class... S> units::return_type_t<F, S...> get() const {
-      return units::accessor<F, S...>(
+    template <class Field, class... Subfield>
+    units::return_type_t<Field, Subfield...> get() const {
+      return units::accessor<Field, Subfield...>(
           pdg_system_of_units::instance(),
-          std::get<utils::tuple_index_v<F, fields>>(*this));
+          std::get<utils::tuple_index_v<Field, fields>>(*this));
     }
 
     /// Check whether the given field information is missing or not
-    template <class F> constexpr bool has() const {
-      if constexpr (database::is_optional_field_v<F>)
-        return std::get<utils::tuple_index_v<F, fields>>(*this).has_value();
+    template <class Field> constexpr bool has() const {
+      if constexpr (database::is_optional_field_v<Field>)
+        return std::get<utils::tuple_index_v<Field, fields>>(*this).has_value();
       else
         return true;
     }
@@ -1012,13 +1013,13 @@ namespace reactions {
     }
 
     /// Access an element using the field accessor
-    template <class F, class T> pdg_element access(T const &v) const {
+    template <class Field, class T> pdg_element access(T const &v) const {
 
       switch (m_cache.status()) {
       case (cache::full): // the full database is loaded
 
         for (auto const &el : m_cache)
-          if (el.get<F>() == v)
+          if (el.get<Field>() == v)
             return el;
 
         break; // throws an exception
@@ -1026,7 +1027,7 @@ namespace reactions {
       case (cache::user): // only user-registered entries exist
 
         for (auto const &el : m_cache)
-          if (el.get<F>() == v)
+          if (el.get<Field>() == v)
             return el;
 
         [[fallthrough]]; // continue as if we had no cache
@@ -1041,8 +1042,8 @@ namespace reactions {
 
         while (std::getline(file, line)) {
 
-          typename F::value_type ref;
-          auto sc = reactions::database::read_field<typename F::range_type>(
+          typename Field::value_type ref;
+          auto sc = reactions::database::read_field<typename Field::range_type>(
               ref, line);
 
           if (sc == reactions::database::failed)
@@ -1060,7 +1061,7 @@ namespace reactions {
       }
 
       throw reactions::lookup_error(
-          (std::string{"Unable to find element with "} + F::title + " \"" +
+          (std::string{"Unable to find element with "} + Field::title + " \"" +
            pdg::to_string(v) + '"')
               .c_str());
     }

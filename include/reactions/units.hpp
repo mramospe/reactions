@@ -1,12 +1,5 @@
 /* \file
 \brief Definition of units
-
-Units are handled by multiplying values returned by the elements of the
-reactions by a factor that depends on the unit used as a reference.
-
-Units are handled by arguments passed as a *SystemOfUnits* template argument,
-which
-
  */
 #pragma once
 #include "reactions/database.hpp"
@@ -18,7 +11,27 @@ namespace reactions {
   /// Energy units
   REACTIONS_POW_ENUM_WITH_UNKNOWN(energy_units, eV, keV, MeV, GeV, TeV, PeV);
 
-  /// Contain functions to determine the scale factors for the given units
+  /*! \brief Contain functions to determine the scale factors for the given
+     units Units are handled by multiplying values returned by the elements of
+     the reactions by a factor that depends on the unit used as a reference.
+
+     Units are handled by arguments passed as a *SystemOfUnits* template
+     argument, which must be instances defining a member function of the form:
+
+     \code{.cpp}
+     template<class Units>
+     Units const& units() const {
+       // return the appropriate units here
+       ...
+     }
+     \endcode
+
+     implementing the unit to return for each kind of system of units.
+
+     Units are defined as `C++` enumerations, whose types are:
+
+     - **energy_units**: units of energy
+   */
   namespace units {
 
     /// Represent the abscence of units
@@ -127,7 +140,7 @@ namespace reactions {
     /// Return type of the accessor of a field
     template <class F, class... S> struct return_type {
       using type = return_type_after_parsing_units_t<
-          F, database::field_subtype_t<typename F::value_type, S...>>;
+          F, database::field_member_type_t<typename F::value_type, S...>>;
     };
 
     /// \copydoc return_type
