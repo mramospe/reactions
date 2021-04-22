@@ -36,28 +36,29 @@ namespace reactions {
     struct name {
       static constexpr const char *title = "name";
       using value_type = std::string;
-      using units_type = units::none;
+      using units_reference_type = units::none;
       using range_type = range<0, 18>;
     };
     /// Field for the PDG ID
     struct pdg_id {
       static constexpr const char *title = "pdg_id";
       using value_type = int;
-      using units_type = units::none;
+      using units_reference_type = units::none;
       using range_type = range<19, 29>;
     };
     /// Field the charge multiplied by three
     struct three_charge {
       static constexpr const char *title = "three_charge";
       using value_type = int;
-      using units_type = units::none;
+      using units_reference_type = units::none;
       using range_type = range<30, 32>;
     };
     /// Field for the mass
     struct mass {
       static constexpr const char *title = "mass";
       using value_type = reactions::database::ve_double_opt;
-      using units_type = units::reference<energy_units::GeV>;
+      using units_reference_type =
+          units::reference<energy_units, energy_units::GeV>;
       using range_type =
           range_collection<range<33, 49>, range<50, 59>, range<60, 69>>;
     };
@@ -65,7 +66,8 @@ namespace reactions {
     struct width {
       static constexpr const char *title = "width";
       using value_type = reactions::database::ve_double_opt;
-      using units_type = units::reference<energy_units::GeV>;
+      using units_reference_type =
+          units::reference<energy_units, energy_units::GeV>;
       using range_type =
           range_collection<range<70, 86>, range<87, 96>, range<97, 106>>;
     };
@@ -73,7 +75,7 @@ namespace reactions {
     struct is_self_cc {
       static constexpr const char *title = "is_self_cc";
       using value_type = bool;
-      using units_type = units::none;
+      using units_reference_type = units::none;
       using range_type = range<107, 108>;
     };
 
@@ -103,6 +105,16 @@ namespace reactions {
     /// Get the energy units
     energy_units const &get_energy_units() const { return m_energy_units; }
 
+    /// Access the given units
+    template <class Units> Units const &units() const {
+      if constexpr (std::is_same_v<Units, energy_units>)
+        return get_energy_units();
+      else
+        // can not use "false" directly because it would be ill-formed
+        static_assert(reactions::utils::dependent_false_v<Units>,
+                      "Invalid units");
+    }
+
     /// Set the energy units
     void set_energy_units(energy_units u) {
 
@@ -122,127 +134,6 @@ namespace reactions {
     void operator=(pdg_system_of_units &&) = delete;
     void operator=(pdg_system_of_units const &) = delete;
   };
-
-  /// Internal utilities for the \ref reactions::pdg namespace
-  namespace pdg::detail {
-    /// Calculate the scale factor for a given energy field
-    template <class F> auto energy_scale_factor() {
-      using units_type_t = typename F::units_type;
-      return units_type_t::reference::scale_factor(
-          pdg_system_of_units::instance().get_energy_units());
-    }
-
-    /// Functor to process the units of a field
-    template <class F, class Enable = void> struct process_units_t;
-
-    /// \copydoc process_units_t
-    template <class F>
-    struct process_units_t<
-        F, std::enable_if_t<std::is_same_v<typename F::units_type, units::none>,
-                            void>> {
-      template <class T>
-      constexpr auto const &operator()(T const &value) const {
-        if constexpr (database::is_optional_v<std::decay_t<T>>)
-          return value.value();
-        else
-          return value;
-      }
-    };
-
-    /// \copydoc process_units_t
-    template <class F>
-    struct process_units_t<
-        F, std::enable_if_t<
-               !std::is_same_v<typename F::units_type, units::none>, void>> {
-      template <class T> constexpr auto operator()(T &&value) const {
-        if constexpr (database::is_optional_v<std::decay_t<T>>)
-          return energy_scale_factor<F>() * value.value();
-        else
-          return energy_scale_factor<F>() * value;
-      }
-    };
-
-    /// \copydoc process_units_t
-    template <class F> static constexpr process_units_t<F> process_units;
-
-    /// Determine the type to be returned after processing the units of a field
-    template <class F, class T, class Enable = void>
-    struct return_type_after_parsing_units {
-      using type = std::decay_t<database::remove_optional_t<T>>;
-    };
-
-    /// \copydoc return_type_after_parsing_units
-    template <class F, class T>
-    struct return_type_after_parsing_units<
-        F, T,
-        std::enable_if_t<std::is_same_v<typename F::units_type, units::none>>> {
-      using type = std::decay_t<database::remove_optional_t<T>> const &;
-    };
-
-    /// \copydoc return_type_after_parsing_units
-    template <class F, class T>
-    using return_type_after_parsing_units_t =
-        typename return_type_after_parsing_units<F, T>::type;
-
-    /// Acess the subtype of a set of fields
-    template <class F, class... S> struct field_subtype;
-
-    /// \copydoc field_subtype
-    template <class F, class S0, class... S> struct field_subtype<F, S0, S...> {
-      using type = typename field_subtype<
-          typename database::remove_optional_t<F>::value_type, S...>::type;
-    };
-
-    /// \copydoc field_subtype
-    template <class F> struct field_subtype<F> {
-      using type = database::remove_optional_t<F>;
-    };
-
-    /// \copydoc field_subtype
-    template <class F, class... S>
-    using field_subtype_t = typename field_subtype<F, S...>::type;
-
-    /// Return type of the accessor of a field
-    template <class F, class... S> struct return_type {
-      using type = return_type_after_parsing_units_t<
-          F, field_subtype_t<typename F::value_type, S...>>;
-    };
-
-    /// \copydoc return_type
-    template <class F, class... S>
-    using return_type_t = typename return_type<F, S...>::type;
-
-    /// Object to access fields
-    template <class F, class... S> struct accessor_t;
-
-    /// Static object to access the fields of a tuple-like object
-    template <class F, class... S>
-    static constexpr accessor_t<F, S...> accessor;
-
-    /// \copydoc accessor_t
-    template <class F> struct accessor_t<F> {
-      /// Access a value and process the units
-      template <class T>
-      constexpr return_type_after_parsing_units_t<F, T>
-      operator()(T const &f) const {
-        return process_units<F>(f);
-      }
-    };
-
-    /// \copydoc accessor_t
-    template <class F, class S0, class... S> struct accessor_t<F, S0, S...> {
-      /// \copydoc accessor_t::operator()
-      template <class T>
-      constexpr return_type_t<F, S0, S...> operator()(T const &f) const {
-
-        if constexpr (database::is_optional_v<T>)
-          return accessor<F, S...>(database::get<S0>(f.value()));
-        else
-          return accessor<F, S...>(database::get<S0>(f));
-      }
-    };
-
-  } // namespace pdg::detail
 
   /// Field types of a PDG element
   using pdg_element_fields =
@@ -310,9 +201,9 @@ namespace reactions {
      * The return type is a constant reference for values without units and
      * a value for those with units.
      */
-    template <class F, class... S>
-    pdg::detail::return_type_t<F, S...> get() const {
-      return pdg::detail::accessor<F, S...>(
+    template <class F, class... S> units::return_type_t<F, S...> get() const {
+      return units::accessor<F, S...>(
+          pdg_system_of_units::instance(),
           std::get<utils::tuple_index_v<F, fields>>(*this));
     }
 

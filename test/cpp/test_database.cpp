@@ -123,6 +123,8 @@ int main() {
         auto &db = reactions::pdg_database::instance();
         auto &sou = reactions::pdg_system_of_units::instance();
 
+        sou.units<reactions::energy_units>(); // simply access it
+
         auto z0_mass_gev = db("Z0").mass();
 
         sou.set_energy_units(reactions::MeV);

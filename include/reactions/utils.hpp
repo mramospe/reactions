@@ -4,6 +4,13 @@
 /// General utilities
 namespace reactions::utils {
 
+  /// A false type that can be used with *static_assert*
+  template <class T> struct dependent_false : std::false_type {};
+
+  /// \copydoc dependent_false
+  template <class T>
+  static constexpr auto dependent_false_v = dependent_false<T>::value;
+
   /// Internal utilities for the \ref reactions::utils namespace
   namespace detail {
     /// Index corresponding to a given element

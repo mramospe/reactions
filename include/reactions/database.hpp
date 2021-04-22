@@ -337,4 +337,23 @@ namespace reactions::database {
     else
       return success;
   }
+
+  /// Access the subtype of a set of fields
+  template <class F, class... S> struct field_subtype;
+
+  /// \copydoc field_subtype
+  template <class F, class S0, class... S> struct field_subtype<F, S0, S...> {
+    using type =
+        typename field_subtype<typename remove_optional_t<F>::value_type,
+                               S...>::type;
+  };
+
+  /// \copydoc field_subtype
+  template <class F> struct field_subtype<F> {
+    using type = remove_optional_t<F>;
+  };
+
+  /// \copydoc field_subtype
+  template <class F, class... S>
+  using field_subtype_t = typename field_subtype<F, S...>::type;
 } // namespace reactions::database
