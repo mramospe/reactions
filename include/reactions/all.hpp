@@ -6,6 +6,7 @@
 #include "reactions/database.hpp"
 #include "reactions/element_traits.hpp"
 #include "reactions/exceptions.hpp"
+#include "reactions/nubase.hpp"
 #include "reactions/pdg.hpp"
 #include "reactions/pow_enum.hpp"
 #include "reactions/processes.hpp"

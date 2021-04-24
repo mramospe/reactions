@@ -1,6 +1,6 @@
 /*! \file
-  \brief Classes and functions to work with elements from the Particle Database
-  Group (PDG) and manage the database service.
+  \brief Classes and functions to work with elements from the NuBase and
+  manage the database service.
 */
 #pragma once
 
@@ -14,7 +14,6 @@
 #include <cmath>
 #include <fstream>
 #include <ios>
-#include <iostream>
 #include <limits>
 #include <optional>
 #include <tuple>
@@ -22,8 +21,9 @@
 
 namespace reactions {
 
-  /// Structures representing the fields of a \ref reactions::pdg_element object
-  namespace pdg {
+  /// Structures representing the fields of a \ref reactions::nubase_element
+  /// object
+  namespace nubase {
 
     /// Range of a variable in a file
     template <std::size_t Min, std::size_t Max>
@@ -38,115 +38,80 @@ namespace reactions {
       static constexpr const char *title = "name";
       using value_type = std::string;
       using units_reference_type = units::none;
-      using range_type = range<0, 18>;
+      using range_type = range<0, 8>;
     };
-    /// Field for the PDG ID
-    struct pdg_id {
-      static constexpr const char *title = "pdg_id";
+    /// Field for the nucleus ID
+    struct nubase_id {
+      static constexpr const char *title = "nubase_id";
       using value_type = int;
       using units_reference_type = units::none;
-      using range_type = range<19, 29>;
+      using range_type = range<9, 18>;
     };
-    /// Field the charge multiplied by three
-    struct three_charge {
-      static constexpr const char *title = "three_charge";
+    /// Field for the atomic number
+    struct Z {
+      static constexpr const char *title = "Z";
       using value_type = int;
       using units_reference_type = units::none;
-      using range_type = range<30, 32>;
+      using range_type = range<19, 22>;
     };
-    /// Field for the mass
-    struct mass {
-      static constexpr const char *title = "mass";
-      using value_type = reactions::database::ves_double_opt;
-      using units_reference_type =
-          units::reference<energy_units, energy_units::GeV>;
+    /// Field for the mass number
+    struct A {
+      static constexpr const char *title = "A";
+      using value_type = int;
+      using units_reference_type = units::none;
+      using range_type = range<23, 26>;
+    };
+    /// Field for the mass excess
+    struct mass_excess {
+      static constexpr const char *title = "mass_excess";
+      using value_type = units::vet_double_opt;
+      using units_reference_type = units::keV;
       using range_type =
-          range_collection<range<33, 49>, range<50, 59>, range<60, 69>>;
+          range_collection<range<27, 43>, range<44, 53>, range<54, 55>>;
     };
-    /// Field for the width
-    struct width {
-      static constexpr const char *title = "width";
-      using value_type = reactions::database::ves_double_opt;
-      using units_reference_type =
-          units::reference<energy_units, energy_units::GeV>;
-      using range_type =
-          range_collection<range<70, 86>, range<87, 96>, range<97, 106>>;
-    };
-    /// Field to store the self charge-conjugate state
-    struct is_self_cc {
-      static constexpr const char *title = "is_self_cc";
+    /// Field to store whether the nucleus is stable
+    struct is_stable {
+      static constexpr const char *title = "is_stable";
       using value_type = bool;
       using units_reference_type = units::none;
-      using range_type = range<107, 108>;
+      using range_type = range<56, 57>;
     };
-  } // namespace pdg
+    /// Field for the half life
+    struct half_life {
+      static constexpr const char *title = "half_life";
+      using value_type = units::vet_double_opt;
+      using units_reference_type = units::sec;
+      using range_type =
+          range_collection<range<58, 74>, range<75, 84>, range<85, 86>>;
+    };
+    /// Field to store whether the nucleus is a ground state
+    struct is_ground_state {
+      static constexpr const char *title = "is_ground_state";
+      using value_type = bool;
+      using units_reference_type = units::none;
+      using range_type = range<87, 88>;
+    };
+  } // namespace nubase
 
-  /*! \brief Defines a singleton to handle the units of PDG elements
-   *
-   * This class affects the values returned by the \ref pdg_element
-   * objects, scaling them according to the units defined by the user.
+  /// Field types of a NuBase element
+  using nubase_element_fields = std::tuple < nubase::name, nubase::nubase_id,
+        nubase::Z, nubase::A, nubase::mass_excess, nubase::is_stable,
+        nubase::half_life, nubase::is_ground_state;
+
+  /// Base class of a NuBase element
+  using nubase_element_base =
+      database::underlying_types_t<nubase_element_fields>;
+
+  /*! \brief An element based on the NuBase database
    */
-  class pdg_system_of_units final {
-
-  public:
-    /// Get the only instance of this class
-    static pdg_system_of_units &instance() {
-      static pdg_system_of_units sou;
-      return sou;
-    }
-
-    /// Get the energy units
-    energy_units const &get_energy_units() const { return m_energy_units; }
-
-    /// Access the given units
-    template <class Units> Units const &units() const {
-      if constexpr (std::is_same_v<Units, energy_units>)
-        return get_energy_units();
-      else
-        // can not use "false" directly because it would be ill-formed
-        static_assert(reactions::utils::dependent_false_v<Units>,
-                      "Invalid units");
-    }
-
-    /// Set the energy units
-    void set_energy_units(energy_units u) {
-
-      if (u == energy_units::unknown_energy_units)
-        throw value_error("Setting energy units to unknown");
-
-      m_energy_units = u;
-    }
-
-  private:
-    /// Units of energy
-    energy_units m_energy_units = energy_units::GeV;
-
-    pdg_system_of_units() {}
-    pdg_system_of_units(pdg_system_of_units &&) = delete;
-    pdg_system_of_units(pdg_system_of_units const &) = delete;
-    void operator=(pdg_system_of_units &&) = delete;
-    void operator=(pdg_system_of_units const &) = delete;
-  };
-
-  /// Field types of a PDG element
-  using pdg_element_fields =
-      std::tuple<pdg::name, pdg::pdg_id, pdg::three_charge, pdg::mass,
-                 pdg::width, pdg::is_self_cc>;
-
-  /// Base class of a PDG element
-  using pdg_element_base = database::underlying_types_t<pdg_element_fields>;
-
-  /*! \brief A PDG particle, based on the fields of a particle in the PDG
-   * database.
-   */
-  class pdg_element final : protected pdg_element_base {
+  class nubase_element final : protected nubase_element_base {
 
   public:
     /// Base class
-    using base_type = pdg_element_base;
+    using base_type = nubase_element_base;
 
     /// Fields of the element
-    using fields = pdg_element_fields;
+    using fields = nubase_element_fields;
 
     /// Number of data fields
     static const size_t number_of_fields = std::tuple_size_v<base_type>;
@@ -155,38 +120,38 @@ namespace reactions {
     static constexpr auto line_size = reactions::database::overall_range_t<
         std::tuple_element_t<number_of_fields - 1, fields>::range_type>::max;
 
-    pdg_element() = delete;
-    explicit pdg_element(pdg_element const &) = default;
-    explicit pdg_element(pdg_element &&) = default;
-    pdg_element &operator=(pdg_element const &) = default;
+    nubase_element() = delete;
+    explicit nubase_element(nubase_element const &) = default;
+    explicit nubase_element(nubase_element &&) = default;
+    nubase_element &operator=(nubase_element const &) = default;
 
     /// Construct the element from an initializer list
     template <class... Args>
-    pdg_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
+    nubase_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
 
     /// Construct the element from the contents
-    explicit pdg_element(base_type &&tuple)
+    explicit nubase_element(base_type &&tuple)
         : base_type{std::forward<base_type>(tuple)} {}
 
     /*! \brief Compare the ID of the two particles
      *
      * \param other element to compare with
-     * \return the result of comparing the PDG IDs of the two elements
+     * \return the result of comparing the NuBase IDs of the two elements
      */
-    bool operator==(pdg_element const &other) const {
-      return pdg_id() == other.pdg_id();
+    bool operator==(nubase_element const &other) const {
+      return nubase_id() == other.nubase_id();
     }
 
-    /// \copydoc pdg_element::operator==
-    bool operator!=(pdg_element const &other) const {
-      return pdg_id() != other.pdg_id();
+    /// \copydoc nubase_element::operator==
+    bool operator!=(nubase_element const &other) const {
+      return nubase_id() != other.nubase_id();
     }
 
     /*! \brief Get an element using an accessor.
      *
      * For fields of \ref std::optional type, the validity of the content
      * must be checked before calling this function using the
-     * \ref pdg_element::has member function. Otherwise the
+     * \ref nubase_element::has member function. Otherwise the
      * \ref reactions::missing_fields_error exception is thrown,
      * if missing.
      *
@@ -197,7 +162,7 @@ namespace reactions {
     units::return_type_t<Field, Subfield...> get() const {
       if constexpr (units::has_units_v<Field, Subfield...>)
         return units::accessor_with_units<Field, Subfield...>(
-            pdg_system_of_units::instance(),
+            nubase_system_of_units::instance(),
             std::get<utils::tuple_index_v<Field, fields>>(*this));
       else
         return units::accessor<Field, Subfield...>(
@@ -215,213 +180,86 @@ namespace reactions {
     /// Representation of the element name as a LaTeX string
     std::string latex_name() const {
 
+      switch (nubase_id) {
+      case (0):
+        // photon
+        return "\\gamma";
+      case (1):
+        // positron
+        return "\\e^{-}";
+      case (2):
+        // electron
+        return "\\e^{-}";
+      default:
+        break;
+      }
+
       const auto &ref = name();
+
+      auto size = ref.size()
+
+                      std::string out;
+      out.reserve(size + 9);
+
+      out.append("\\ce{^{");
+
       std::size_t count = 0;
-      std::size_t size = ref.size();
 
-      if (size == 0)
-        return std::string{};
+      // parse the mass number
+      while (count != size) {
+        if (ref[count] >= '0' && ref[count] < '9')
+          out.push_back(ref[count++]);
+        else {
+          out.push_back('}');
+          break;
+        }
+      }
 
-      // this lambda function allows to simplify the processing of errors
-      auto process_latex_string = [&]() {
-        auto match_charge = [](char c) {
-          return reactions::tokens::match_any<'0', '+', '-'>(c);
-        };
-        auto match_extra = [](char c) {
-          return reactions::tokens::match_any<'*', '\''>(c);
-        };
-        auto match_number = [](char c) {
-          return reactions::tokens::match_range<'0', '9'>(c);
-        };
-        auto match_lowercase = [](char c) {
-          return reactions::tokens::match_range<'a', 'z'>(c);
-        };
-        auto match_character = [](char c) {
-          return reactions::tokens::match_range<'A', 'z'>(c);
-        };
+      // parse the name
+      while (count != size) {
+        if (ref[count] >= 'A' && ref[count] < 'z')
+          out.push_back(ref[count++]);
+        else
+          break;
+      }
 
-        std::string latex;
-        std::string superscript_buffer;
-        // Avoid reallocations. The constant is based on the
-        // maximum size of an expansion of names to LaTeX
-        // names.
-        //
-        // Obtained with: scripts/pdg-latex-name-buffers.py
-        //
-        latex.reserve(4 * ref.size());
-        superscript_buffer.reserve(
-            5); // maximum number of (', *, 0/+/-) in names
+      // parse the isomer
+      if (ref[count] == '(') {
 
-        // add a character or process a Greek letter
-        auto process_characters = [&]() {
-          latex.push_back(ref[count++]);
+        out.append("^{");
 
-          if (count == size)
-            return;
+        ++count;
 
-          if (match_lowercase(ref[count])) {
-            latex.insert(latex.size() - 1, 1, '\\');
-            // is a Greek letter
-            do {
-              latex.push_back(ref[count++]);
-            } while (count < size && match_lowercase(ref[count]));
-          }
-        };
-
-        // add the superscript
-        auto process_superscript = [&]() {
-          latex.append("^{");
-          latex.insert(latex.end(), superscript_buffer.begin(),
-                       superscript_buffer.end());
-          superscript_buffer.clear();
-          latex.push_back('}');
-        };
-
-        // ========== process the base name
-
-        process_characters(); // first element is always a character
+        while (count != size && ref[++count] != ')')
+          out.push_back(ref[count]);
 
         if (count == size)
-          return latex;
+          throw internal_error("Missing parenthesis in name");
 
-        if (reactions::tokens::match_any<'/'>(ref[count])) {
+        out.push_back('}');
+      }
 
-          // this is needed to process composed names like the J/psi
-          latex.push_back(ref[count++]);
-
-          if (count == size)
-            return latex;
-
-          if (match_character(ref[count]))
-            process_characters();
-
-          if (count == size)
-            return latex;
-        }
-
-        // ========== process particle/anti-particle information
-
-        if (ref.find('~') != std::string::npos) {
-          // it is an anti-particle, so we must tweak the base name
-          latex.insert(0, "\\bar{");
-          latex.insert(latex.size(), 1, '}');
-        }
-
-        // ========== process additional qualifiers
-
-        if (ref[count] == '(' &&
-            (!match_number(ref[count + 1]) ||
-             ref.find('(', count + 1) != std::string::npos)) {
-          // unique subscript
-          latex.insert(latex.size(), "_{");
-          ++count;
-          while (ref[count] != ')') {
-
-            if (match_character(ref[count]))
-              process_characters(); // increments the counter
-            else
-              latex.push_back(ref[count++]);
-
-            if (count == size)
-              throw internal_error("Missing parenthesis in name");
-          }
-
-          latex.push_back('}');
-
-          if (++count == size) { // process the parenthesis
-            if (!superscript_buffer.empty())
-              process_superscript();
-            return latex;
-          }
-        }
-
-        if (match_extra(ref[count])) {
-          // first or unique superscript
-          superscript_buffer.push_back(ref[count++]);
-          while (count < size && match_extra(ref[count])) {
-            if (reactions::tokens::match_any<'\''>(ref[count])) {
-              superscript_buffer.append("\\prime");
-              ++count;
-            } else if (reactions::tokens::match_any<'*'>(ref[count])) {
-              superscript_buffer.append("\\ast");
-              ++count;
-            } else
-              superscript_buffer.push_back(ref[count++]);
-          }
-
-          if (count == size) {
-            process_superscript();
-            return latex;
-          }
-        }
-
-        // ========== process the resonance mass
-
-        if (ref[count] == '(') {
-
-          // if there is a superscript, add it now
-          if (!superscript_buffer.empty())
-            process_superscript();
-
-          // parenthesized expression
-          latex.push_back(ref[count++]);
-          while (ref[count] != ')') {
-            latex.push_back(ref[count++]);
-            if (count == size)
-              throw internal_error("Missing parenthesis in name");
-          }
-          latex.push_back(ref[count++]); // process ')' (no check is done)
-
-          if (count == size)
-            return latex;
-        }
-
-        // ========== process the charge (skip the anti-particle token)
-
-        if (match_charge(ref[count]) || ref[count] == '~') {
-          // second superscript
-          do {
-            if (ref[count] == '~') // anti-particle nature is processed above
-              ++count;
-            else
-              superscript_buffer.push_back(ref[count++]);
-          } while (count < size &&
-                   (match_charge(ref[count]) || ref[count] == '~'));
-        }
-
-        if (!superscript_buffer.empty())
-          process_superscript();
-
-        return latex;
-      };
-
-      auto latex = process_latex_string();
+      out.push_back('}');
 
       if (count != size)
         throw reactions::internal_error(
-            (std::string{"Failed to process LaTeX string for particle \""} +
+            (std::string{"Failed to process LaTeX string for nucleus \""} +
              name() + "\"")
                 .c_str());
 
-      latex.shrink_to_fit();
+      out.shrink_to_fit();
 
-      return latex;
+      return out;
     }
 
     /// Name of the particle
-    std::string const &name() const { return get<pdg::name>(); }
+    std::string const &name() const { return get<nubase::name>(); }
 
-    /// PDG ID
-    int pdg_id() const { return get<pdg::pdg_id>(); }
-
-    /// Three times the charge, as an integer
-    int three_charge() const { return get<pdg::three_charge>(); }
-
-    /// Charge as a doubleing point number
-    double charge() const { return get<pdg::three_charge>() / 3.; }
+    /// NuBase ID
+    int nubase_id() const { return get<nubase::nubase_id>(); }
 
     /// Whether the element is its own charge-conjugate
-    bool is_self_cc() const { return get<pdg::is_self_cc>(); }
+    bool is_ground_state() const { return get<nubase::is_ground_state>(); }
 
     /*! Get the mass of the element
      *
@@ -429,10 +267,12 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double mass() const { return get<pdg::mass, database::value>(); }
+    double mass_excess() const {
+      return get<nubase::mass_excess, database::value>();
+    }
 
     /// Whether the mass and its errors are defined or not
-    bool has_mass() const { return has<pdg::mass>(); }
+    bool has_mass() const { return has<nubase::mass_excess>(); }
 
     /*! \brief Lower mass error
      *
@@ -440,46 +280,8 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double mass_error_lower() const {
-      return get<pdg::mass, database::error_lower>();
-    }
-
-    /*! \brief Upper mass error
-     *
-     * You must check whether the mass is defined or not before calling this
-     * member function, otherwise a \ref
-     * reactions::missing_fields_error is thrown.
-     */
-    double mass_error_upper() const {
-      return get<pdg::mass, database::error_lower>();
-    }
-
-    /* \brief Calculate the mass error
-     *
-     * You must check whether the width is defined or not before calling this
-     * member function, otherwise a \ref
-     * reactions::missing_fields_error is thrown.
-     */
-    double mass_error() const { return std::sqrt(mass_error_squared()); }
-
-    /* \brief Calculate the mass error squared
-     *
-     * You must check whether the width is defined or not before calling this
-     * member function, otherwise a \ref
-     * reactions::missing_fields_error is thrown.
-     */
-    double mass_error_squared() const {
-
-      if (!has<pdg::mass>())
-        throw reactions::missing_fields_error(
-            ("Unable to access mass errors; mass is not defined for particle" +
-             name())
-                .c_str());
-
-      auto const el = mass_error_lower();
-      auto const eu = mass_error_upper();
-
-      return el * el + eu * eu;
+    double mass_excess_error() const {
+      return get<nubase::mass_excess_error, database::error>();
     }
 
     /*! \brief Get the width of the element.
@@ -488,10 +290,12 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double width() const { return get<pdg::width, database::value>(); }
+    double half_life() const {
+      return get<nubase::half_life, database::value>();
+    }
 
     /// Whether the width and its errors are defined or not
-    bool has_width() const { return has<pdg::width>(); }
+    bool has_half_life() const { return has<nubase::half_life>(); }
 
     /*! \brief Get the lower width error
      *
@@ -499,54 +303,18 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double width_error_lower() const {
-      return get<pdg::width, database::error_lower>();
+    double half_life_error() const {
+      return get<nubase::half_life, database::error>();
     }
 
-    /*! \brief Get the upper width error
-     *
-     * You must check whether the width is defined or not before calling this
-     * member function, otherwise a \ref
-     * reactions::missing_fields_error is thrown.
-     */
-    double width_error_upper() const {
-      return get<pdg::width, database::error_upper>();
-    }
-
-    /*! Calculate the width error
-     *
-     * You must check whether the width is defined or not before calling this
-     * member function, otherwise a \ref
-     * reactions::missing_fields_error is thrown.
-     */
-    double width_error() const { return std::sqrt(width_error_squared()); }
-
-    /*! Calculate the width error squared
-     *
-     * You must check whether the width is defined or not before calling this
-     * member function, otherwise a \ref
-     * reactions::missing_fields_error is thrown.
-     */
-    double width_error_squared() const {
-
-      if (!has<pdg::width>())
-        throw reactions::missing_fields_error(
-            ("Unable to access width errors; width is not defined for "
-             "particle" +
-             name())
-                .c_str());
-
-      auto const el = width_error_lower();
-      auto const eu = width_error_upper();
-
-      return el * el + eu * eu;
-    }
+    /// Whether the element is its own charge-conjugate
+    bool is_stable() const { return get<nubase::is_stable>(); }
   };
 
-  /*! \brief Database of elements following the PDG convention
+  /*! \brief Database of elements with the NuBase information
    *
    */
-  class pdg_database final {
+  class nubase_database final {
 
   public:
     /*! \brief All the elements in the database file
@@ -558,9 +326,9 @@ namespace reactions {
      * This function returns the elements in the database and those registered
      * by the user.
      */
-    std::vector<pdg_element> all_elements() const {
+    std::vector<nubase_element> all_elements() const {
 
-      std::vector<pdg_element> out;
+      std::vector<nubase_element> out;
 
       switch (m_cache.status()) {
 
@@ -577,7 +345,8 @@ namespace reactions {
         auto start = skip_commented_lines(file);
 
         std::size_t count = 0;
-        while (file.ignore(pdg_element::line_size + 1)) // include end-of-line
+        while (
+            file.ignore(nubase_element::line_size + 1)) // include end-of-line
           ++count;
 
         file.clear(); // we reached the end of the file
@@ -625,7 +394,7 @@ namespace reactions {
       auto start = skip_commented_lines(file);
 
       std::size_t count = 0;
-      while (file.ignore(pdg_element::line_size + 1)) // include end-of-line
+      while (file.ignore(nubase_element::line_size + 1)) // include end-of-line
         ++count;
 
       file.clear(); // we reached the end of the file
@@ -635,7 +404,7 @@ namespace reactions {
 
       std::string line;
       m_cache.add_database_elements(count,
-                                    [this, &file, &line]() -> pdg_element {
+                                    [this, &file, &line]() -> nubase_element {
                                       std::getline(file, line);
                                       return read_element(line);
                                     });
@@ -644,26 +413,26 @@ namespace reactions {
     }
 
     /// Return the charge-conjugate of an element
-    pdg_element charge_conjugate(pdg_element const &el) const {
+    nubase_element charge_conjugate(nubase_element const &el) const {
 
       if (el.is_self_cc())
         return el;
       else
-        return operator()(-el.pdg_id());
+        return operator()(-el.nubase_id());
     }
 
     /// Get the only instance of this class
-    static pdg_database &instance() {
-      static pdg_database db;
+    static nubase_database &instance() {
+      static nubase_database db;
       return db;
     }
 
     /// Get the path to the database file
     std::string const &get_database_path() const { return m_db; }
 
-    /*! \brief Register a new PDG element
+    /*! \brief Register a new NuBase element
      *
-     * The new element must have a name and a PDG ID that does not clash with
+     * The new element must have a name and a NuBase ID that does not clash with
      * any of the database used.
      *
      * For the LaTeX name to be valid (an to avoid possible exceptions thrown
@@ -685,7 +454,7 @@ namespace reactions {
      * - The last part of the name is composed by the possible anti-particle
      * marker, specified with a tilde, and the charge, which can be 0, + or -.
      *
-     * There is no official naming scheme for the PDG particles, but the
+     * There is no official naming scheme for the NuBase particles, but the
      * following guidelines can be used in order to get the most common way of
      * naming the particles:
      *
@@ -705,7 +474,7 @@ namespace reactions {
      */
     template <class... Args> void register_element(Args &&... args) {
 
-      pdg_element new_element{std::forward<Args>(args)...};
+      nubase_element new_element{std::forward<Args>(args)...};
 
       // If the cache is enabled, the checks are done within the cache object,
       // otherwise we must check the database
@@ -719,26 +488,26 @@ namespace reactions {
 
         while (std::getline(file, line)) {
 
-          pdg::name::value_type name;
-          if (reactions::database::read_field<pdg::name::range_type>(
+          nubase::name::value_type name;
+          if (reactions::database::read_field<nubase::name::range_type>(
                   name, line) == reactions::database::failed)
             throw reactions::database_error(
-                "Error reading PDG database; data format not understood");
+                "Error reading NuBase database; data format not understood");
 
           if (new_element.name() == name)
             throw reactions::database_error(
                 "Attempt to register an element with similar name to an "
                 "element in the database");
 
-          pdg::pdg_id::value_type pdg_id;
-          if (reactions::database::read_field<pdg::pdg_id::range_type>(
-                  pdg_id, line) == reactions::database::failed)
+          nubase::nubase_id::value_type nubase_id;
+          if (reactions::database::read_field<nubase::nubase_id::range_type>(
+                  nubase_id, line) == reactions::database::failed)
             throw reactions::database_error(
-                "Error reading PDG database; data format not understood");
+                "Error reading NuBase database; data format not understood");
 
-          if (new_element.pdg_id() == pdg_id)
+          if (new_element.nubase_id() == nubase_id)
             throw reactions::database_error(
-                "Attempt to register an element with similar PDG ID to an "
+                "Attempt to register an element with similar NuBase ID to an "
                 "element in the database");
         }
       }
@@ -761,25 +530,27 @@ namespace reactions {
     }
 
     /// Create an element accessing by ID
-    pdg_element operator()(int id) const { return access<pdg::pdg_id>(id); }
+    nubase_element operator()(int id) const {
+      return access<nubase::nubase_id>(id);
+    }
 
     /// Create an element accessing by name
-    pdg_element operator()(std::string const &str) const {
-      return access<pdg::name>(str);
+    nubase_element operator()(std::string const &str) const {
+      return access<nubase::name>(str);
     }
 
   private:
     /// Path to the database file
-    std::string m_db = "@PDG_TABLE@";
+    std::string m_db = "@NUBASE_TABLE@";
 
-    /// \brief Cache of PDG elements
+    /// \brief Cache of NuBase elements
     class cache {
 
     public:
       /// Code to define the status of the cache
       enum cache_status { empty, user, full };
 
-      using cache_type = std::vector<pdg_element>;
+      using cache_type = std::vector<nubase_element>;
       using const_iterator_type = cache_type::const_iterator;
       using size_type = cache_type::size_type;
 
@@ -867,9 +638,10 @@ namespace reactions {
           if (user_registered_size() != 0) {
             auto cend = user_registered_cend();
             if (std::find_if(user_registered_cbegin(), cend,
-                             [&new_element](pdg_element const &el) {
+                             [&new_element](nubase_element const &el) {
                                return (el.name() == new_element.name() ||
-                                       el.pdg_id() == new_element.pdg_id());
+                                       el.nubase_id() ==
+                                           new_element.nubase_id());
                              }) != cend)
               throw reactions::database_error(
                   (std::string{"User-defined element clashes with database "
@@ -892,13 +664,13 @@ namespace reactions {
 
       /// Add a new element (by the user)
       template <class... Args>
-      pdg_element const &add_user_element(Args &&... args) {
-        pdg_element new_element{std::forward<Args>(args)...};
+      nubase_element const &add_user_element(Args &&... args) {
+        nubase_element new_element{std::forward<Args>(args)...};
         auto e = end();
         if (std::find_if(begin(), e,
-                         [this, &new_element](pdg_element const &el) {
+                         [this, &new_element](nubase_element const &el) {
                            return (el.name() == new_element.name() ||
-                                   el.pdg_id() == new_element.pdg_id());
+                                   el.nubase_id() == new_element.nubase_id());
                          }) != e) {
           throw reactions::database_error(
               (std::string{"User-registered element clashes: \""} +
@@ -925,7 +697,7 @@ namespace reactions {
 
       if (m_db.empty())
         throw reactions::database_error(
-            "The PDG database has not been specified");
+            "The NuBase database has not been specified");
 
       std::ifstream file;
 
@@ -959,10 +731,10 @@ namespace reactions {
 
     /// Read a field with the given index from a line
     template <std::size_t I>
-    bool read_field(pdg_element::base_type &tuple,
+    bool read_field(nubase_element::base_type &tuple,
                     std::string const &line) const {
 
-      using field = std::tuple_element_t<I, pdg_element::fields>;
+      using field = std::tuple_element_t<I, nubase_element::fields>;
 
       if constexpr (database::is_optional_field_v<field>) {
 
@@ -983,33 +755,33 @@ namespace reactions {
 
     /// Read all the fields from a line
     template <std::size_t... I>
-    bool read_line(pdg_element::base_type &tuple, std::string const &line,
+    bool read_line(nubase_element::base_type &tuple, std::string const &line,
                    std::index_sequence<I...>) const {
       return (read_field<I>(tuple, line) && ...);
     }
 
     /// Read all the fields from a line
-    bool read_line(pdg_element::base_type &tuple,
+    bool read_line(nubase_element::base_type &tuple,
                    std::string const &line) const {
       return read_line(
           tuple, line,
-          std::make_index_sequence<pdg_element::number_of_fields>());
+          std::make_index_sequence<nubase_element::number_of_fields>());
     }
 
     /// Advance to the next element in the file and read it
-    pdg_element read_element(std::string const &line) const {
+    nubase_element read_element(std::string const &line) const {
 
-      pdg_element::base_type tuple;
+      nubase_element::base_type tuple;
 
       if (!read_line(tuple, line))
         throw reactions::database_error(
-            "Error reading PDG database; data format not understood");
+            "Error reading NuBase database; data format not understood");
 
       return tuple;
     }
 
     /// Access an element using the field accessor
-    template <class Field, class T> pdg_element access(T const &v) const {
+    template <class Field, class T> nubase_element access(T const &v) const {
 
       switch (m_cache.status()) {
       case (cache::full): // the full database is loaded
@@ -1044,10 +816,10 @@ namespace reactions {
 
           if (sc == reactions::database::failed)
             throw reactions::database_error(
-                "Error reading PDG database; data format not understood");
+                "Error reading NuBase database; data format not understood");
 
           if (ref == v) {
-            pdg_element el = read_element(line);
+            nubase_element el = read_element(line);
             file.close();
             return el;
           }
@@ -1062,10 +834,10 @@ namespace reactions {
               .c_str());
     }
 
-    pdg_database() {}
-    pdg_database(pdg_database &&) = delete;
-    pdg_database(pdg_database const &) = delete;
-    void operator=(pdg_database &&) = delete;
-    void operator=(pdg_database const &) = delete;
+    nubase_database() {}
+    nubase_database(nubase_database &&) = delete;
+    nubase_database(nubase_database const &) = delete;
+    void operator=(nubase_database &&) = delete;
+    void operator=(nubase_database const &) = delete;
   };
 } // namespace reactions

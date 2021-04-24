@@ -66,6 +66,10 @@ namespace reactions::database {
     using type = std::tuple<typename Field::value_type...>;
   };
 
+  /// \copydoc underlying_types
+  template <class Fields>
+  using underlying_types_t = typename underlying_types<Fields>::type;
+
   /// Check if a type represents an optional
   template <class> struct is_optional : std::false_type {};
 
@@ -109,6 +113,8 @@ namespace reactions::database {
   struct error_lower {};
   /// Field for an lower error
   struct error_upper {};
+  /// Field for a tag
+  struct tag {};
 
   /// Define a range with minimum and maximum indices
   template <std::size_t Min, std::size_t Max> struct range {
@@ -131,6 +137,57 @@ namespace reactions::database {
 
   /// Overall range of a variable (that can be a composite)
   template <class R> using overall_range_t = typename overall_range<R>::type;
+
+  /// Simple structure composed by a value and its error
+  template <class T, class Enable = void> struct value_and_error;
+
+  /// \copydoc value_and_error
+  template <class T>
+  struct value_and_error<T,
+                         std::enable_if_t<std::is_floating_point_v<T>, void>> {
+
+    using value_type = T;
+
+    /// Empty constructor
+    value_and_error(){};
+
+    /// Build the class with forwarded arguments
+    template <class Value, class Error>
+    value_and_error(Value &&value_, Error &&error_)
+        : value(value_), error(error_) {}
+    /// Build the class from a field constant expression
+    template <class Value, class Error>
+    value_and_error(fill<Value, Error> &&f)
+        : value(std::get<0>(f)), error(std::get<1>(f)) {}
+
+    /// Value
+    value_type value;
+    /// Error
+    value_type error;
+  };
+
+  /// Represent a value, its error and a identifier tag
+  template <class ValueType, class TagType>
+  struct value_and_error_with_tag : value_and_error<ValueType> {
+
+    using base_type = value_and_error<ValueType>;
+    using value_type = ValueType;
+
+    /// Empty constructor
+    value_and_error_with_tag() : base_type{} {};
+
+    /// Build the class with forwarded arguments
+    template <class Value, class Error>
+    value_and_error_with_tag(Value &&value_, Error &&error_, TagType &&tag_)
+        : base_type{value_, error_}, tag(tag_) {}
+    /// Build the class from a field constant expression
+    template <class Value, class Error>
+    value_and_error_with_tag(fill<Value, Error, TagType> &&f)
+        : base_type{std::get<0>(f), std::get<1>(f)}, tag(std::get<2>(f)) {}
+
+    /// Internal tag
+    TagType tag;
+  };
 
   /// Simple structure composed by a value and the lower and upper errors
   template <class T, class Enable = void> struct value_and_errors;
@@ -212,13 +269,62 @@ namespace reactions::database {
     }
   };
 
-  /// Multiplication of values and errors by a constant
+  /// Accessor to the tag
+  template <> struct get_t<tag> {
+    template <class T> constexpr auto const &operator()(T const &t) const {
+      return access_value(t).tag;
+    }
+  };
+
+  /// Determine a returned type
+  template <class T, class Subfield, class... S> struct type_of {
+    using type = typename type_of<Subfield, S...>::type;
+  };
+
+  /// \copydoc type_of
+  template <class T, class Subfield> struct type_of<T, Subfield> {
+    using type =
+        std::enable_if_t<std::is_default_constructible_v<T>,
+                         std::decay_t<decltype(get_t<Subfield>{}(T{}))>>;
+  };
+
+  /// \copydoc type_of
+  template <class T, class... Subfield>
+  using type_of_t = typename type_of<T, Subfield...>::type;
+
+  /// Multiplication of the value and error by a constant
+  template <class T>
+  value_and_error<T> operator*(value_and_error<T> const &vae, T f) {
+    return {f * vae.value, f * vae.error};
+  }
+
+  /// Multiplication of the value and error by a constant
+  template <class T>
+  value_and_error<T> operator*(T f, value_and_error<T> const &vae) {
+    return vae * f;
+  }
+
+  /// Multiplication of the value and error by a constant
+  template <class V, class T>
+  value_and_error_with_tag<V, T>
+  operator*(value_and_error_with_tag<V, T> const &vae, V f) {
+    return {f * vae.value, f * vae.error, vae.tag};
+  }
+
+  /// Multiplication of the value and error by a constant
+  template <class V, class T>
+  value_and_error_with_tag<V, T>
+  operator*(V f, value_and_error_with_tag<V, T> const &vae) {
+    return vae * f;
+  }
+
+  /// Multiplication of the value and errors by a constant
   template <class T>
   value_and_errors<T> operator*(value_and_errors<T> const &vae, T f) {
     return {f * vae.value, f * vae.error_lower, f * vae.error_upper};
   }
 
-  /// Multiplication of values and errors by a constant
+  /// Multiplication of the value and errors by a constant
   template <class T>
   value_and_errors<T> operator*(T f, value_and_errors<T> const &vae) {
     return vae * f;
@@ -231,10 +337,23 @@ namespace reactions::database {
   using float_opt = std::optional<float>;
   /// Optional for \ref double type
   using double_opt = std::optional<double>;
+  /// Optional \ref value_and_error for single-precision floating-point type
+  using ve_float_opt = std::optional<value_and_error<float>>;
+  /// Optional \ref value_and_error for double-precision floating-point type
+  using ve_double_opt = std::optional<value_and_error<double>>;
+  /// Optional \ref value_and_error_with_tag for single-precision floating-point
+  /// type
+  template <class TagType>
+  using vet_float_opt = std::optional<value_and_error_with_tag<float, TagType>>;
+  /// Optional \ref value_and_error_with_tag for double-precision floating-point
+  /// type
+  template <class TagType>
+  using vet_double_opt =
+      std::optional<value_and_error_with_tag<double, TagType>>;
   /// Optional \ref value_and_errors for single-precision floating-point type
-  using ve_float_opt = std::optional<value_and_errors<float>>;
+  using ves_float_opt = std::optional<value_and_errors<float>>;
   /// Optional \ref value_and_errors for double-precision floating-point type
-  using ve_double_opt = std::optional<value_and_errors<double>>;
+  using ves_double_opt = std::optional<value_and_errors<double>>;
 
   /// Status code of a conversion to an arithmetic or \ref std::optional type
   enum conversion_status : int {
@@ -333,6 +452,65 @@ namespace reactions::database {
     return detail::string_to_type(out, s.substr(b, e - b));
   }
 
+  /// Read a field composed by value and an error in a line from a file
+  template <class Ranges, class T>
+  conversion_status read_field(value_and_error<T> &out, std::string const &s) {
+    // std::from_chars is not correctly implemented in GCC, and
+    // we can not work with std::string_view objects
+    static_assert(std::tuple_size_v<Ranges> == 3);
+
+    auto b = s.find_first_not_of(' ', std::tuple_element_t<0, Ranges>::min);
+
+    if (b >= std::tuple_element_t<1, Ranges>::max)
+      return empty;
+
+    auto value_sc = detail::string_to_type(
+        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
+                            std::tuple_element_t<0, Ranges>::max));
+    auto error_sc = detail::string_to_type(
+        out.error, s.substr(std::tuple_element_t<1, Ranges>::min,
+                            std::tuple_element_t<1, Ranges>::max));
+
+    if (value_sc == empty || error_sc == empty)
+      return failed; // either all are defined or none
+    else if (value_sc == failed || error_sc == failed)
+      return failed;
+    else
+      return success;
+  }
+
+  /// Read a field composed by value and an error in a line from a file
+  template <class Ranges, class ValueType, class TagType>
+  conversion_status
+  read_field(value_and_error_with_tag<ValueType, TagType> &out,
+             std::string const &s) {
+    // std::from_chars is not correctly implemented in GCC, and
+    // we can not work with std::string_view objects
+    static_assert(std::tuple_size_v<Ranges> == 3);
+
+    auto b = s.find_first_not_of(' ', std::tuple_element_t<0, Ranges>::min);
+
+    if (b >= std::tuple_element_t<2, Ranges>::max)
+      return empty;
+
+    auto value_sc = detail::string_to_type(
+        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
+                            std::tuple_element_t<0, Ranges>::max));
+    auto error_sc = detail::string_to_type(
+        out.error, s.substr(std::tuple_element_t<1, Ranges>::min,
+                            std::tuple_element_t<1, Ranges>::max));
+    auto tag_sc = detail::string_to_type(
+        out.tag, s.substr(std::tuple_element_t<2, Ranges>::min,
+                          std::tuple_element_t<2, Ranges>::max));
+
+    if (value_sc == empty || error_sc == empty || tag_sc == empty)
+      return failed; // either all are defined or none
+    else if (value_sc == failed || error_sc == failed || tag_sc == failed)
+      return failed;
+    else
+      return success;
+  }
+
   /// Read a field composed by value and errors in a line from a file
   template <class Ranges, class T>
   conversion_status read_field(value_and_errors<T> &out, std::string const &s) {
@@ -365,22 +543,26 @@ namespace reactions::database {
   }
 
   /// Access the subtype of a set of fields
-  template <class Field, class... Subfield> struct field_member_type;
-
-  /// \copydoc field_member_type
-  template <class Field, class S, class... Subfield>
-  struct field_member_type<Field, S, Subfield...> {
-    using type = typename field_member_type<
-        typename remove_optional_t<Field>::value_type, Subfield...>::type;
+  template <class Field, class... Subfield> struct field_member_type {
+    using type =
+        type_of_t<remove_optional_t<typename Field::value_type>, Subfield...>;
   };
 
   /// \copydoc field_member_type
   template <class Field> struct field_member_type<Field> {
-    using type = remove_optional_t<Field>;
+    using type = remove_optional_t<typename Field::value_type>;
   };
 
   /// \copydoc field_member_type
   template <class Field, class... Subfield>
   using field_member_type_t =
       typename field_member_type<Field, Subfield...>::type;
+
+  /// Convert the given object to a string
+  template <class T> std::string to_string(T const &v) {
+    return std::to_string(v);
+  }
+
+  /// \copydoc to_string
+  template <> std::string to_string(std::string const &v) { return v; }
 } // namespace reactions::database

@@ -58,8 +58,8 @@ def parse_name(name):
     return f'{name:>{NAME_SIZE}}'
 
 
-def parse_id(nid):
-    return f'{int(nid):>{ID_SIZE}}'
+def parse_id(nubase_id):
+    return f'{int(nubase_id):>{ID_SIZE}}'
 
 
 def parse_value(value):
@@ -86,7 +86,7 @@ def parse_az(value):
 
 FIELDS = [
     ('name', parse_name),
-    ('nid', parse_id),
+    ('nubase_id', parse_id),
     ('atomic_number', parse_az),
     ('mass_number', parse_az),
     ('mass_excess', parse_value),
@@ -147,7 +147,7 @@ if __name__ == '__main__':
 
             config = dict(
                 name=p,
-                nid=i,
+                nubase_id=i,
                 mass_number=0,
                 atomic_number=atomic_number,
                 mass_excess=0.,
@@ -214,11 +214,11 @@ if __name__ == '__main__':
             mass_number = line[MASS_NUMBER].strip()
             atomic_number = line[ATOMIC_NUMBER].strip()
 
-            nid = f'{mass_number:0<{AZ_SIZE}}{atomic_number:0<{AZ_SIZE}}{ord(isomer or chr(0)):0<{AZ_SIZE}}'
+            nubase_id = f'{mass_number:0<{AZ_SIZE}}{atomic_number:0<{AZ_SIZE}}{ord(isomer or chr(0)):0<{AZ_SIZE}}'
 
             config = dict(
                 name=f'{base_name}({isomer})' if isomer else base_name,
-                nid=nid,
+                nubase_id=nubase_id,
                 mass_number=mass_number,
                 atomic_number=atomic_number,
                 is_stable=is_stable,

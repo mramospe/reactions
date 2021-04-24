@@ -214,7 +214,7 @@ namespace reactions {
         case (processes::node_kind::decay):
           delete ptr_as_decay();
           return;
-        case (processes::node_kind::unknown):
+        case (processes::node_kind::unknown_node_kind):
           throw reactions::internal_error(
               "A node type should always be set (internal error); please "
               "report the bug");
@@ -267,7 +267,7 @@ namespace reactions {
 
   private:
     /// Node type
-    processes::node_kind m_type = processes::node_kind::unknown;
+    processes::node_kind m_type = processes::node_kind::unknown_node_kind;
 
     /// Underlying object
     node_object *m_ptr = nullptr;
@@ -319,7 +319,7 @@ namespace reactions {
             if (*(first[i].ptr_as_decay()) == *(second[i].ptr_as_decay()))
               mask[j] = true;
             break;
-          case (processes::node_kind::unknown):
+          case (processes::node_kind::unknown_node_kind):
             throw reactions::internal_error(
                 "A node can not be of unknown type (internal error); please "
                 "report the bug");
