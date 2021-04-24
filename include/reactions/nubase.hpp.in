@@ -64,8 +64,9 @@ namespace reactions {
     /// Field for the mass excess
     struct mass_excess {
       static constexpr const char *title = "mass_excess";
-      using value_type = units::vet_double_opt;
-      using units_reference_type = units::keV;
+      using value_type = database::vet_double_opt<bool>;
+      using units_reference_type =
+          units::reference<energy_units, energy_units::keV>;
       using range_type =
           range_collection<range<27, 43>, range<44, 53>, range<54, 55>>;
     };
@@ -79,8 +80,9 @@ namespace reactions {
     /// Field for the half life
     struct half_life {
       static constexpr const char *title = "half_life";
-      using value_type = units::vet_double_opt;
-      using units_reference_type = units::sec;
+      using value_type = database::vet_double_opt<bool>;
+      using units_reference_type =
+          units::reference<time_units, time_units::sec>;
       using range_type =
           range_collection<range<58, 74>, range<75, 84>, range<85, 86>>;
     };
@@ -93,10 +95,74 @@ namespace reactions {
     };
   } // namespace nubase
 
+  /*! \brief Defines a singleton to handle the units of PDG elements
+   *
+   * This class affects the values returned by the \ref nubase_element
+   * objects, scaling them according to the units defined by the user.
+   */
+  class nubase_system_of_units final {
+
+  public:
+    /// Get the only instance of this class
+    static nubase_system_of_units &instance() {
+      static nubase_system_of_units sou;
+      return sou;
+    }
+
+    /// Get the energy units
+    energy_units const &get_energy_units() const { return m_energy_units; }
+
+    /// Get the time units
+    time_units const &get_time_units() const { return m_time_units; }
+
+    /// Access the given units
+    template <class Units> Units const &units() const {
+      if constexpr (std::is_same_v<Units, energy_units>)
+        return get_energy_units();
+      else if constexpr (std::is_same_v<Units, time_units>)
+        return get_time_units();
+      else
+        // can not use "false" directly because it would be ill-formed
+        static_assert(reactions::utils::dependent_false_v<Units>,
+                      "Invalid units");
+    }
+
+    /// Set the energy units
+    void set_energy_units(energy_units u) {
+
+      if (u == energy_units::unknown_energy_units)
+        throw value_error("Setting energy units to unknown");
+
+      m_energy_units = u;
+    }
+
+    /// Set the time units
+    void set_time_units(time_units u) {
+
+      if (u == time_units::unknown_time_units)
+        throw value_error("Setting time units to unknown");
+
+      m_time_units = u;
+    }
+
+  private:
+    /// Units of energy
+    energy_units m_energy_units = energy_units::GeV;
+    /// Units of time
+    time_units m_time_units = time_units::sec;
+
+    nubase_system_of_units() {}
+    nubase_system_of_units(nubase_system_of_units &&) = delete;
+    nubase_system_of_units(nubase_system_of_units const &) = delete;
+    void operator=(nubase_system_of_units &&) = delete;
+    void operator=(nubase_system_of_units const &) = delete;
+  };
+
   /// Field types of a NuBase element
-  using nubase_element_fields = std::tuple < nubase::name, nubase::nubase_id,
-        nubase::Z, nubase::A, nubase::mass_excess, nubase::is_stable,
-        nubase::half_life, nubase::is_ground_state;
+  using nubase_element_fields =
+      std::tuple<nubase::name, nubase::nubase_id, nubase::Z, nubase::A,
+                 nubase::mass_excess, nubase::is_stable, nubase::half_life,
+                 nubase::is_ground_state>;
 
   /// Base class of a NuBase element
   using nubase_element_base =
@@ -180,13 +246,13 @@ namespace reactions {
     /// Representation of the element name as a LaTeX string
     std::string latex_name() const {
 
-      switch (nubase_id) {
+      switch (nubase_id()) {
       case (0):
         // photon
         return "\\gamma";
       case (1):
         // positron
-        return "\\e^{-}";
+        return "\\e^{+}";
       case (2):
         // electron
         return "\\e^{-}";
@@ -196,9 +262,9 @@ namespace reactions {
 
       const auto &ref = name();
 
-      auto size = ref.size()
+      auto size = ref.size();
 
-                      std::string out;
+      std::string out;
       out.reserve(size + 9);
 
       out.append("\\ce{^{");
@@ -281,7 +347,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double mass_excess_error() const {
-      return get<nubase::mass_excess_error, database::error>();
+      return get<nubase::mass_excess, database::error>();
     }
 
     /*! \brief Get the width of the element.
@@ -410,15 +476,6 @@ namespace reactions {
                                     });
 
       file.close();
-    }
-
-    /// Return the charge-conjugate of an element
-    nubase_element charge_conjugate(nubase_element const &el) const {
-
-      if (el.is_self_cc())
-        return el;
-      else
-        return operator()(-el.nubase_id());
     }
 
     /// Get the only instance of this class
