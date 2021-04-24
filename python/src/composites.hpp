@@ -78,7 +78,8 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  reactions::python::element_kind ek = reactions::python::element_kind::unknown;
+  reactions::python::element_kind ek =
+      reactions::python::element_kind::unknown_element_kind;
   PyObject *reactants; // list of reactants
   PyObject *products;  // list of products
 } Reaction;
@@ -107,7 +108,7 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
 
   if (!str) {
     // initialization with no values
-    if (self->ek == reactions::python::unknown) {
+    if (self->ek == reactions::python::unknown_element_kind) {
       PyErr_SetString(
           PyExc_ValueError,
           (std::string{"Unknown element type \""} + kind + "\"").c_str());
@@ -149,7 +150,7 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
     }
     REACTIONS_PYTHON_CATCH_ERRORS(-1)
   }
-  case (reactions::python::element_kind::unknown):
+  case (reactions::python::element_kind::unknown_element_kind):
 
     PyErr_SetString(PyExc_ValueError,
                     (std::string{"Unknown element type "} + kind).c_str());
@@ -343,7 +344,8 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  reactions::python::element_kind ek = reactions::python::element_kind::unknown;
+  reactions::python::element_kind ek =
+      reactions::python::element_kind::unknown_element_kind;
   PyObject *head;     // head of the decay
   PyObject *products; // list of products
 } Decay;
@@ -372,7 +374,7 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
   if (!str) {
     // initialization with no values
-    if (self->ek == reactions::python::element_kind::unknown) {
+    if (self->ek == reactions::python::element_kind::unknown_element_kind) {
       PyErr_SetString(
           PyExc_ValueError,
           (std::string{"Unknown element type \""} + kind + "\"").c_str());
@@ -417,7 +419,7 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
     break;
   }
-  case (reactions::python::element_kind::unknown):
+  case (reactions::python::element_kind::unknown_element_kind):
 
     PyErr_SetString(PyExc_ValueError,
                     (std::string{"Unknown element type "} + kind).c_str());
