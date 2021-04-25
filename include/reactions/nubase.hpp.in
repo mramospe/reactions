@@ -43,15 +43,15 @@ namespace reactions {
       using range_type = range<9, 18>;
     };
     /// Field for the atomic number
-    struct Z {
-      static constexpr const char *title = "Z";
+    struct atomic_number {
+      static constexpr const char *title = "atomic_number";
       using value_type = int;
       using units_reference_type = units::none;
       using range_type = range<19, 22>;
     };
     /// Field for the mass number
-    struct A {
-      static constexpr const char *title = "A";
+    struct mass_number {
+      static constexpr const char *title = "mass_number";
       using value_type = int;
       using units_reference_type = units::none;
       using range_type = range<23, 26>;
@@ -155,9 +155,9 @@ namespace reactions {
 
   /// Field types of a NuBase element
   using nubase_element_fields =
-      std::tuple<nubase::name, nubase::nubase_id, nubase::Z, nubase::A,
-                 nubase::mass_excess, nubase::is_stable, nubase::half_life,
-                 nubase::is_ground_state>;
+      std::tuple<nubase::name, nubase::nubase_id, nubase::atomic_number,
+                 nubase::mass_number, nubase::mass_excess, nubase::is_stable,
+                 nubase::half_life, nubase::is_ground_state>;
 
   /// Base class of a NuBase element
   using nubase_element_base = fields::underlying_types_t<nubase_element_fields>;
@@ -320,10 +320,18 @@ namespace reactions {
     std::string const &name() const { return get<nubase::name>(); }
 
     /// NuBase ID
-    int nubase_id() const { return get<nubase::nubase_id>(); }
+    int const &nubase_id() const { return get<nubase::nubase_id>(); }
+
+    /// Atomic number
+    int const &atomic_number() const { return get<nubase::atomic_number>(); }
+
+    /// Mass number
+    int const &mass_number() const { return get<nubase::mass_number>(); }
 
     /// Whether the element is its own charge-conjugate
-    bool is_ground_state() const { return get<nubase::is_ground_state>(); }
+    bool const &is_ground_state() const {
+      return get<nubase::is_ground_state>();
+    }
 
     /*! Get the mass of the element
      *
@@ -336,7 +344,7 @@ namespace reactions {
     }
 
     /// Whether the mass and its errors are defined or not
-    bool has_mass() const { return has<nubase::mass_excess>(); }
+    bool has_mass_excess() const { return has<nubase::mass_excess>(); }
 
     /*! \brief Lower mass error
      *
@@ -346,6 +354,11 @@ namespace reactions {
      */
     double mass_excess_error() const {
       return get<nubase::mass_excess, fields::error>();
+    }
+
+    /// Whether the mass excess has been calculated from systematics
+    bool const &mass_excess_from_systematics() const {
+      return get<nubase::mass_excess, fields::tag>();
     }
 
     /*! \brief Get the width of the element.
@@ -369,8 +382,13 @@ namespace reactions {
       return get<nubase::half_life, fields::error>();
     }
 
+    /// Whether the half-life has been calculated from systematics
+    bool const &half_life_from_systematics() const {
+      return get<nubase::half_life, fields::tag>();
+    }
+
     /// Whether the element is its own charge-conjugate
-    bool is_stable() const { return get<nubase::is_stable>(); }
+    bool const &is_stable() const { return get<nubase::is_stable>(); }
   };
 
   /*! \brief Database of elements with the NuBase information

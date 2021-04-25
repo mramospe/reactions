@@ -46,6 +46,28 @@ namespace reactions::python {
   };
 
   /// \copydoc to_string_t
+  template <class T> struct to_string_t<reactions::fields::value_and_error<T>> {
+    /// \copydoc to_string_t::operator()
+    std::string
+    operator()(reactions::fields::value_and_error<T> const &vae) const {
+      return std::string{"(value="} + to_string(vae.value) +
+             std::string{", error="} + to_string(vae.error) + ')';
+    }
+  };
+
+  /// \copydoc to_string_t
+  template <class V, class T>
+  struct to_string_t<reactions::fields::value_and_error_with_tag<V, T>> {
+    /// \copydoc to_string_t::operator()
+    std::string operator()(
+        reactions::fields::value_and_error_with_tag<V, T> const &vae) const {
+      return std::string{"(value="} + to_string(vae.value) +
+             std::string{", error="} + to_string(vae.error) +
+             std::string{", tag="} + to_string(vae.tag) + ')';
+    }
+  };
+
+  /// \copydoc to_string_t
   template <class T>
   struct to_string_t<reactions::fields::value_and_errors<T>> {
     /// \copydoc to_string_t::operator()

@@ -14,7 +14,7 @@
 typedef struct {
   // base class
   Node node;
-  // attributes (same as pdg::pdg_element)
+  // attributes (same as pdg_element)
   reactions::pdg_element element;
 } ElementPDG;
 

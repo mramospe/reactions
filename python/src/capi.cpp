@@ -1,5 +1,6 @@
 #include "composites.hpp"
 #include "database.hpp"
+#include "element_nubase.hpp"
 #include "element_pdg.hpp"
 #include "element_string.hpp"
 #include "node.hpp"
@@ -119,6 +120,7 @@ PyMODINIT_FUNC PyInit_capi(void) {
   // Types
   REACTIONS_PYTHON_CLASS_READY(NodeType);
   REACTIONS_PYTHON_CLASS_READY(ElementStringType);
+  REACTIONS_PYTHON_CLASS_READY(ElementNuBaseType);
   REACTIONS_PYTHON_CLASS_READY(ElementPDGType);
   REACTIONS_PYTHON_CLASS_READY(ReactionType);
   REACTIONS_PYTHON_CLASS_READY(DecayType);
@@ -132,6 +134,7 @@ PyMODINIT_FUNC PyInit_capi(void) {
 
   // Add types
   REACTIONS_PYTHON_REGISTER_CLASS(m, "node", NodeType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "nubase_element", ElementNuBaseType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_element", ElementPDGType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "string_element", ElementStringType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "reaction", ReactionType);
