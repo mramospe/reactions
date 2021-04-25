@@ -4,6 +4,9 @@
 #pragma once
 #include <fstream>
 #include <ios>
+#include <limits>
+#include <tuple>
+#include <vector>
 
 #include "reactions/fields.hpp"
 
@@ -116,7 +119,7 @@ namespace reactions::database {
     /// Get the path to the database file
     std::string const &get_database_path() const { return m_db; }
 
-    /*! \brief Register a new PDG element
+    /*! \brief Register a new element
      *
      * The new element must have a name and a ID that does not clash with
      * any of the database used.
@@ -142,22 +145,22 @@ namespace reactions::database {
           if (reactions::fields::read_field<typename NameField::range_type>(
                   name, line) == reactions::fields::failed)
             throw reactions::database_error(
-                "Error reading PDG database; data format not understood");
+                "Error reading the database; data format not understood");
 
-          if (new_element.name() == name)
+          if (new_element.template get<NameField>() == name)
             throw reactions::database_error(
                 "Attempt to register an element with similar name to an "
                 "element in the database");
 
-          typename IdField::value_type pdg_id;
+          typename IdField::value_type id;
           if (reactions::fields::read_field<typename IdField::range_type>(
-                  pdg_id, line) == reactions::fields::failed)
+                  id, line) == reactions::fields::failed)
             throw reactions::database_error(
-                "Error reading PDG database; data format not understood");
+                "Error reading the database; data format not understood");
 
-          if (new_element.pdg_id() == pdg_id)
+          if (new_element.template get<IdField>() == id)
             throw reactions::database_error(
-                "Attempt to register an element with similar PDG ID to an "
+                "Attempt to register an element with similar ID to an "
                 "element in the database");
         }
       }
@@ -285,8 +288,11 @@ namespace reactions::database {
             auto cend = user_registered_cend();
             if (std::find_if(user_registered_cbegin(), cend,
                              [&new_element](element_type const &el) {
-                               return (el.name() == new_element.name() ||
-                                       el.pdg_id() == new_element.pdg_id());
+                               return (
+                                   el.template get<NameField>() ==
+                                       new_element.template get<NameField>() ||
+                                   el.template get<IdField>() ==
+                                       new_element.template get<IdField>());
                              }) != cend)
               throw reactions::database_error(
                   (std::string{"User-defined element clashes with database "
@@ -314,8 +320,10 @@ namespace reactions::database {
         auto e = end();
         if (std::find_if(begin(), e,
                          [this, &new_element](element_type const &el) {
-                           return (el.name() == new_element.name() ||
-                                   el.pdg_id() == new_element.pdg_id());
+                           return (el.template get<NameField>() ==
+                                       new_element.template get<NameField>() ||
+                                   el.template get<IdField>() ==
+                                       new_element.template get<IdField>());
                          }) != e) {
           throw reactions::database_error(
               (std::string{"User-registered element clashes: \""} +

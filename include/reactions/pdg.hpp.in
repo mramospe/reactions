@@ -4,6 +4,9 @@
 */
 #pragma once
 
+#include <cmath>
+#include <tuple>
+
 #include "reactions/database.hpp"
 #include "reactions/exceptions.hpp"
 #include "reactions/fields.hpp"
@@ -11,15 +14,6 @@
 #include "reactions/tokens.hpp"
 #include "reactions/units.hpp"
 #include "reactions/utils.hpp"
-
-#include <cmath>
-#include <fstream>
-#include <ios>
-#include <iostream>
-#include <limits>
-#include <optional>
-#include <tuple>
-#include <vector>
 
 namespace reactions {
 

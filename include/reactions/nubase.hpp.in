@@ -4,6 +4,8 @@
 */
 #pragma once
 
+#include <tuple>
+
 #include "reactions/database.hpp"
 #include "reactions/exceptions.hpp"
 #include "reactions/fields.hpp"
@@ -11,14 +13,6 @@
 #include "reactions/tokens.hpp"
 #include "reactions/units.hpp"
 #include "reactions/utils.hpp"
-
-#include <cmath>
-#include <fstream>
-#include <ios>
-#include <limits>
-#include <optional>
-#include <tuple>
-#include <vector>
 
 namespace reactions {
 
@@ -148,7 +142,7 @@ namespace reactions {
 
   private:
     /// Units of energy
-    energy_units m_energy_units = energy_units::GeV;
+    energy_units m_energy_units = energy_units::keV;
     /// Units of time
     time_units m_time_units = time_units::sec;
 

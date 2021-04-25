@@ -4,17 +4,17 @@
  */
 #pragma once
 
-#include "reactions/element_traits.hpp"
-#include "reactions/exceptions.hpp"
-#include "reactions/pow_enum.hpp"
-#include "reactions/tokens.hpp"
-
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include "reactions/element_traits.hpp"
+#include "reactions/exceptions.hpp"
+#include "reactions/pow_enum.hpp"
+#include "reactions/tokens.hpp"
 
 namespace reactions {
 
