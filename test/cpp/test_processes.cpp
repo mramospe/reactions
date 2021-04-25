@@ -64,6 +64,9 @@ int main() {
   REACTIONS_TEST_UTILS_ADD_TEST(
       reaction_coll, reaction_tester<pdg_element>{"pi+ -> mu+ nu(mu)"});
 
+  REACTIONS_TEST_UTILS_ADD_TEST(reaction_coll,
+                                reaction_tester<nubase_element>{"1n -> 1H e-"});
+
   // Test the decay class
   test::collector decay_coll("decay tests");
   REACTIONS_TEST_UTILS_ADD_TEST(
@@ -79,6 +82,9 @@ int main() {
 
   REACTIONS_TEST_UTILS_ADD_TEST(decay_coll,
                                 decay_tester<pdg_element>{"pi+ -> mu+ nu(mu)"});
+
+  REACTIONS_TEST_UTILS_ADD_TEST(decay_coll,
+                                decay_tester<nubase_element>{"1n -> 1H e-"});
 
   auto reaction_status = !reaction_coll.run();
   auto decay_status = !decay_coll.run();
