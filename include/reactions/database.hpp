@@ -1,568 +1,487 @@
 /*! \file
- * \brief Common operations on databases
+ * \brief Define the base database class
  */
 #pragma once
+#include <fstream>
+#include <ios>
 
-#include <algorithm>
-#include <cmath>
-#include <optional>
-#include <stdexcept>
-#include <string>
-#include <tuple>
-#include <type_traits>
+#include "reactions/fields.hpp"
 
-namespace reactions {
-
-  /*! \brief Small structure to define fields without explicitely knowing its
-   * type
-   *
-   * This class serves as an interface, forwarding its contents. Any class which
-   * represents a field must define a constructor from this type.
-   */
-  template <class... Args> struct fill : std::tuple<Args...> {
-    /// Build the class from the contents
-    using base_type = std::tuple<Args...>;
-    constexpr fill(Args &&... args) : base_type{std::forward<Args>(args)...} {}
-  };
-
-  /// Static object that defines a missing field within an object
-  static constexpr auto missing = std::nullopt;
-} // namespace reactions
-
-/*!\brief Utilities to handle database objects and their elements.
-
-  Databases return elements with *fields*. The template argument name *Field*
-  designates an object with the following properties:
-
-  - **title**: a string representing the name of the field.
-
-  - **value_type**: a type representing the object that is stored (can be a
-  \ref std::optional).
-
-  - **units_reference_type**: a resolved type of the \ref database::reference
-  template, containing the units of the field and the associated units in the
-  database. If the field has no units, \ref units::none must be used.
-
-  - **range_type**: a resolved type of the \ref database::range template,
-  indicating the position of the field in the database (can be a set of ranges).
-
-  On the other hand, the members of a field can be accessed using the \ref
-  database::get function, using as a template argument the structure
-  (*Subfield*) that identifies the member.
-
-  The access to a value of a field (or a member of a field) is handled by
-  \ref database::accessor, which automatically handles the system of units
-  and the access to members of a field. If at some point the associated
-  type is a \ref std::optional, the value is accessed without checking its
-  validity.
- */
 namespace reactions::database {
 
-  /// Define a \ref std::tuple with the types of the fields provided
-  template <class Tuple> struct underlying_types;
+  /*! \brief Base database class
+   *
+   */
+  template <class Element, class NameField, class IdField> class database {
 
-  /// \copydoc underlying_types
-  template <class... Field> struct underlying_types<std::tuple<Field...>> {
-    using type = std::tuple<typename Field::value_type...>;
-  };
+  public:
+    using element_type = Element;
 
-  /// \copydoc underlying_types
-  template <class Fields>
-  using underlying_types_t = typename underlying_types<Fields>::type;
+    virtual ~database() {}
 
-  /// Check if a type represents an optional
-  template <class> struct is_optional : std::false_type {};
+    /*! \brief All the elements in the database file
+     *
+     * Calling this function does not alter the cache. If the cache is
+     * enabled a copy of its content is returned. If not, elements are
+     * read from the database file.
+     *
+     * This function returns the elements in the database and those registered
+     * by the user.
+     */
+    std::vector<element_type> all_elements() const {
 
-  /// Check if a type represents an optional
-  template <class T> struct is_optional<std::optional<T>> : std::true_type {};
+      std::vector<element_type> out;
 
-  /// Alias to check if a type represents an optional
-  template <class T> constexpr auto is_optional_v = is_optional<T>::value;
+      switch (m_cache.status()) {
 
-  /// Contain the information whether a field is optional or not
-  template <class Field, class Enable = void>
-  struct is_optional_field : std::false_type {};
+      case (cache::full):
 
-  /// \copydoc is_optional_field
-  template <class Field>
-  struct is_optional_field<
-      Field, std::enable_if_t<is_optional_v<typename Field::value_type>>>
-      : std::true_type {};
+        out.insert(out.end(), m_cache.begin(), m_cache.end());
+        return out;
 
-  /// \copydoc is_optional_field
-  template <class Field>
-  constexpr auto is_optional_field_v = is_optional_field<Field>::value;
+      default:
 
-  /// If the input type is an optional, get the underying type
-  template <class T> struct remove_optional { using type = T; };
+        // open the database to count the number of lines
+        auto file = open_database();
 
-  /// \copydoc remove_optional
-  template <class T> struct remove_optional<std::optional<T>> {
-    using type = T;
-  };
+        auto start = skip_commented_lines(file);
 
-  /// \copydoc remove_optional
-  template <class T>
-  using remove_optional_t = typename remove_optional<T>::type;
+        std::size_t count = 0;
+        while (file.ignore(element_type::line_size + 1)) // include end-of-line
+          ++count;
 
-  /// Field for a value
-  struct value {};
-  /// Field for an error
-  struct error {};
-  /// Field for a lower error
-  struct error_lower {};
-  /// Field for an lower error
-  struct error_upper {};
-  /// Field for a tag
-  struct tag {};
+        file.clear(); // we reached the end of the file
 
-  /// Define a range with minimum and maximum indices
-  template <std::size_t Min, std::size_t Max> struct range {
-    static constexpr auto min = Min, max = Max;
-  };
+        // go back to the start of the table and read the elements
+        file.seekg(start);
 
-  /// Define a collection of ranges (a single variable with subvariables)
-  template <class... R> using range_collection = std::tuple<R...>;
+        out.reserve(count + m_cache.size());
 
-  /// Get the overall range for a range with/without subranges
-  template <class R> struct overall_range {
-    using type = range<R::min, R::max>;
-  };
+        for (auto i = 0u; i < count; ++i) {
+          std::string line;
+          std::getline(file, line);
+          out.emplace_back(read_element(line));
+        }
 
-  /// Overall range of a variable (that can be a composite)
-  template <class R0, class... R, class Rn>
-  struct overall_range<range_collection<R0, R..., Rn>> {
-    using type = range<R0::min, Rn::max>;
-  };
+        if (m_cache.size())
+          out.insert(out.end(), m_cache.begin(), m_cache.end());
 
-  /// Overall range of a variable (that can be a composite)
-  template <class R> using overall_range_t = typename overall_range<R>::type;
-
-  /// Simple structure composed by a value and its error
-  template <class T, class Enable = void> struct value_and_error;
-
-  /// \copydoc value_and_error
-  template <class T>
-  struct value_and_error<T,
-                         std::enable_if_t<std::is_floating_point_v<T>, void>> {
-
-    using value_type = T;
-
-    /// Empty constructor
-    value_and_error(){};
-
-    /// Build the class with forwarded arguments
-    template <class Value, class Error>
-    value_and_error(Value &&value_, Error &&error_)
-        : value(value_), error(error_) {}
-    /// Build the class from a field constant expression
-    template <class Value, class Error>
-    value_and_error(fill<Value, Error> &&f)
-        : value(std::get<0>(f)), error(std::get<1>(f)) {}
-
-    /// Value
-    value_type value;
-    /// Error
-    value_type error;
-  };
-
-  /// Represent a value, its error and a identifier tag
-  template <class ValueType, class TagType>
-  struct value_and_error_with_tag : value_and_error<ValueType> {
-
-    using base_type = value_and_error<ValueType>;
-    using value_type = ValueType;
-
-    /// Empty constructor
-    value_and_error_with_tag() : base_type{} {};
-
-    /// Build the class with forwarded arguments
-    template <class Value, class Error>
-    value_and_error_with_tag(Value &&value_, Error &&error_, TagType &&tag_)
-        : base_type{value_, error_}, tag(tag_) {}
-    /// Build the class from a field constant expression
-    template <class Value, class Error>
-    value_and_error_with_tag(fill<Value, Error, TagType> &&f)
-        : base_type{std::get<0>(f), std::get<1>(f)}, tag(std::get<2>(f)) {}
-
-    /// Internal tag
-    TagType tag;
-  };
-
-  /// Simple structure composed by a value and the lower and upper errors
-  template <class T, class Enable = void> struct value_and_errors;
-
-  /// \copydoc value_and_errors
-  template <class T>
-  struct value_and_errors<T,
-                          std::enable_if_t<std::is_floating_point_v<T>, void>> {
-
-    using value_type = T;
-
-    /// Empty constructor
-    value_and_errors() = default;
-    /// Build the class with forwarded arguments
-    template <class Value, class ErrorLower, class ErrorUpper>
-    value_and_errors(Value &&value_, ErrorLower &&error_lower_,
-                     ErrorUpper &&error_upper_)
-        : value(value_), error_lower(error_lower_), error_upper(error_upper_) {}
-    /// Build the class from a field constant expression
-    template <class Value, class ErrorLower, class ErrorUpper>
-    value_and_errors(fill<Value, ErrorLower, ErrorUpper> &&f)
-        : value(std::get<0>(f)), error_lower(std::get<1>(f)),
-          error_upper(std::get<2>(f)) {}
-
-    /// Value
-    value_type value;
-    /// Lower error
-    value_type error_lower;
-    /// Upper error
-    value_type error_upper;
-    /// Calculate the squared error from the lower and upper errors
-    value_type error_squared() const {
-      return error_lower * error_lower + error_upper * error_upper;
-    };
-    /// Calculate the error from the lower and upper errors
-    value_type error() const { return std::sqrt(error_squared()); }
-  };
-
-  /// Return the underlying value of an object (the same if the object is \ref
-  /// std::optional)
-  template <class T> constexpr auto const &access_value(T const &c) {
-    return c;
-  }
-
-  /// \copydoc access_value
-  template <class T>
-  constexpr auto const &access_value(std::optional<T> const &opt) {
-    return opt.value();
-  }
-
-  /// Type defining an accessor to a value/error field
-  template <class Field> struct get_t;
-
-  /// Accessor to the value
-  template <> struct get_t<value> {
-    template <class T> constexpr auto const &operator()(T const &t) const {
-      return access_value(t).value;
-    }
-  };
-
-  /// Accessor to the error
-  template <> struct get_t<error> {
-    template <class T> constexpr auto const &operator()(T const &t) const {
-      return access_value(t).error;
-    }
-  };
-
-  /// Accessor to the lower error
-  template <> struct get_t<error_lower> {
-    template <class T> constexpr auto const &operator()(T const &t) const {
-      return access_value(t).error_lower;
-    }
-  };
-
-  /// Accessor to the upper error
-  template <> struct get_t<error_upper> {
-    template <class T> constexpr auto const &operator()(T const &t) const {
-      return access_value(t).error_upper;
-    }
-  };
-
-  /// Accessor to the tag
-  template <> struct get_t<tag> {
-    template <class T> constexpr auto const &operator()(T const &t) const {
-      return access_value(t).tag;
-    }
-  };
-
-  /// Determine a returned type
-  template <class T, class Subfield, class... S> struct type_of {
-    using type = typename type_of<Subfield, S...>::type;
-  };
-
-  /// \copydoc type_of
-  template <class T, class Subfield> struct type_of<T, Subfield> {
-    using type =
-        std::enable_if_t<std::is_default_constructible_v<T>,
-                         std::decay_t<decltype(get_t<Subfield>{}(T{}))>>;
-  };
-
-  /// \copydoc type_of
-  template <class T, class... Subfield>
-  using type_of_t = typename type_of<T, Subfield...>::type;
-
-  /// Multiplication of the value and error by a constant
-  template <class T>
-  value_and_error<T> operator*(value_and_error<T> const &vae, T f) {
-    return {f * vae.value, f * vae.error};
-  }
-
-  /// Multiplication of the value and error by a constant
-  template <class T>
-  value_and_error<T> operator*(T f, value_and_error<T> const &vae) {
-    return vae * f;
-  }
-
-  /// Multiplication of the value and error by a constant
-  template <class V, class T>
-  value_and_error_with_tag<V, T>
-  operator*(value_and_error_with_tag<V, T> const &vae, V f) {
-    return {f * vae.value, f * vae.error, vae.tag};
-  }
-
-  /// Multiplication of the value and error by a constant
-  template <class V, class T>
-  value_and_error_with_tag<V, T>
-  operator*(V f, value_and_error_with_tag<V, T> const &vae) {
-    return vae * f;
-  }
-
-  /// Multiplication of the value and errors by a constant
-  template <class T>
-  value_and_errors<T> operator*(value_and_errors<T> const &vae, T f) {
-    return {f * vae.value, f * vae.error_lower, f * vae.error_upper};
-  }
-
-  /// Multiplication of the value and errors by a constant
-  template <class T>
-  value_and_errors<T> operator*(T f, value_and_errors<T> const &vae) {
-    return vae * f;
-  }
-
-  /// Accessor to a value/error field
-  template <class Field> static constexpr get_t<Field> get;
-
-  /// Optional for \ref float type
-  using float_opt = std::optional<float>;
-  /// Optional for \ref double type
-  using double_opt = std::optional<double>;
-  /// Optional \ref value_and_error for single-precision floating-point type
-  using ve_float_opt = std::optional<value_and_error<float>>;
-  /// Optional \ref value_and_error for double-precision floating-point type
-  using ve_double_opt = std::optional<value_and_error<double>>;
-  /// Optional \ref value_and_error_with_tag for single-precision floating-point
-  /// type
-  template <class TagType>
-  using vet_float_opt = std::optional<value_and_error_with_tag<float, TagType>>;
-  /// Optional \ref value_and_error_with_tag for double-precision floating-point
-  /// type
-  template <class TagType>
-  using vet_double_opt =
-      std::optional<value_and_error_with_tag<double, TagType>>;
-  /// Optional \ref value_and_errors for single-precision floating-point type
-  using ves_float_opt = std::optional<value_and_errors<float>>;
-  /// Optional \ref value_and_errors for double-precision floating-point type
-  using ves_double_opt = std::optional<value_and_errors<double>>;
-
-  /// Status code of a conversion to an arithmetic or \ref std::optional type
-  enum conversion_status : int {
-    success, ///< the conversion succeeded
-    empty,   ///< the object is missing
-    failed   ///<  the conversion failed
-  };
-
-  /// Internal utilitites for the \ref reactions::database namespace
-  namespace detail {
-
-    /// Convert a range of characters to an integral
-    conversion_status string_to_type(int &out, std::string const &s) {
-
-      if (s.empty())
-        return empty;
-
-      try {
-        out = std::stoi(s);
-      } catch (std::invalid_argument &e) {
-        return failed;
+        file.close();
       }
 
-      return success;
+      return out;
     }
 
-    /// Convert a range of characters to a floating point
-    conversion_status string_to_type(float &out, std::string const &s) {
+    /// Clear the cache, removing also user-registered elements
+    void clear_cache() { m_cache.clear(); }
 
-      if (s.empty())
-        return empty;
+    /// Disable the cache
+    void disable_cache() { m_cache.clear_database_elements(); }
 
-      try {
-        out = std::stof(s);
-      } catch (std::invalid_argument &e) {
-        return failed;
+    /* \brief Enable the internal cache.
+     *
+     * All the values in the database will be read an stored in a internal
+     * cache. This will speed-up the code, with the caveat of consuming some
+     * memory.
+     */
+    void enable_cache() {
+
+      if (m_cache.status() == cache::full)
+        return;
+
+      // open the database to count the number of lines
+      auto file = open_database();
+
+      auto start = skip_commented_lines(file);
+
+      std::size_t count = 0;
+      while (file.ignore(element_type::line_size + 1)) // include end-of-line
+        ++count;
+
+      file.clear(); // we reached the end of the file
+
+      // go back to the start of the table and read the elements
+      file.seekg(start);
+
+      std::string line;
+      m_cache.add_database_elements(count,
+                                    [this, &file, &line]() -> element_type {
+                                      std::getline(file, line);
+                                      return read_element(line);
+                                    });
+
+      file.close();
+    }
+
+    /// Get the path to the database file
+    std::string const &get_database_path() const { return m_db; }
+
+    /*! \brief Register a new PDG element
+     *
+     * The new element must have a name and a ID that does not clash with
+     * any of the database used.
+     *
+     */
+    template <class... Args> void register_element(Args &&... args) {
+
+      element_type new_element{std::forward<Args>(args)...};
+
+      // If the cache is enabled, the checks are done within the cache object,
+      // otherwise we must check the database
+      if (m_cache.status() != cache::full) {
+
+        auto file = open_database();
+
+        skip_commented_lines(file);
+
+        std::string line;
+
+        while (std::getline(file, line)) {
+
+          typename NameField::value_type name;
+          if (reactions::fields::read_field<typename NameField::range_type>(
+                  name, line) == reactions::fields::failed)
+            throw reactions::database_error(
+                "Error reading PDG database; data format not understood");
+
+          if (new_element.name() == name)
+            throw reactions::database_error(
+                "Attempt to register an element with similar name to an "
+                "element in the database");
+
+          typename IdField::value_type pdg_id;
+          if (reactions::fields::read_field<typename IdField::range_type>(
+                  pdg_id, line) == reactions::fields::failed)
+            throw reactions::database_error(
+                "Error reading PDG database; data format not understood");
+
+          if (new_element.pdg_id() == pdg_id)
+            throw reactions::database_error(
+                "Attempt to register an element with similar PDG ID to an "
+                "element in the database");
+        }
       }
 
-      return success;
+      // this must be done after the checks are done to prevent leaving
+      // the cache in an invalid state
+      m_cache.add_user_element(std::move(new_element));
     }
 
-    /// Convert a range of characters to a floating point (double precision)
-    conversion_status string_to_type(double &out, std::string const &s) {
+    /* \brief Set the path to the database file.
+     *
+     * If the cache is enabled, reloads the content using the new path.
+     */
+    void set_database_path(std::string const &s) {
+      m_db = s;
+      if (m_cache.status() == cache::full) {
+        disable_cache();
+        enable_cache();
+      }
+    }
 
-      if (s.empty())
-        return empty;
+    /// Create an element accessing by ID
+    virtual element_type operator()(int id) const = 0;
 
-      try {
-        out = std::stod(s);
-      } catch (std::invalid_argument &e) {
-        return failed;
+    /// Create an element accessing by name
+    virtual element_type operator()(std::string const &str) const = 0;
+
+  protected:
+    /// Path to the database file
+    std::string m_db;
+
+    /// \brief Cache of elements
+    class cache {
+
+    public:
+      /// Code to define the status of the cache
+      enum cache_status { empty, user, full };
+
+      using cache_type = std::vector<element_type>;
+      using const_iterator_type = typename cache_type::const_iterator;
+      using size_type = typename cache_type::size_type;
+
+      cache() = default;
+
+      /// Clear the cache
+      void clear() {
+        m_vector.clear();
+        m_vector.shrink_to_fit();
+        m_separator = 0;
       }
 
-      return success;
-    }
-
-    /// Convert a range of characters to a boolean
-    conversion_status string_to_type(bool &out, std::string const &s) {
-
-      if (s.empty())
-        return empty;
-
-      try {
-        out = std::stoi(s);
-      } catch (std::invalid_argument &e) {
-        return failed;
+      /// Clear the cache
+      void clear_database_elements() {
+        m_vector.erase(database_cbegin(), database_cend());
+        m_vector.shrink_to_fit();
+        m_separator = 0;
       }
 
-      return success;
+      /// Status of the cache
+      cache_status status() const {
+        if (m_vector.size()) {
+          if (database_size() == 0)
+            return cache_status::user;
+          else
+            return cache_status::full;
+        } else
+          return cache_status::empty;
+      }
+
+      /// Underlying vector of elements
+      cache_type const &elements() const { return m_vector; }
+
+      /// Underlying vector of elements
+      cache_type &elements() { return m_vector; }
+
+      /// Begining of the cache
+      const_iterator_type begin() const { return m_vector.cbegin(); }
+
+      /// End of the cache
+      const_iterator_type end() const { return m_vector.cend(); }
+
+      /// Begining of the database elements
+      const_iterator_type database_cbegin() const { return m_vector.cbegin(); }
+
+      /// End of the database elements
+      const_iterator_type database_cend() const {
+        return m_vector.cbegin() + m_separator;
+      }
+
+      /// Begining of the user-registered elements
+      const_iterator_type user_registered_cbegin() const {
+        return database_cend();
+      }
+
+      /// End of the user-registered elements
+      const_iterator_type user_registered_cend() const {
+        return m_vector.cend();
+      }
+
+      /// Number of elements associated to the database
+      size_type database_size() const { return m_separator; }
+
+      /// Number of user-registered elements
+      size_type user_registered_size() const {
+        return m_vector.size() - m_separator;
+      }
+
+      /// Number of cached elements
+      size_type size() const { return m_vector.size(); }
+
+      /// Add elements from a database by calling the given function several
+      /// times
+      template <class ElementReader>
+      void add_database_elements(size_type n, ElementReader func) {
+
+        cache_type new_cache;
+        new_cache.reserve(n + user_registered_size());
+
+        for (auto i = 0u; i < n; ++i) {
+
+          auto new_element = func();
+
+          // check that we do not repeat any entry
+          if (user_registered_size() != 0) {
+            auto cend = user_registered_cend();
+            if (std::find_if(user_registered_cbegin(), cend,
+                             [&new_element](element_type const &el) {
+                               return (el.name() == new_element.name() ||
+                                       el.pdg_id() == new_element.pdg_id());
+                             }) != cend)
+              throw reactions::database_error(
+                  (std::string{"User-defined element clashes with database "
+                               "element: \""} +
+                   new_cache.back().name() + "\"")
+                      .c_str());
+          }
+
+          new_cache.emplace_back(std::move(new_element));
+        }
+
+        // insert the elements and assign the separator to the number of
+        // database elements
+        new_cache.insert(new_cache.end(),
+                         std::make_move_iterator(user_registered_cbegin()),
+                         std::make_move_iterator(user_registered_cend()));
+        m_separator = n;
+        m_vector = std::move(new_cache);
+      }
+
+      /// Add a new element (by the user)
+      template <class... Args>
+      element_type const &add_user_element(Args &&... args) {
+        element_type new_element{std::forward<Args>(args)...};
+        auto e = end();
+        if (std::find_if(begin(), e,
+                         [this, &new_element](element_type const &el) {
+                           return (el.name() == new_element.name() ||
+                                   el.pdg_id() == new_element.pdg_id());
+                         }) != e) {
+          throw reactions::database_error(
+              (std::string{"User-registered element clashes: \""} +
+               new_element.name() + "\"")
+                  .c_str());
+        }
+        m_vector.emplace_back(std::move(new_element));
+        return m_vector.back();
+      }
+
+    protected:
+      /// Collection of elements
+      cache_type m_vector;
+
+      /// Index that defines elements registered by the user and those read from
+      /// the database
+      size_type m_separator = 0;
+
+    } m_cache; /// Cache for elements loaded from the database or registered by
+               /// the user
+
+    /// Open the database
+    std::ifstream open_database() const {
+
+      if (m_db.empty())
+        throw reactions::database_error("The database has not been specified");
+
+      std::ifstream file;
+
+      try {
+        file.open(m_db);
+      } catch (...) {
+        throw reactions::database_error("Unable to access the database");
+      }
+
+      if (!file.is_open())
+        throw reactions::database_error("Unable to access the database");
+
+      return file;
     }
 
-    /// Convert a range of characters to string
-    conversion_status string_to_type(std::string &out, std::string const &s) {
+    /// Skip lines with comments (preceeded by *)
+    std::streampos skip_commented_lines(std::ifstream &file) const {
 
-      out = s;
+      char c;
+      while (true) {
+        file.get(c);
+        if (c == '*')
+          file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        else
+          break;
+      }
+      file.unget();
 
-      if (out.size() == 0)
-        return empty;
-      else
-        return success;
+      return file.tellg();
     }
-  } // namespace detail
 
-  /// Read a field in a line from a file
-  template <class Range, class T>
-  conversion_status read_field(T &out, std::string const &s) {
-    // std::from_chars is not correctly implemented in GCC, and
-    // we can not work with std::string_view objects
-    auto b = s.find_first_not_of(' ', Range::min);
+    /// Read a field with the given index from a line
+    template <std::size_t I>
+    bool read_field(typename element_type::base_type &tuple,
+                    std::string const &line) const {
 
-    if (b >= Range::max)
-      return empty;
+      using field = std::tuple_element_t<I, typename element_type::fields_type>;
 
-    auto e = s.find_last_not_of(' ', Range::max) + 1;
+      if constexpr (fields::is_optional_field_v<field>) {
 
-    return detail::string_to_type(out, s.substr(b, e - b));
-  }
+        typename field::value_type::value_type value;
 
-  /// Read a field composed by value and an error in a line from a file
-  template <class Ranges, class T>
-  conversion_status read_field(value_and_error<T> &out, std::string const &s) {
-    // std::from_chars is not correctly implemented in GCC, and
-    // we can not work with std::string_view objects
-    static_assert(std::tuple_size_v<Ranges> == 3);
+        auto sc = reactions::fields::read_field<typename field::range_type>(
+            value, line);
 
-    auto b = s.find_first_not_of(' ', std::tuple_element_t<0, Ranges>::min);
+        if (sc == reactions::fields::conversion_status::success)
+          std::get<I>(tuple).emplace(value);
 
-    if (b >= std::tuple_element_t<1, Ranges>::max)
-      return empty;
+        return sc != reactions::fields::conversion_status::failed;
+      } else
+        return reactions::fields::read_field<typename field::range_type>(
+                   std::get<I>(tuple), line) !=
+               reactions::fields::conversion_status::failed;
+    }
 
-    auto value_sc = detail::string_to_type(
-        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
-                            std::tuple_element_t<0, Ranges>::max));
-    auto error_sc = detail::string_to_type(
-        out.error, s.substr(std::tuple_element_t<1, Ranges>::min,
-                            std::tuple_element_t<1, Ranges>::max));
+    /// Read all the fields from a line
+    template <std::size_t... I>
+    bool read_line(typename element_type::base_type &tuple,
+                   std::string const &line, std::index_sequence<I...>) const {
+      return (read_field<I>(tuple, line) && ...);
+    }
 
-    if (value_sc == empty || error_sc == empty)
-      return failed; // either all are defined or none
-    else if (value_sc == failed || error_sc == failed)
-      return failed;
-    else
-      return success;
-  }
+    /// Read all the fields from a line
+    bool read_line(typename element_type::base_type &tuple,
+                   std::string const &line) const {
+      return read_line(
+          tuple, line,
+          std::make_index_sequence<element_type::number_of_fields>());
+    }
 
-  /// Read a field composed by value and an error in a line from a file
-  template <class Ranges, class ValueType, class TagType>
-  conversion_status
-  read_field(value_and_error_with_tag<ValueType, TagType> &out,
-             std::string const &s) {
-    // std::from_chars is not correctly implemented in GCC, and
-    // we can not work with std::string_view objects
-    static_assert(std::tuple_size_v<Ranges> == 3);
+    /// Advance to the next element in the file and read it
+    element_type read_element(std::string const &line) const {
 
-    auto b = s.find_first_not_of(' ', std::tuple_element_t<0, Ranges>::min);
+      typename element_type::base_type tuple;
 
-    if (b >= std::tuple_element_t<2, Ranges>::max)
-      return empty;
+      if (!read_line(tuple, line))
+        throw reactions::database_error(
+            "Error reading the database; data format not understood");
 
-    auto value_sc = detail::string_to_type(
-        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
-                            std::tuple_element_t<0, Ranges>::max));
-    auto error_sc = detail::string_to_type(
-        out.error, s.substr(std::tuple_element_t<1, Ranges>::min,
-                            std::tuple_element_t<1, Ranges>::max));
-    auto tag_sc = detail::string_to_type(
-        out.tag, s.substr(std::tuple_element_t<2, Ranges>::min,
-                          std::tuple_element_t<2, Ranges>::max));
+      return tuple;
+    }
 
-    if (value_sc == empty || error_sc == empty || tag_sc == empty)
-      return failed; // either all are defined or none
-    else if (value_sc == failed || error_sc == failed || tag_sc == failed)
-      return failed;
-    else
-      return success;
-  }
+    /// Access an element using the field accessor
+    template <class Field, class T> element_type access(T const &v) const {
 
-  /// Read a field composed by value and errors in a line from a file
-  template <class Ranges, class T>
-  conversion_status read_field(value_and_errors<T> &out, std::string const &s) {
-    // std::from_chars is not correctly implemented in GCC, and
-    // we can not work with std::string_view objects
-    static_assert(std::tuple_size_v<Ranges> == 3);
+      switch (m_cache.status()) {
+      case (cache::full): // the full database is loaded
 
-    auto b = s.find_first_not_of(' ', std::tuple_element_t<0, Ranges>::min);
+        for (auto const &el : m_cache)
+          if (el.template get<Field>() == v)
+            return el;
 
-    if (b >= std::tuple_element_t<2, Ranges>::max)
-      return empty;
+        break; // throws an exception
 
-    auto value_sc = detail::string_to_type(
-        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
-                            std::tuple_element_t<0, Ranges>::max));
-    auto error_lower_sc = detail::string_to_type(
-        out.error_lower, s.substr(std::tuple_element_t<1, Ranges>::min,
-                                  std::tuple_element_t<1, Ranges>::max));
-    auto error_upper_sc = detail::string_to_type(
-        out.error_upper, s.substr(std::tuple_element_t<2, Ranges>::min,
-                                  std::tuple_element_t<2, Ranges>::max));
+      case (cache::user): // only user-registered entries exist
 
-    if (value_sc == empty || error_lower_sc == empty || error_upper_sc == empty)
-      return failed; // either all are defined or none
-    else if (value_sc == failed || error_lower_sc == failed ||
-             error_upper_sc == failed)
-      return failed;
-    else
-      return success;
-  }
+        for (auto const &el : m_cache)
+          if (el.template get<Field>() == v)
+            return el;
 
-  /// Access the subtype of a set of fields
-  template <class Field, class... Subfield> struct field_member_type {
-    using type =
-        type_of_t<remove_optional_t<typename Field::value_type>, Subfield...>;
+        [[fallthrough]]; // continue as if we had no cache
+
+      case (cache::empty): // the cache is empty
+
+        auto file = open_database();
+
+        skip_commented_lines(file);
+
+        std::string line;
+
+        while (std::getline(file, line)) {
+
+          typename Field::value_type ref;
+          auto sc = reactions::fields::read_field<typename Field::range_type>(
+              ref, line);
+
+          if (sc == reactions::fields::failed)
+            throw reactions::database_error(
+                "Error reading the database; data format not understood");
+
+          if (ref == v) {
+            element_type el = read_element(line);
+            file.close();
+            return el;
+          }
+        }
+
+        file.close();
+      }
+
+      throw reactions::lookup_error(
+          (std::string{"Unable to find element with "} + Field::title + " \"" +
+           fields::to_string(v) + '"')
+              .c_str());
+    }
+
+    database(std::string &&db) : m_db{std::move(db)} {}
+    database(database &&) = delete;
+    database(database const &) = delete;
+    void operator=(database &&) = delete;
+    void operator=(database const &) = delete;
   };
-
-  /// \copydoc field_member_type
-  template <class Field> struct field_member_type<Field> {
-    using type = remove_optional_t<typename Field::value_type>;
-  };
-
-  /// \copydoc field_member_type
-  template <class Field, class... Subfield>
-  using field_member_type_t =
-      typename field_member_type<Field, Subfield...>::type;
-
-  /// Convert the given object to a string
-  template <class T> std::string to_string(T const &v) {
-    return std::to_string(v);
-  }
-
-  /// \copydoc to_string
-  template <> std::string to_string(std::string const &v) { return v; }
 } // namespace reactions::database

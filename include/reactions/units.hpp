@@ -154,9 +154,9 @@ namespace reactions {
     /// Whether a type can be affected by units
     template <class T> struct is_type_affected_by_units {
       static constexpr auto value =
-          (std::is_class_v<std::decay_t<database::remove_optional_t<T>>> ||
+          (std::is_class_v<std::decay_t<fields::remove_optional_t<T>>> ||
            std::is_floating_point_v<
-               std::decay_t<database::remove_optional_t<T>>>);
+               std::decay_t<fields::remove_optional_t<T>>>);
     };
 
     /// \copydoc is_type_affected_by_units
@@ -169,7 +169,7 @@ namespace reactions {
       static constexpr auto value =
           !std::is_same_v<typename Field::units_reference_type, units::none> &&
           is_type_affected_by_units_v<
-              database::field_member_type_t<Field, Subfield...>>;
+              fields::field_member_type_t<Field, Subfield...>>;
     };
 
     /// \copydoc has_units
@@ -187,8 +187,8 @@ namespace reactions {
     template <class Field, class... Subfield> struct return_type {
       using type = std::conditional_t<
           has_units_v<Field, Subfield...>,
-          database::field_member_type_t<Field, Subfield...>,
-          database::field_member_type_t<Field, Subfield...> const &>;
+          fields::field_member_type_t<Field, Subfield...>,
+          fields::field_member_type_t<Field, Subfield...> const &>;
     };
 
     /// \copydoc return_type
@@ -206,7 +206,7 @@ namespace reactions {
     template <class Field> struct accessor_t<Field> {
       /// Access a value and process the units
       template <class T> constexpr auto const &operator()(T const &f) const {
-        if constexpr (database::is_optional_v<T>)
+        if constexpr (fields::is_optional_v<T>)
           return f.value();
         else
           return f;
@@ -218,13 +218,13 @@ namespace reactions {
     struct accessor_t<Field, Subfield, S...> {
       /// \copydoc accessor_t::operator()
       template <class T>
-      constexpr database::field_member_type_t<Field, Subfield, S...> const &
+      constexpr fields::field_member_type_t<Field, Subfield, S...> const &
       operator()(T const &f) const {
 
-        if constexpr (database::is_optional_v<T>)
-          return accessor<Field, S...>(database::get<Subfield>(f.value()));
+        if constexpr (fields::is_optional_v<T>)
+          return accessor<Field, S...>(fields::get<Subfield>(f.value()));
         else
-          return accessor<Field, S...>(database::get<Subfield>(f));
+          return accessor<Field, S...>(fields::get<Subfield>(f));
       }
     };
 

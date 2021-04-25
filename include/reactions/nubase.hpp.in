@@ -6,6 +6,7 @@
 
 #include "reactions/database.hpp"
 #include "reactions/exceptions.hpp"
+#include "reactions/fields.hpp"
 #include "reactions/pow_enum.hpp"
 #include "reactions/tokens.hpp"
 #include "reactions/units.hpp"
@@ -27,11 +28,11 @@ namespace reactions {
 
     /// Range of a variable in a file
     template <std::size_t Min, std::size_t Max>
-    using range = reactions::database::range<Min, Max>;
+    using range = reactions::fields::range<Min, Max>;
 
     /// Range of a composite variable in a file
     template <class... R>
-    using range_collection = reactions::database::range_collection<R...>;
+    using range_collection = reactions::fields::range_collection<R...>;
 
     /// Field for the name
     struct name {
@@ -64,7 +65,7 @@ namespace reactions {
     /// Field for the mass excess
     struct mass_excess {
       static constexpr const char *title = "mass_excess";
-      using value_type = database::vet_double_opt<bool>;
+      using value_type = fields::vet_double_opt<bool>;
       using units_reference_type =
           units::reference<energy_units, energy_units::keV>;
       using range_type =
@@ -80,7 +81,7 @@ namespace reactions {
     /// Field for the half life
     struct half_life {
       static constexpr const char *title = "half_life";
-      using value_type = database::vet_double_opt<bool>;
+      using value_type = fields::vet_double_opt<bool>;
       using units_reference_type =
           units::reference<time_units, time_units::sec>;
       using range_type =
@@ -165,8 +166,7 @@ namespace reactions {
                  nubase::is_ground_state>;
 
   /// Base class of a NuBase element
-  using nubase_element_base =
-      database::underlying_types_t<nubase_element_fields>;
+  using nubase_element_base = fields::underlying_types_t<nubase_element_fields>;
 
   /*! \brief An element based on the NuBase database
    */
@@ -177,14 +177,15 @@ namespace reactions {
     using base_type = nubase_element_base;
 
     /// Fields of the element
-    using fields = nubase_element_fields;
+    using fields_type = nubase_element_fields;
 
     /// Number of data fields
     static const size_t number_of_fields = std::tuple_size_v<base_type>;
 
     /// Size of the line (in characters) associated to this class
-    static constexpr auto line_size = reactions::database::overall_range_t<
-        std::tuple_element_t<number_of_fields - 1, fields>::range_type>::max;
+    static constexpr auto line_size =
+        reactions::fields::overall_range_t<std::tuple_element_t<
+            number_of_fields - 1, fields_type>::range_type>::max;
 
     nubase_element() = delete;
     explicit nubase_element(nubase_element const &) = default;
@@ -229,16 +230,17 @@ namespace reactions {
       if constexpr (units::has_units_v<Field, Subfield...>)
         return units::accessor_with_units<Field, Subfield...>(
             nubase_system_of_units::instance(),
-            std::get<utils::tuple_index_v<Field, fields>>(*this));
+            std::get<utils::tuple_index_v<Field, fields_type>>(*this));
       else
         return units::accessor<Field, Subfield...>(
-            std::get<utils::tuple_index_v<Field, fields>>(*this));
+            std::get<utils::tuple_index_v<Field, fields_type>>(*this));
     }
 
     /// Check whether the given field information is missing or not
     template <class Field> constexpr bool has() const {
-      if constexpr (database::is_optional_field_v<Field>)
-        return std::get<utils::tuple_index_v<Field, fields>>(*this).has_value();
+      if constexpr (fields::is_optional_field_v<Field>)
+        return std::get<utils::tuple_index_v<Field, fields_type>>(*this)
+            .has_value();
       else
         return true;
     }
@@ -334,7 +336,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double mass_excess() const {
-      return get<nubase::mass_excess, database::value>();
+      return get<nubase::mass_excess, fields::value>();
     }
 
     /// Whether the mass and its errors are defined or not
@@ -347,7 +349,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double mass_excess_error() const {
-      return get<nubase::mass_excess, database::error>();
+      return get<nubase::mass_excess, fields::error>();
     }
 
     /*! \brief Get the width of the element.
@@ -356,9 +358,7 @@ namespace reactions {
      * member function, otherwise a \ref
      * reactions::missing_fields_error is thrown.
      */
-    double half_life() const {
-      return get<nubase::half_life, database::value>();
-    }
+    double half_life() const { return get<nubase::half_life, fields::value>(); }
 
     /// Whether the width and its errors are defined or not
     bool has_half_life() const { return has<nubase::half_life>(); }
@@ -370,7 +370,7 @@ namespace reactions {
      * reactions::missing_fields_error is thrown.
      */
     double half_life_error() const {
-      return get<nubase::half_life, database::error>();
+      return get<nubase::half_life, fields::error>();
     }
 
     /// Whether the element is its own charge-conjugate
@@ -380,103 +380,14 @@ namespace reactions {
   /*! \brief Database of elements with the NuBase information
    *
    */
-  class nubase_database final {
+  class nubase_database final
+      : public reactions::database::database<nubase_element, nubase::name,
+                                             nubase::nubase_id> {
 
   public:
-    /*! \brief All the elements in the database file
-     *
-     * Calling this function does not alter the cache. If the cache is
-     * enabled a copy of its content is returned. If not, elements are
-     * read from the database file.
-     *
-     * This function returns the elements in the database and those registered
-     * by the user.
-     */
-    std::vector<nubase_element> all_elements() const {
-
-      std::vector<nubase_element> out;
-
-      switch (m_cache.status()) {
-
-      case (cache::full):
-
-        out.insert(out.end(), m_cache.begin(), m_cache.end());
-        return out;
-
-      default:
-
-        // open the database to count the number of lines
-        auto file = open_database();
-
-        auto start = skip_commented_lines(file);
-
-        std::size_t count = 0;
-        while (
-            file.ignore(nubase_element::line_size + 1)) // include end-of-line
-          ++count;
-
-        file.clear(); // we reached the end of the file
-
-        // go back to the start of the table and read the elements
-        file.seekg(start);
-
-        out.reserve(count + m_cache.size());
-
-        for (auto i = 0u; i < count; ++i) {
-          std::string line;
-          std::getline(file, line);
-          out.emplace_back(read_element(line));
-        }
-
-        if (m_cache.size())
-          out.insert(out.end(), m_cache.begin(), m_cache.end());
-
-        file.close();
-      }
-
-      return out;
-    }
-
-    /// Clear the cache, removing also user-registered elements
-    void clear_cache() { m_cache.clear(); }
-
-    /// Disable the cache
-    void disable_cache() { m_cache.clear_database_elements(); }
-
-    /* \brief Enable the internal cache.
-     *
-     * All the values in the database will be read an stored in a internal
-     * cache. This will speed-up the code, with the caveat of consuming some
-     * memory.
-     */
-    void enable_cache() {
-
-      if (m_cache.status() == cache::full)
-        return;
-
-      // open the database to count the number of lines
-      auto file = open_database();
-
-      auto start = skip_commented_lines(file);
-
-      std::size_t count = 0;
-      while (file.ignore(nubase_element::line_size + 1)) // include end-of-line
-        ++count;
-
-      file.clear(); // we reached the end of the file
-
-      // go back to the start of the table and read the elements
-      file.seekg(start);
-
-      std::string line;
-      m_cache.add_database_elements(count,
-                                    [this, &file, &line]() -> nubase_element {
-                                      std::getline(file, line);
-                                      return read_element(line);
-                                    });
-
-      file.close();
-    }
+    using base_type =
+        reactions::database::database<nubase_element, nubase::name,
+                                      nubase::nubase_id>;
 
     /// Get the only instance of this class
     static nubase_database &instance() {
@@ -496,402 +407,27 @@ namespace reactions {
      * during its computation), the element name must follow the following
      * convention:
      *
-     * - The name starts with a set of characters. A capital letter followed by
-     * lowercase letters or a set of lowercase letters are considered as a Greek
-     * letter.
-     * - The base name can be followed by a set of modifiers indicating the
-     * flavour, mass eigenstate or spin of the particle, between parenthesis.
-     * - After, it is possible to indicate that the particle has a sligh
-     * variation with respect to another existing particle or that it
-     * corresponds to an excited state, in which it should be indicated with one
-     * or various prime symbols for the first case, or an asterisk for the
-     * second.
-     * - The mass can be indicated between two parentheses as an integral
-     * number.
-     * - The last part of the name is composed by the possible anti-particle
-     * marker, specified with a tilde, and the charge, which can be 0, + or -.
+     * - The name starts with the mass number
+     * - The mass number is followed by the element name
+     * - A possible isomer state identifier can be added between parentheses.
      *
-     * There is no official naming scheme for the NuBase particles, but the
-     * following guidelines can be used in order to get the most common way of
-     * naming the particles:
-     *
-     * - Quarks are specified with a single character, and anti-quarks extend
-     * this name by adding a tilde.
-     * - If the name refers to a gauge boson, it must only contain the charge if
-     * it is named with a captial letter.
-     * - Hadrons only contain the charge if there are other entries in the
-     * database with the same name. In the case of mesons, they also contain the
-     * charge if the particle is not self charge-conjugate.
-     * - Particle names referring to mass-eigenstates contain the charge if
-     * the corresponding flavour eigenstates do.
-     * - The anti-particles of mesons where the charge is in the name are
-     * specified using the opposite charge. For the rest, anti-particles are
-     * specified by including a tilde before the charge or at the end of the
-     * name, where adecuate.
      */
     template <class... Args> void register_element(Args &&... args) {
-
-      nubase_element new_element{std::forward<Args>(args)...};
-
-      // If the cache is enabled, the checks are done within the cache object,
-      // otherwise we must check the database
-      if (m_cache.status() != cache::full) {
-
-        auto file = open_database();
-
-        skip_commented_lines(file);
-
-        std::string line;
-
-        while (std::getline(file, line)) {
-
-          nubase::name::value_type name;
-          if (reactions::database::read_field<nubase::name::range_type>(
-                  name, line) == reactions::database::failed)
-            throw reactions::database_error(
-                "Error reading NuBase database; data format not understood");
-
-          if (new_element.name() == name)
-            throw reactions::database_error(
-                "Attempt to register an element with similar name to an "
-                "element in the database");
-
-          nubase::nubase_id::value_type nubase_id;
-          if (reactions::database::read_field<nubase::nubase_id::range_type>(
-                  nubase_id, line) == reactions::database::failed)
-            throw reactions::database_error(
-                "Error reading NuBase database; data format not understood");
-
-          if (new_element.nubase_id() == nubase_id)
-            throw reactions::database_error(
-                "Attempt to register an element with similar NuBase ID to an "
-                "element in the database");
-        }
-      }
-
-      // this must be done after the checks are done to prevent leaving
-      // the cache in an invalid state
-      m_cache.add_user_element(std::move(new_element));
-    }
-
-    /* \brief Set the path to the database file.
-     *
-     * If the cache is enabled, reloads the content using the new path.
-     */
-    void set_database_path(std::string const &s) {
-      m_db = s;
-      if (m_cache.status() == cache::full) {
-        disable_cache();
-        enable_cache();
-      }
+      return base_type::register_element(std::move(args)...);
     }
 
     /// Create an element accessing by ID
-    nubase_element operator()(int id) const {
+    nubase_element operator()(int id) const override {
       return access<nubase::nubase_id>(id);
     }
 
     /// Create an element accessing by name
-    nubase_element operator()(std::string const &str) const {
+    nubase_element operator()(std::string const &str) const override {
       return access<nubase::name>(str);
     }
 
   private:
-    /// Path to the database file
-    std::string m_db = "@NUBASE_TABLE@";
-
-    /// \brief Cache of NuBase elements
-    class cache {
-
-    public:
-      /// Code to define the status of the cache
-      enum cache_status { empty, user, full };
-
-      using cache_type = std::vector<nubase_element>;
-      using const_iterator_type = cache_type::const_iterator;
-      using size_type = cache_type::size_type;
-
-      cache() = default;
-
-      /// Clear the cache
-      void clear() {
-        m_vector.clear();
-        m_vector.shrink_to_fit();
-        m_separator = 0;
-      }
-
-      /// Clear the cache
-      void clear_database_elements() {
-        m_vector.erase(database_cbegin(), database_cend());
-        m_vector.shrink_to_fit();
-        m_separator = 0;
-      }
-
-      /// Status of the cache
-      cache_status status() const {
-        if (m_vector.size()) {
-          if (database_size() == 0)
-            return cache_status::user;
-          else
-            return cache_status::full;
-        } else
-          return cache_status::empty;
-      }
-
-      /// Underlying vector of elements
-      cache_type const &elements() const { return m_vector; }
-
-      /// Underlying vector of elements
-      cache_type &elements() { return m_vector; }
-
-      /// Begining of the cache
-      const_iterator_type begin() const { return m_vector.cbegin(); }
-
-      /// End of the cache
-      const_iterator_type end() const { return m_vector.cend(); }
-
-      /// Begining of the database elements
-      const_iterator_type database_cbegin() const { return m_vector.cbegin(); }
-
-      /// End of the database elements
-      const_iterator_type database_cend() const {
-        return m_vector.cbegin() + m_separator;
-      }
-
-      /// Begining of the user-registered elements
-      const_iterator_type user_registered_cbegin() const {
-        return database_cend();
-      }
-
-      /// End of the user-registered elements
-      const_iterator_type user_registered_cend() const {
-        return m_vector.cend();
-      }
-
-      /// Number of elements associated to the database
-      size_type database_size() const { return m_separator; }
-
-      /// Number of user-registered elements
-      size_type user_registered_size() const {
-        return m_vector.size() - m_separator;
-      }
-
-      /// Number of cached elements
-      size_type size() const { return m_vector.size(); }
-
-      /// Add elements from a database by calling the given function several
-      /// times
-      template <class ElementReader>
-      void add_database_elements(size_type n, ElementReader func) {
-
-        cache_type new_cache;
-        new_cache.reserve(n + user_registered_size());
-
-        for (auto i = 0u; i < n; ++i) {
-
-          auto new_element = func();
-
-          // check that we do not repeat any entry
-          if (user_registered_size() != 0) {
-            auto cend = user_registered_cend();
-            if (std::find_if(user_registered_cbegin(), cend,
-                             [&new_element](nubase_element const &el) {
-                               return (el.name() == new_element.name() ||
-                                       el.nubase_id() ==
-                                           new_element.nubase_id());
-                             }) != cend)
-              throw reactions::database_error(
-                  (std::string{"User-defined element clashes with database "
-                               "element: \""} +
-                   new_cache.back().name() + "\"")
-                      .c_str());
-          }
-
-          new_cache.emplace_back(std::move(new_element));
-        }
-
-        // insert the elements and assign the separator to the number of
-        // database elements
-        new_cache.insert(new_cache.end(),
-                         std::make_move_iterator(user_registered_cbegin()),
-                         std::make_move_iterator(user_registered_cend()));
-        m_separator = n;
-        m_vector = std::move(new_cache);
-      }
-
-      /// Add a new element (by the user)
-      template <class... Args>
-      nubase_element const &add_user_element(Args &&... args) {
-        nubase_element new_element{std::forward<Args>(args)...};
-        auto e = end();
-        if (std::find_if(begin(), e,
-                         [this, &new_element](nubase_element const &el) {
-                           return (el.name() == new_element.name() ||
-                                   el.nubase_id() == new_element.nubase_id());
-                         }) != e) {
-          throw reactions::database_error(
-              (std::string{"User-registered element clashes: \""} +
-               new_element.name() + "\"")
-                  .c_str());
-        }
-        m_vector.emplace_back(std::move(new_element));
-        return m_vector.back();
-      }
-
-    protected:
-      /// Collection of elements
-      cache_type m_vector;
-
-      /// Index that defines elements registered by the user and those read from
-      /// the database
-      size_type m_separator = 0;
-
-    } m_cache; /// Cache for elements loaded from the database or registered by
-               /// the user
-
-    /// Open the database
-    std::ifstream open_database() const {
-
-      if (m_db.empty())
-        throw reactions::database_error(
-            "The NuBase database has not been specified");
-
-      std::ifstream file;
-
-      try {
-        file.open(m_db);
-      } catch (...) {
-        throw reactions::database_error("Unable to access the database");
-      }
-
-      if (!file.is_open())
-        throw reactions::database_error("Unable to access the database");
-
-      return file;
-    }
-
-    /// Skip lines with comments (preceeded by *)
-    std::streampos skip_commented_lines(std::ifstream &file) const {
-
-      char c;
-      while (true) {
-        file.get(c);
-        if (c == '*')
-          file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        else
-          break;
-      }
-      file.unget();
-
-      return file.tellg();
-    }
-
-    /// Read a field with the given index from a line
-    template <std::size_t I>
-    bool read_field(nubase_element::base_type &tuple,
-                    std::string const &line) const {
-
-      using field = std::tuple_element_t<I, nubase_element::fields>;
-
-      if constexpr (database::is_optional_field_v<field>) {
-
-        typename field::value_type::value_type value;
-
-        auto sc = reactions::database::read_field<typename field::range_type>(
-            value, line);
-
-        if (sc == reactions::database::conversion_status::success)
-          std::get<I>(tuple).emplace(value);
-
-        return sc != reactions::database::conversion_status::failed;
-      } else
-        return reactions::database::read_field<typename field::range_type>(
-                   std::get<I>(tuple), line) !=
-               reactions::database::conversion_status::failed;
-    }
-
-    /// Read all the fields from a line
-    template <std::size_t... I>
-    bool read_line(nubase_element::base_type &tuple, std::string const &line,
-                   std::index_sequence<I...>) const {
-      return (read_field<I>(tuple, line) && ...);
-    }
-
-    /// Read all the fields from a line
-    bool read_line(nubase_element::base_type &tuple,
-                   std::string const &line) const {
-      return read_line(
-          tuple, line,
-          std::make_index_sequence<nubase_element::number_of_fields>());
-    }
-
-    /// Advance to the next element in the file and read it
-    nubase_element read_element(std::string const &line) const {
-
-      nubase_element::base_type tuple;
-
-      if (!read_line(tuple, line))
-        throw reactions::database_error(
-            "Error reading NuBase database; data format not understood");
-
-      return tuple;
-    }
-
-    /// Access an element using the field accessor
-    template <class Field, class T> nubase_element access(T const &v) const {
-
-      switch (m_cache.status()) {
-      case (cache::full): // the full database is loaded
-
-        for (auto const &el : m_cache)
-          if (el.get<Field>() == v)
-            return el;
-
-        break; // throws an exception
-
-      case (cache::user): // only user-registered entries exist
-
-        for (auto const &el : m_cache)
-          if (el.get<Field>() == v)
-            return el;
-
-        [[fallthrough]]; // continue as if we had no cache
-
-      case (cache::empty): // the cache is empty
-
-        auto file = open_database();
-
-        skip_commented_lines(file);
-
-        std::string line;
-
-        while (std::getline(file, line)) {
-
-          typename Field::value_type ref;
-          auto sc = reactions::database::read_field<typename Field::range_type>(
-              ref, line);
-
-          if (sc == reactions::database::failed)
-            throw reactions::database_error(
-                "Error reading NuBase database; data format not understood");
-
-          if (ref == v) {
-            nubase_element el = read_element(line);
-            file.close();
-            return el;
-          }
-        }
-
-        file.close();
-      }
-
-      throw reactions::lookup_error(
-          (std::string{"Unable to find element with "} + Field::title + " \"" +
-           database::to_string(v) + '"')
-              .c_str());
-    }
-
-    nubase_database() {}
+    nubase_database() : base_type{"@NUBASE_TABLE@"} {}
     nubase_database(nubase_database &&) = delete;
     nubase_database(nubase_database const &) = delete;
     void operator=(nubase_database &&) = delete;
