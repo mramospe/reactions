@@ -152,8 +152,9 @@ int main() {
 
           c3.get<nubase::mass_excess>(); // simply try to get it
 
-          if (c1.has_mass() || c1.has_half_life() || !c2.has_mass() ||
-              c2.has_half_life() || !c3.has_mass() || !c3.has_half_life())
+          if (c1.has_mass_excess() || c1.has_half_life() ||
+              !c2.has_mass_excess() || c2.has_half_life() ||
+              !c3.has_mass_excess() || !c3.has_half_life())
             errors.push_back("Problems found building custom NUBASE elements");
 
           auto check_latex_name = [&db, &errors](std::string const &name,
