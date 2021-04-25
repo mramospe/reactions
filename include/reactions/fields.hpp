@@ -153,7 +153,7 @@ namespace reactions::fields {
 
     /// Build the class with forwarded arguments
     template <class Value, class Error>
-    value_and_error(Value &&value_, Error &&error_)
+    value_and_error(Value value_, Error error_)
         : value(value_), error(error_) {}
     /// Build the class from a field constant expression
     template <class Value, class Error>
@@ -171,14 +171,13 @@ namespace reactions::fields {
   struct value_and_error_with_tag : value_and_error<ValueType> {
 
     using base_type = value_and_error<ValueType>;
-    using value_type = ValueType;
 
     /// Empty constructor
     value_and_error_with_tag() : base_type{} {};
 
     /// Build the class with forwarded arguments
     template <class Value, class Error>
-    value_and_error_with_tag(Value &&value_, Error &&error_, TagType &&tag_)
+    value_and_error_with_tag(Value value_, Error error_, TagType tag_)
         : base_type{value_, error_}, tag(tag_) {}
     /// Build the class from a field constant expression
     template <class Value, class Error>
@@ -203,8 +202,8 @@ namespace reactions::fields {
     value_and_errors() = default;
     /// Build the class with forwarded arguments
     template <class Value, class ErrorLower, class ErrorUpper>
-    value_and_errors(Value &&value_, ErrorLower &&error_lower_,
-                     ErrorUpper &&error_upper_)
+    value_and_errors(Value value_, ErrorLower error_lower_,
+                     ErrorUpper error_upper_)
         : value(value_), error_lower(error_lower_), error_upper(error_upper_) {}
     /// Build the class from a field constant expression
     template <class Value, class ErrorLower, class ErrorUpper>

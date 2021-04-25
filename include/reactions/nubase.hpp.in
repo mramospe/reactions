@@ -269,7 +269,7 @@ namespace reactions {
 
       // parse the mass number
       while (count != size) {
-        if (ref[count] >= '0' && ref[count] < '9')
+        if (ref[count] >= '0' && ref[count] <= '9')
           out.push_back(ref[count++]);
         else {
           out.push_back('}');
@@ -279,7 +279,7 @@ namespace reactions {
 
       // parse the name
       while (count != size) {
-        if (ref[count] >= 'A' && ref[count] < 'z')
+        if (ref[count] >= 'A' && ref[count] <= 'z')
           out.push_back(ref[count++]);
         else
           break;
@@ -292,10 +292,12 @@ namespace reactions {
 
         ++count;
 
-        while (count != size && ref[++count] != ')')
-          out.push_back(ref[count]);
+        while (count != size && ref[count] != ')')
+          out.push_back(ref[count++]);
 
-        if (count == size)
+        ++count;
+
+        if (count > size)
           throw internal_error("Missing parenthesis in name");
 
         out.push_back('}');
