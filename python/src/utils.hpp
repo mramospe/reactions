@@ -47,10 +47,10 @@ namespace reactions::python {
 
   /// \copydoc to_string_t
   template <class T>
-  struct to_string_t<reactions::database::value_and_errors<T>> {
+  struct to_string_t<reactions::fields::value_and_errors<T>> {
     /// \copydoc to_string_t::operator()
     std::string
-    operator()(reactions::database::value_and_errors<T> const &vae) const {
+    operator()(reactions::fields::value_and_errors<T> const &vae) const {
       return std::string{"(value="} + to_string(vae.value) +
              std::string{", error_lower="} + to_string(vae.error_lower) +
              std::string{", error_upper="} + to_string(vae.error_upper) + ')';

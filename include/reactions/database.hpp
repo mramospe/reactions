@@ -8,6 +8,7 @@
 #include <tuple>
 #include <vector>
 
+#include "reactions/exceptions.hpp"
 #include "reactions/fields.hpp"
 
 namespace reactions::database {
