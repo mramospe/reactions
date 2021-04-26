@@ -1,8 +1,8 @@
 #pragma once
 
-#include "reactions/processes.hpp"
-
 #include <string>
+
+#include "reactions/processes.hpp"
 
 // Wrapper for a string element
 typedef struct {

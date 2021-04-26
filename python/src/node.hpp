@@ -1,9 +1,9 @@
 #pragma once
 
-#include "reactions/processes.hpp"
-
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+
+#include "reactions/processes.hpp"
 
 // Wrapper for a node
 typedef struct {

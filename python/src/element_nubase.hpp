@@ -3,7 +3,7 @@
 #include <tuple>
 
 #include "reactions/fields.hpp"
-#include "reactions/pdg.hpp"
+#include "reactions/nubase.hpp"
 
 #include "errors.hpp"
 #include "node.hpp"
@@ -137,7 +137,7 @@ static int ElementNuBase_init(ElementNuBase *self, PyObject *args,
       if (length < 1 || length > 3) {
         PyErr_SetString(PyExc_ValueError,
                         "Half-life argument must be a sequence "
-                        "of two floating point objects and a boolean");
+                        "of two floating point objects and a boolean or None");
         return -1;
       }
 

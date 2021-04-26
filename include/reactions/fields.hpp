@@ -463,12 +463,8 @@ namespace reactions::fields {
     if (b >= std::tuple_element_t<1, Ranges>::max)
       return empty;
 
-    auto value_sc = detail::string_to_type(
-        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
-                            std::tuple_element_t<0, Ranges>::max));
-    auto error_sc = detail::string_to_type(
-        out.error, s.substr(std::tuple_element_t<1, Ranges>::min,
-                            std::tuple_element_t<1, Ranges>::max));
+    auto value_sc = read_field<std::tuple_element_t<0, Ranges>>(out.value, s);
+    auto error_sc = read_field<std::tuple_element_t<1, Ranges>>(out.error, s);
 
     if (value_sc == empty || error_sc == empty)
       return failed; // either all are defined or none
@@ -492,15 +488,9 @@ namespace reactions::fields {
     if (b >= std::tuple_element_t<2, Ranges>::max)
       return empty;
 
-    auto value_sc = detail::string_to_type(
-        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
-                            std::tuple_element_t<0, Ranges>::max));
-    auto error_sc = detail::string_to_type(
-        out.error, s.substr(std::tuple_element_t<1, Ranges>::min,
-                            std::tuple_element_t<1, Ranges>::max));
-    auto tag_sc = detail::string_to_type(
-        out.tag, s.substr(std::tuple_element_t<2, Ranges>::min,
-                          std::tuple_element_t<2, Ranges>::max));
+    auto value_sc = read_field<std::tuple_element_t<0, Ranges>>(out.value, s);
+    auto error_sc = read_field<std::tuple_element_t<1, Ranges>>(out.error, s);
+    auto tag_sc = read_field<std::tuple_element_t<2, Ranges>>(out.tag, s);
 
     if (value_sc == empty || error_sc == empty || tag_sc == empty)
       return failed; // either all are defined or none
@@ -522,15 +512,11 @@ namespace reactions::fields {
     if (b >= std::tuple_element_t<2, Ranges>::max)
       return empty;
 
-    auto value_sc = detail::string_to_type(
-        out.value, s.substr(std::tuple_element_t<0, Ranges>::min,
-                            std::tuple_element_t<0, Ranges>::max));
-    auto error_lower_sc = detail::string_to_type(
-        out.error_lower, s.substr(std::tuple_element_t<1, Ranges>::min,
-                                  std::tuple_element_t<1, Ranges>::max));
-    auto error_upper_sc = detail::string_to_type(
-        out.error_upper, s.substr(std::tuple_element_t<2, Ranges>::min,
-                                  std::tuple_element_t<2, Ranges>::max));
+    auto value_sc = read_field<std::tuple_element_t<0, Ranges>>(out.value, s);
+    auto error_lower_sc =
+        read_field<std::tuple_element_t<1, Ranges>>(out.error_lower, s);
+    auto error_upper_sc =
+        read_field<std::tuple_element_t<2, Ranges>>(out.error_upper, s);
 
     if (value_sc == empty || error_lower_sc == empty || error_upper_sc == empty)
       return failed; // either all are defined or none

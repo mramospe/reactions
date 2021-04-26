@@ -5,6 +5,56 @@ import pytest
 import reactions
 
 
+def test_nubase_element():
+
+    # create an element from the database
+    el = reactions.nubase_element('1H')
+    assert reactions.node_type(el) == 'element'
+    assert el.name == '1H'
+    assert el.nubase_id == 1001000
+
+    el = reactions.nubase_element(1001000)
+    assert reactions.node_type(el) == 'element'
+
+    # check that empty values in C++ correspond to None in python
+    assert reactions.nubase_element('1H').half_life is None
+    assert reactions.nubase_element('1H').half_life_error is None
+    assert reactions.nubase_element('1H').half_life_from_systematics is None
+
+    # create a custom element
+    n0 = reactions.nubase_element(
+        '999Un', 999999000, 999, 999, (0., 0., False), False, None, True)
+    n1 = reactions.nubase_element(name='999Un', nubase_id=999999000, atomic_number=999, mass_number=999, mass_excess_and_error_with_tag=(
+        0., 0., False), half_life_and_error_with_tag=None, is_stable=True, is_ground_state=True)
+
+    assert n0 == n1
+
+    assert str(n0) == n0.__repr__()
+
+    # all these constructors must fail
+    with pytest.raises(TypeError):
+        reactions.nubase_element(0.0)
+
+    with pytest.raises(RuntimeError):
+        reactions.nubase_element('gamma', 1, 22)
+
+    with pytest.raises(RuntimeError):
+        reactions.nubase_element('gamma', 1, 22, nubase_id=22)
+
+    for e in reactions.nubase_database.all_elements():
+        # we must be able to compute all the LaTeX names
+        e.latex_name
+
+    # test LaTeX names
+    assert reactions.nubase_element("1H").latex_name == "\\ce{^{1}H}"
+    assert reactions.nubase_element("1n").latex_name == "\\ce{^{1}n}"
+    assert reactions.nubase_element("7Li(i)").latex_name == "\\ce{^{7}Li^{i}}"
+
+    # errors accessing elements
+    with pytest.raises(reactions.LookupError):
+        reactions.nubase_element('H')
+
+
 def test_pdg_element():
 
     # create an element from the database
@@ -48,9 +98,6 @@ def test_pdg_element():
 
     with pytest.raises(RuntimeError):
         reactions.pdg_element('gamma', 1, 22, pdg_id=22)
-
-    with pytest.raises(RuntimeError):
-        reactions.pdg_element(name='gamma', geant_id=1)
 
     # test the comparison operators
     assert reactions.pdg_element('pi+') == reactions.pdg_element(+211)

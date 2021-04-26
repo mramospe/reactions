@@ -1,9 +1,9 @@
 #pragma once
 
-#include "reactions/exceptions.hpp"
-
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
+
+#include "reactions/exceptions.hpp"
 
 // Definition of an error due to a missing database
 static PyObject *DatabaseError =

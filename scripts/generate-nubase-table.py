@@ -77,7 +77,10 @@ def parse_error(error):
 
 
 def parse_bool(value):
-    return f'{int(value):>{BOOL_SIZE}}'
+    if value:
+        return f'{int(value):>{BOOL_SIZE}}'
+    else:
+        return f'{value:>{BOOL_SIZE}}'
 
 
 def parse_az(value):
@@ -170,12 +173,15 @@ if __name__ == '__main__':
             mass_excess = line[MASS_EXCESS].strip()
             mass_excess_error = line[MASS_EXCESS_ERROR].strip()
 
-            if mass_excess.endswith('#'):
-                mass_excess = mass_excess[:-1]
-                mass_excess_error = mass_excess_error[:-1]
-                mass_excess_from_systematics = True
+            if not mass_excess:
+                mass_excess_from_systematics = ''
             else:
-                mass_excess_from_systematics = False
+                if mass_excess.endswith('#'):
+                    mass_excess = mass_excess[:-1]
+                    mass_excess_error = mass_excess_error[:-1]
+                    mass_excess_from_systematics = True
+                else:
+                    mass_excess_from_systematics = False
 
             half_life = line[HALF_LIFE].strip()
             half_life_units = line[HALF_LIFE_UNIT].strip()
@@ -183,12 +189,10 @@ if __name__ == '__main__':
 
             if half_life == 'stbl':
                 is_stable = True
-                half_life, half_life_error = '', ''
-                half_life_from_systematics = False
+                half_life, half_life_error, half_life_from_systematics = '', '', ''
             elif half_life == 'p-unst':
                 is_stable = False
-                half_life, half_life_error = '', ''
-                half_life_from_systematics = False
+                half_life, half_life_error, half_life_from_systematics = '', '', ''
             else:
                 is_stable = False
 
@@ -203,8 +207,7 @@ if __name__ == '__main__':
                     half_life = float(half_life)
                     half_life_error = float(half_life_error)
                 except:
-                    half_life, half_life_error = '', ''
-                    half_life_from_systematics = False
+                    half_life, half_life_error, half_life_from_systematics = '', '', ''
 
             if half_life:
                 half_life = float(half_life) * time_units[half_life_units]

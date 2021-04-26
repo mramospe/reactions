@@ -114,9 +114,9 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
 
       double value, error_lower, error_upper;
       if (!PyArg_ParseTuple(mass, "ddd", &value, &error_lower, &error_upper)) {
-        PyErr_SetString(
-            PyExc_ValueError,
-            "Mass argument must be a sequence of three floating point objects");
+        PyErr_SetString(PyExc_ValueError,
+                        "Mass argument must be a sequence of three floating "
+                        "point objects or None");
         return -1;
       }
 

@@ -1,14 +1,15 @@
 #pragma once
 
+#define PY_SSIZE_T_CLEAN
+#include "Python.h"
+
+#include "reactions/element_traits.hpp"
+#include "reactions/nubase.hpp"
+#include "reactions/pdg.hpp"
+
 #include "element.hpp"
 #include "errors.hpp"
 #include "node.hpp"
-
-#include "reactions/element_traits.hpp"
-#include "reactions/pdg.hpp"
-
-#define PY_SSIZE_T_CLEAN
-#include "Python.h"
 
 // default element type
 #define REACTIONS_PYTHON_DEFAULT_ELEMENT_TYPE "string"
@@ -132,6 +133,20 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
       auto reac = reactions::make_reaction_for<reactions::pdg_element>(
           str, [](std::string const &s) -> reactions::pdg_element {
             return reactions::pdg_database::instance()(s);
+          });
+      if (!python_node_fill_reaction(self, reac))
+        return -1;
+    }
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
+
+    break;
+  }
+  case (reactions::python::element_kind::nubase): {
+
+    try {
+      auto reac = reactions::make_reaction_for<reactions::nubase_element>(
+          str, [](std::string const &s) -> reactions::nubase_element {
+            return reactions::nubase_database::instance()(s);
           });
       if (!python_node_fill_reaction(self, reac))
         return -1;
@@ -408,6 +423,20 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
     break;
   }
+  case (reactions::python::element_kind::nubase): {
+
+    try {
+      auto dec = reactions::make_decay_for<reactions::nubase_element>(
+          str, [](std::string const &s) -> reactions::nubase_element {
+            return reactions::nubase_database::instance()(s);
+          });
+      if (!python_node_fill_decay(self, dec))
+        return -1;
+    }
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
+
+    break;
+  }
   case (reactions::python::element_kind::string): {
 
     try {
@@ -478,7 +507,8 @@ static PyObject *Decay_get_products(Decay *self, void *) {
 /// Properties of the Decay class
 static PyGetSetDef Decay_getsetters[] = {
     {"head", (getter)Decay_get_head, (setter)Decay_set_head,
-     "pdg_element or string_element: Element at the left hand-side of a decay",
+     "pdg_element, nubase_element or string_element: Element at the left "
+     "hand-side of a decay",
      NULL},
     {"products", (getter)Decay_get_products, NULL,
      "list(node): Objects at the right hand-side of a decay", NULL},
