@@ -86,6 +86,8 @@ def test_nubase_user_register():
                                      mass_excess_and_error_with_tag=None, is_stable=False, half_life_and_error_with_tag=None, is_ground_state=True)
         db.register_element(n)
 
+        assert n.name == "999Un"
+
         reactions.nubase_element(name="998Un", nubase_id=999998000, atomic_number=999, mass_number=998,
                                  mass_excess_and_error_with_tag=None, is_stable=False, half_life_and_error_with_tag=None, is_ground_state=True)
         db.register_element("997Un", 999997000, 999, 997,
@@ -115,6 +117,8 @@ def test_pdg_user_register():
         z = reactions.pdg_element(name="Z0'", pdg_id=9999999, three_charge=0,
                                   mass_and_errors=None, width_and_errors=None, is_self_cc=True)
         db.register_element(z)
+
+        assert z.name == "Z0'"
 
         db.register_element(name="Z0''", pdg_id=9999998, three_charge=0,
                             mass_and_errors=None, width_and_errors=None, is_self_cc=True)

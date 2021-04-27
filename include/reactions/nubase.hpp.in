@@ -247,11 +247,11 @@ namespace reactions {
         // photon
         return "\\gamma";
       case (1):
-        // positron
-        return "\\e^{+}";
-      case (2):
         // electron
-        return "\\e^{-}";
+        return "e^{-}";
+      case (2):
+        // positron
+        return "e^{+}";
       default:
         break;
       }
@@ -433,7 +433,7 @@ namespace reactions {
      *
      */
     template <class... Args> void register_element(Args &&... args) {
-      return base_type::register_element(std::move(args)...);
+      return base_type::register_element(std::forward<Args>(args)...);
     }
 
     /// Create an element accessing by ID

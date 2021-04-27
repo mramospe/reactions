@@ -603,7 +603,7 @@ namespace reactions {
      * name, where adecuate.
      */
     template <class... Args> void register_element(Args &&... args) {
-      return base_type::register_element(std::move(args)...);
+      return base_type::register_element(std::forward<Args>(args)...);
     }
 
     /// Create an element accessing by ID

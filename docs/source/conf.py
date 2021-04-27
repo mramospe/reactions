@@ -65,7 +65,10 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
     os.makedirs(auxiliar_tmp_dir, exist_ok=True)
 
     subprocess.check_call(['python', os.path.join(
-        root, 'scripts', 'display-pdg-table.py'), '--output', os.path.join(static_doc_dir, 'pdg_table.pdf')])
+        root, 'scripts', 'display-table.py'), 'pdg', '--output', os.path.join(static_doc_dir, 'pdg_table.pdf')])
+
+    subprocess.check_call(['python', os.path.join(
+        root, 'scripts', 'display-table.py'), 'nubase', '--output', os.path.join(static_doc_dir, 'nubase_table.pdf')])
 
     tmp_changelog = os.path.join(tmpdir, 'changelog.md')
     subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
