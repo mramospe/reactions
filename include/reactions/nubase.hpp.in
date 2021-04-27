@@ -261,7 +261,13 @@ namespace reactions {
       auto size = ref.size();
 
       std::string out;
-      out.reserve(size + 9);
+      // Avoid reallocations. The constant is based on the
+      // maximum size of an expansion of names to LaTeX
+      // names.
+      //
+      // Obtained with: scripts/latex-name-buffers.py
+      //
+      out.reserve(5 * size);
 
       out.append("\\ce{^{");
 
