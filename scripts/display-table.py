@@ -17,8 +17,9 @@ if __name__ == '__main__':
     pdg_parser = subparsers.add_parser('pdg', description='PDG elements')
     pdg_parser.set_defaults(database=reactions.pdg_database, title='Table of PDG elements', subtitle=r'Masses and widths are provided in \(\text{GeV}/c^2\)',
                             fields=['name', 'latex_name', 'pdg_id', 'three_charge', 'mass',
-              'mass_error_lower', 'mass_error_upper', 'width', 'width_error_lower', 'width_error_upper', 'is_self_cc'])
-    nubase_parser = subparsers.add_parser('nubase', description='NuBase elements')
+                                    'mass_error_lower', 'mass_error_upper', 'width', 'width_error_lower', 'width_error_upper', 'is_self_cc'])
+    nubase_parser = subparsers.add_parser(
+        'nubase', description='NuBase elements')
     nubase_parser.set_defaults(database=reactions.nubase_database, title='Table of NuBase elements', subtitle=r'Mass excesses are provided in \(\text{keV}/c^2\), half-lifes in seconds',
                                fields=['name', 'latex_name', 'nubase_id', 'atomic_number', 'mass_number', 'mass_excess', 'mass_excess_error', 'mass_excess_from_systematics', 'is_stable', 'half_life', 'half_life_error', 'half_life_from_systematics', 'is_ground_state'])
 
