@@ -1,11 +1,13 @@
+#define PY_SSIZE_T_CLEAN
+#include "Python.h"
+
 #include "composites.hpp"
 #include "database.hpp"
+#include "element_nubase.hpp"
 #include "element_pdg.hpp"
 #include "element_string.hpp"
 #include "node.hpp"
-
-#define PY_SSIZE_T_CLEAN
-#include "Python.h"
+#include "system_of_units.hpp"
 
 // Global function to check whether the input object is an element
 PyObject *is_element(PyObject *module, PyObject *args) {
@@ -119,11 +121,14 @@ PyMODINIT_FUNC PyInit_capi(void) {
   // Types
   REACTIONS_PYTHON_CLASS_READY(NodeType);
   REACTIONS_PYTHON_CLASS_READY(ElementStringType);
+  REACTIONS_PYTHON_CLASS_READY(ElementNuBaseType);
   REACTIONS_PYTHON_CLASS_READY(ElementPDGType);
   REACTIONS_PYTHON_CLASS_READY(ReactionType);
   REACTIONS_PYTHON_CLASS_READY(DecayType);
   REACTIONS_PYTHON_CLASS_READY(DatabasePDGType);
+  REACTIONS_PYTHON_CLASS_READY(DatabaseNuBaseType);
   REACTIONS_PYTHON_CLASS_READY(SystemOfUnitsPDGType);
+  REACTIONS_PYTHON_CLASS_READY(SystemOfUnitsNuBaseType);
 
   // Create the module
   PyObject *m = PyModule_Create(&capi_module);
@@ -133,12 +138,16 @@ PyMODINIT_FUNC PyInit_capi(void) {
   // Add types
   REACTIONS_PYTHON_REGISTER_CLASS(m, "node", NodeType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_element", ElementPDGType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "nubase_element", ElementNuBaseType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "string_element", ElementStringType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "reaction", ReactionType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "decay", DecayType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_database_sgl", DatabasePDGType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "nubase_database_sgl", DatabaseNuBaseType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_system_of_units_sgl",
                                   SystemOfUnitsPDGType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "nubase_system_of_units_sgl",
+                                  SystemOfUnitsNuBaseType);
 
   // Add errors
   REACTIONS_PYTHON_REGISTER_ERROR(m, DatabaseError);

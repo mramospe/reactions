@@ -1,14 +1,15 @@
 #pragma once
 
+#define PY_SSIZE_T_CLEAN
+#include "Python.h"
+
+#include "reactions/element_traits.hpp"
+#include "reactions/nubase.hpp"
+#include "reactions/pdg.hpp"
+
 #include "element.hpp"
 #include "errors.hpp"
 #include "node.hpp"
-
-#include "reactions/element_traits.hpp"
-#include "reactions/pdg.hpp"
-
-#define PY_SSIZE_T_CLEAN
-#include "Python.h"
 
 // default element type
 #define REACTIONS_PYTHON_DEFAULT_ELEMENT_TYPE "string"
@@ -78,7 +79,8 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  reactions::python::element_kind ek = reactions::python::element_kind::unknown;
+  reactions::python::element_kind ek =
+      reactions::python::element_kind::unknown_element_kind;
   PyObject *reactants; // list of reactants
   PyObject *products;  // list of products
 } Reaction;
@@ -107,7 +109,7 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
 
   if (!str) {
     // initialization with no values
-    if (self->ek == reactions::python::unknown) {
+    if (self->ek == reactions::python::unknown_element_kind) {
       PyErr_SetString(
           PyExc_ValueError,
           (std::string{"Unknown element type \""} + kind + "\"").c_str());
@@ -139,6 +141,20 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
 
     break;
   }
+  case (reactions::python::element_kind::nubase): {
+
+    try {
+      auto reac = reactions::make_reaction_for<reactions::nubase_element>(
+          str, [](std::string const &s) -> reactions::nubase_element {
+            return reactions::nubase_database::instance()(s);
+          });
+      if (!python_node_fill_reaction(self, reac))
+        return -1;
+    }
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
+
+    break;
+  }
   case (reactions::python::element_kind::string): {
 
     try {
@@ -149,7 +165,7 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
     }
     REACTIONS_PYTHON_CATCH_ERRORS(-1)
   }
-  case (reactions::python::element_kind::unknown):
+  case (reactions::python::element_kind::unknown_element_kind):
 
     PyErr_SetString(PyExc_ValueError,
                     (std::string{"Unknown element type "} + kind).c_str());
@@ -343,7 +359,8 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  reactions::python::element_kind ek = reactions::python::element_kind::unknown;
+  reactions::python::element_kind ek =
+      reactions::python::element_kind::unknown_element_kind;
   PyObject *head;     // head of the decay
   PyObject *products; // list of products
 } Decay;
@@ -372,7 +389,7 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
   if (!str) {
     // initialization with no values
-    if (self->ek == reactions::python::element_kind::unknown) {
+    if (self->ek == reactions::python::element_kind::unknown_element_kind) {
       PyErr_SetString(
           PyExc_ValueError,
           (std::string{"Unknown element type \""} + kind + "\"").c_str());
@@ -406,6 +423,20 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
     break;
   }
+  case (reactions::python::element_kind::nubase): {
+
+    try {
+      auto dec = reactions::make_decay_for<reactions::nubase_element>(
+          str, [](std::string const &s) -> reactions::nubase_element {
+            return reactions::nubase_database::instance()(s);
+          });
+      if (!python_node_fill_decay(self, dec))
+        return -1;
+    }
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
+
+    break;
+  }
   case (reactions::python::element_kind::string): {
 
     try {
@@ -417,7 +448,7 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
     break;
   }
-  case (reactions::python::element_kind::unknown):
+  case (reactions::python::element_kind::unknown_element_kind):
 
     PyErr_SetString(PyExc_ValueError,
                     (std::string{"Unknown element type "} + kind).c_str());
@@ -476,7 +507,8 @@ static PyObject *Decay_get_products(Decay *self, void *) {
 /// Properties of the Decay class
 static PyGetSetDef Decay_getsetters[] = {
     {"head", (getter)Decay_get_head, (setter)Decay_set_head,
-     "pdg_element or string_element: Element at the left hand-side of a decay",
+     "pdg_element, nubase_element or string_element: Element at the left "
+     "hand-side of a decay",
      NULL},
     {"products", (getter)Decay_get_products, NULL,
      "list(node): Objects at the right hand-side of a decay", NULL},

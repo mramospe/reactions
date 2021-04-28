@@ -247,7 +247,7 @@ with tempfile.TemporaryDirectory() as tmp_include_dir:
             tmp_include_dir, 'reactions', os.path.basename(input_filename[:-3]))
         with open(input_filename) as input_file, open(output_filename, 'wt') as output_file:
             # this is specified at the python level
-            output_file.write(re.sub('@PDG_TABLE@', '', input_file.read()))
+            output_file.write(re.sub('@[A-Z]*_TABLE@', '', input_file.read()))
 
     # setup function
     setup(

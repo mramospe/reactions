@@ -3,6 +3,7 @@
  */
 #pragma once
 
+#include "reactions/nubase.hpp"
 #include "reactions/pdg.hpp"
 #include "reactions/pow_enum.hpp"
 
@@ -26,6 +27,14 @@ namespace reactions::element_traits {
     using type = reactions::pdg_element;
     static constexpr auto builder = [](std::string const &s) {
       return reactions::pdg_database::instance()(s);
+    };
+  };
+
+  /// Definition of the properties of a NuBase element
+  template <> struct properties<reactions::nubase_element> {
+    using type = reactions::nubase_element;
+    static constexpr auto builder = [](std::string const &s) {
+      return reactions::nubase_database::instance()(s);
     };
   };
 

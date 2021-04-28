@@ -5,7 +5,41 @@
 
 #include "reactions/database.hpp"
 
+#define REACTIONS_INSTANCE_ACCESSOR "__instance"
+
 namespace reactions::python {
+
+  // Accessor for singleton classes
+  template <class Singleton> PyObject *singleton_new(PyTypeObject *type) {
+
+    Singleton *self = (Singleton *)PyDict_GetItemString(
+        type->tp_dict, REACTIONS_INSTANCE_ACCESSOR);
+
+    if (!self) {
+
+      self = (Singleton *)type->tp_alloc(type, 0);
+      if (!self)
+        return NULL;
+
+      self->instance = &std::decay_t<
+          std::remove_pointer_t<decltype(self->instance)>>::instance();
+
+      if (PyDict_SetItemString(type->tp_dict, REACTIONS_INSTANCE_ACCESSOR,
+                               (PyObject *)self) != 0) {
+        Py_DecRef((PyObject *)self);
+        PyErr_SetString(PyExc_RuntimeError,
+                        "Unable to define the object as a singleton ("
+                        "internal error); please report the bug");
+        return NULL;
+      }
+      PyType_Modified(type);
+
+    } else
+      // we are not calling "tp_alloc"
+      Py_IncRef((PyObject *)self);
+
+    return (PyObject *)self;
+  }
 
   // Forward declaration
   template <class T> std::string to_string(T const &t);
@@ -46,11 +80,33 @@ namespace reactions::python {
   };
 
   /// \copydoc to_string_t
-  template <class T>
-  struct to_string_t<reactions::database::value_and_errors<T>> {
+  template <class T> struct to_string_t<reactions::fields::value_and_error<T>> {
     /// \copydoc to_string_t::operator()
     std::string
-    operator()(reactions::database::value_and_errors<T> const &vae) const {
+    operator()(reactions::fields::value_and_error<T> const &vae) const {
+      return std::string{"(value="} + to_string(vae.value) +
+             std::string{", error="} + to_string(vae.error) + ')';
+    }
+  };
+
+  /// \copydoc to_string_t
+  template <class V, class T>
+  struct to_string_t<reactions::fields::value_and_error_with_tag<V, T>> {
+    /// \copydoc to_string_t::operator()
+    std::string operator()(
+        reactions::fields::value_and_error_with_tag<V, T> const &vae) const {
+      return std::string{"(value="} + to_string(vae.value) +
+             std::string{", error="} + to_string(vae.error) +
+             std::string{", tag="} + to_string(vae.tag) + ')';
+    }
+  };
+
+  /// \copydoc to_string_t
+  template <class T>
+  struct to_string_t<reactions::fields::value_and_errors<T>> {
+    /// \copydoc to_string_t::operator()
+    std::string
+    operator()(reactions::fields::value_and_errors<T> const &vae) const {
       return std::string{"(value="} + to_string(vae.value) +
              std::string{", error_lower="} + to_string(vae.error_lower) +
              std::string{", error_upper="} + to_string(vae.error_upper) + ')';

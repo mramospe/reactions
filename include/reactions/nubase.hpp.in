@@ -1,0 +1,453 @@
+/*! \file
+  \brief Classes and functions to work with elements from the NuBase and
+  manage the database service.
+*/
+#pragma once
+
+#include <tuple>
+
+#include "reactions/database.hpp"
+#include "reactions/exceptions.hpp"
+#include "reactions/fields.hpp"
+#include "reactions/pow_enum.hpp"
+#include "reactions/tokens.hpp"
+#include "reactions/units.hpp"
+#include "reactions/utils.hpp"
+
+namespace reactions {
+
+  /// Structures representing the fields of a \ref reactions::nubase_element
+  /// object
+  namespace nubase {
+
+    /// Range of a variable in a file
+    template <std::size_t Min, std::size_t Max>
+    using range = reactions::fields::range<Min, Max>;
+
+    /// Range of a composite variable in a file
+    template <class... R>
+    using range_collection = reactions::fields::range_collection<R...>;
+
+    /// Field for the name
+    struct name {
+      static constexpr const char *title = "name";
+      using value_type = std::string;
+      using units_reference_type = units::none;
+      using range_type = range<0, 8>;
+    };
+    /// Field for the nucleus ID
+    struct nubase_id {
+      static constexpr const char *title = "nubase_id";
+      using value_type = int;
+      using units_reference_type = units::none;
+      using range_type = range<9, 18>;
+    };
+    /// Field for the atomic number
+    struct atomic_number {
+      static constexpr const char *title = "atomic_number";
+      using value_type = int;
+      using units_reference_type = units::none;
+      using range_type = range<19, 22>;
+    };
+    /// Field for the mass number
+    struct mass_number {
+      static constexpr const char *title = "mass_number";
+      using value_type = int;
+      using units_reference_type = units::none;
+      using range_type = range<23, 26>;
+    };
+    /// Field for the mass excess
+    struct mass_excess {
+      static constexpr const char *title = "mass_excess";
+      using value_type = fields::vet_double_opt<bool>;
+      using units_reference_type =
+          units::reference<energy_units, energy_units::keV>;
+      using range_type =
+          range_collection<range<27, 43>, range<44, 53>, range<54, 55>>;
+    };
+    /// Field to store whether the nucleus is stable
+    struct is_stable {
+      static constexpr const char *title = "is_stable";
+      using value_type = bool;
+      using units_reference_type = units::none;
+      using range_type = range<56, 57>;
+    };
+    /// Field for the half life
+    struct half_life {
+      static constexpr const char *title = "half_life";
+      using value_type = fields::vet_double_opt<bool>;
+      using units_reference_type =
+          units::reference<time_units, time_units::sec>;
+      using range_type =
+          range_collection<range<58, 74>, range<75, 84>, range<85, 86>>;
+    };
+    /// Field to store whether the nucleus is a ground state
+    struct is_ground_state {
+      static constexpr const char *title = "is_ground_state";
+      using value_type = bool;
+      using units_reference_type = units::none;
+      using range_type = range<87, 88>;
+    };
+  } // namespace nubase
+
+  /*! \brief Defines a singleton to handle the units of PDG elements
+   *
+   * This class affects the values returned by the \ref nubase_element
+   * objects, scaling them according to the units defined by the user.
+   */
+  class nubase_system_of_units final {
+
+  public:
+    /// Get the only instance of this class
+    static nubase_system_of_units &instance() {
+      static nubase_system_of_units sou;
+      return sou;
+    }
+
+    /// Get the energy units
+    energy_units const &get_energy_units() const { return m_energy_units; }
+
+    /// Get the time units
+    time_units const &get_time_units() const { return m_time_units; }
+
+    /// Access the given units
+    template <class Units> Units const &units() const {
+      if constexpr (std::is_same_v<Units, energy_units>)
+        return get_energy_units();
+      else if constexpr (std::is_same_v<Units, time_units>)
+        return get_time_units();
+      else
+        // can not use "false" directly because it would be ill-formed
+        static_assert(reactions::utils::dependent_false_v<Units>,
+                      "Invalid units");
+    }
+
+    /// Set the energy units
+    void set_energy_units(energy_units u) {
+
+      if (u == energy_units::unknown_energy_units)
+        throw value_error("Setting energy units to unknown");
+
+      m_energy_units = u;
+    }
+
+    /// Set the time units
+    void set_time_units(time_units u) {
+
+      if (u == time_units::unknown_time_units)
+        throw value_error("Setting time units to unknown");
+
+      m_time_units = u;
+    }
+
+  private:
+    /// Units of energy
+    energy_units m_energy_units = energy_units::keV;
+    /// Units of time
+    time_units m_time_units = time_units::sec;
+
+    nubase_system_of_units() {}
+    nubase_system_of_units(nubase_system_of_units &&) = delete;
+    nubase_system_of_units(nubase_system_of_units const &) = delete;
+    void operator=(nubase_system_of_units &&) = delete;
+    void operator=(nubase_system_of_units const &) = delete;
+  };
+
+  /// Field types of a NuBase element
+  using nubase_element_fields =
+      std::tuple<nubase::name, nubase::nubase_id, nubase::atomic_number,
+                 nubase::mass_number, nubase::mass_excess, nubase::is_stable,
+                 nubase::half_life, nubase::is_ground_state>;
+
+  /// Base class of a NuBase element
+  using nubase_element_base = fields::underlying_types_t<nubase_element_fields>;
+
+  /*! \brief An element based on the NuBase database
+   */
+  class nubase_element final : protected nubase_element_base {
+
+  public:
+    /// Base class
+    using base_type = nubase_element_base;
+
+    /// Fields of the element
+    using fields_type = nubase_element_fields;
+
+    /// Number of data fields
+    static const size_t number_of_fields = std::tuple_size_v<base_type>;
+
+    /// Size of the line (in characters) associated to this class
+    static constexpr auto line_size =
+        reactions::fields::overall_range_t<std::tuple_element_t<
+            number_of_fields - 1, fields_type>::range_type>::max;
+
+    nubase_element() = delete;
+    explicit nubase_element(nubase_element const &) = default;
+    explicit nubase_element(nubase_element &&) = default;
+    nubase_element &operator=(nubase_element const &) = default;
+
+    /// Construct the element from an initializer list
+    template <class... Args>
+    nubase_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
+
+    /// Construct the element from the contents
+    explicit nubase_element(base_type &&tuple)
+        : base_type{std::forward<base_type>(tuple)} {}
+
+    /*! \brief Compare the ID of the two particles
+     *
+     * \param other element to compare with
+     * \return the result of comparing the NuBase IDs of the two elements
+     */
+    bool operator==(nubase_element const &other) const {
+      return nubase_id() == other.nubase_id();
+    }
+
+    /// \copydoc nubase_element::operator==
+    bool operator!=(nubase_element const &other) const {
+      return nubase_id() != other.nubase_id();
+    }
+
+    /*! \brief Get an element using an accessor.
+     *
+     * For fields of \ref std::optional type, the validity of the content
+     * must be checked before calling this function using the
+     * \ref nubase_element::has member function. Otherwise the
+     * \ref reactions::missing_fields_error exception is thrown,
+     * if missing.
+     *
+     * The return type is a constant reference for values without units and
+     * a value for those with units.
+     */
+    template <class Field, class... Subfield>
+    units::return_type_t<Field, Subfield...> get() const {
+      if constexpr (units::has_units_v<Field, Subfield...>)
+        return units::accessor_with_units<Field, Subfield...>(
+            nubase_system_of_units::instance(),
+            std::get<utils::tuple_index_v<Field, fields_type>>(*this));
+      else
+        return units::accessor<Field, Subfield...>(
+            std::get<utils::tuple_index_v<Field, fields_type>>(*this));
+    }
+
+    /// Check whether the given field information is missing or not
+    template <class Field> constexpr bool has() const {
+      if constexpr (fields::is_optional_field_v<Field>)
+        return std::get<utils::tuple_index_v<Field, fields_type>>(*this)
+            .has_value();
+      else
+        return true;
+    }
+
+    /// Representation of the element name as a LaTeX string
+    std::string latex_name() const {
+
+      switch (nubase_id()) {
+      case (0):
+        // photon
+        return "\\gamma";
+      case (1):
+        // electron
+        return "e^{-}";
+      case (2):
+        // positron
+        return "e^{+}";
+      default:
+        break;
+      }
+
+      const auto &ref = name();
+
+      auto size = ref.size();
+
+      std::string out;
+      // Avoid reallocations. The constant is based on the
+      // maximum size of an expansion of names to LaTeX
+      // names.
+      //
+      // Obtained with: scripts/latex-name-buffers.py
+      //
+      out.reserve(5 * size);
+
+      out.append("\\ce{^{");
+
+      std::size_t count = 0;
+
+      // parse the mass number
+      while (count != size) {
+        if (ref[count] >= '0' && ref[count] <= '9')
+          out.push_back(ref[count++]);
+        else
+          break;
+      }
+
+      // parse the isomer
+      auto back_count = size - 1;
+
+      if (ref[back_count] == ')') {
+
+        --back_count;
+
+        while (back_count != 0 && ref[back_count] != '(')
+          out.push_back(ref[back_count--]);
+
+        if (back_count == 0)
+          throw internal_error("Missing parenthesis in name");
+      } else
+        ++back_count;
+
+      out.push_back('}'); // close superindex
+
+      // parse the name
+      while (count != size) {
+        if (ref[count] >= 'A' && ref[count] <= 'z')
+          out.push_back(ref[count++]);
+        else
+          break;
+      }
+
+      out.push_back('}'); // close \ce
+
+      if (count != back_count)
+        throw reactions::internal_error(
+            (std::string{"Failed to process LaTeX string for nucleus \""} +
+             name() + "\"")
+                .c_str());
+
+      out.shrink_to_fit();
+
+      return out;
+    }
+
+    /// Name of the particle
+    std::string const &name() const { return get<nubase::name>(); }
+
+    /// NuBase ID
+    int const &nubase_id() const { return get<nubase::nubase_id>(); }
+
+    /// Atomic number
+    int const &atomic_number() const { return get<nubase::atomic_number>(); }
+
+    /// Mass number
+    int const &mass_number() const { return get<nubase::mass_number>(); }
+
+    /// Whether the element is its own charge-conjugate
+    bool const &is_ground_state() const {
+      return get<nubase::is_ground_state>();
+    }
+
+    /*! Get the mass of the element
+     *
+     * You must check whether the mass is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::missing_fields_error is thrown.
+     */
+    double mass_excess() const {
+      return get<nubase::mass_excess, fields::value>();
+    }
+
+    /// Whether the mass and its errors are defined or not
+    bool has_mass_excess() const { return has<nubase::mass_excess>(); }
+
+    /*! \brief Lower mass error
+     *
+     * You must check whether the mass is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::missing_fields_error is thrown.
+     */
+    double mass_excess_error() const {
+      return get<nubase::mass_excess, fields::error>();
+    }
+
+    /// Whether the mass excess has been calculated from systematics
+    bool const &mass_excess_from_systematics() const {
+      return get<nubase::mass_excess, fields::tag>();
+    }
+
+    /*! \brief Get the width of the element.
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::missing_fields_error is thrown.
+     */
+    double half_life() const { return get<nubase::half_life, fields::value>(); }
+
+    /// Whether the width and its errors are defined or not
+    bool has_half_life() const { return has<nubase::half_life>(); }
+
+    /*! \brief Get the lower width error
+     *
+     * You must check whether the width is defined or not before calling this
+     * member function, otherwise a \ref
+     * reactions::missing_fields_error is thrown.
+     */
+    double half_life_error() const {
+      return get<nubase::half_life, fields::error>();
+    }
+
+    /// Whether the half-life has been calculated from systematics
+    bool const &half_life_from_systematics() const {
+      return get<nubase::half_life, fields::tag>();
+    }
+
+    /// Whether the element is its own charge-conjugate
+    bool const &is_stable() const { return get<nubase::is_stable>(); }
+  };
+
+  /*! \brief Database of elements with the NuBase information
+   *
+   */
+  class nubase_database final
+      : public reactions::database::database<nubase_element, nubase::name,
+                                             nubase::nubase_id> {
+
+  public:
+    using base_type =
+        reactions::database::database<nubase_element, nubase::name,
+                                      nubase::nubase_id>;
+
+    /// Get the only instance of this class
+    static nubase_database &instance() {
+      static nubase_database db;
+      return db;
+    }
+
+    /// Get the path to the database file
+    std::string const &get_database_path() const { return m_db; }
+
+    /*! \brief Register a new NuBase element
+     *
+     * The new element must have a name and a NuBase ID that does not clash with
+     * any of the database used.
+     *
+     * For the LaTeX name to be valid (an to avoid possible exceptions thrown
+     * during its computation), the element name must follow the following
+     * convention:
+     *
+     * - The name starts with the mass number
+     * - The mass number is followed by the element name
+     * - A possible isomer state identifier can be added between parentheses.
+     *
+     */
+    template <class... Args> void register_element(Args &&... args) {
+      return base_type::register_element(std::forward<Args>(args)...);
+    }
+
+    /// Create an element accessing by ID
+    nubase_element operator()(int id) const override {
+      return access<nubase::nubase_id>(id);
+    }
+
+    /// Create an element accessing by name
+    nubase_element operator()(std::string const &str) const override {
+      return access<nubase::name>(str);
+    }
+
+  private:
+    nubase_database() : base_type{"@NUBASE_TABLE@"} {}
+    nubase_database(nubase_database &&) = delete;
+    nubase_database(nubase_database const &) = delete;
+    void operator=(nubase_database &&) = delete;
+    void operator=(nubase_database const &) = delete;
+  };
+} // namespace reactions

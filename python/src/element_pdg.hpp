@@ -2,6 +2,7 @@
 
 #include <tuple>
 
+#include "reactions/fields.hpp"
 #include "reactions/pdg.hpp"
 
 #include "errors.hpp"
@@ -13,7 +14,7 @@
 typedef struct {
   // base class
   Node node;
-  // attributes (same as pdg::pdg_element)
+  // attributes (same as pdg_element)
   reactions::pdg_element element;
 } ElementPDG;
 
@@ -113,9 +114,9 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
 
       double value, error_lower, error_upper;
       if (!PyArg_ParseTuple(mass, "ddd", &value, &error_lower, &error_upper)) {
-        PyErr_SetString(
-            PyExc_ValueError,
-            "Mass argument must be a sequence of three floating point objects");
+        PyErr_SetString(PyExc_ValueError,
+                        "Mass argument must be a sequence of three floating "
+                        "point objects or None");
         return -1;
       }
 
@@ -152,13 +153,14 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
 template <std::size_t I>
 std::string ElementPDG_field_to_string(reactions::pdg_element const &el) {
 
-  using field_type = std::tuple_element_t<I, reactions::pdg_element::fields>;
+  using field_type =
+      std::tuple_element_t<I, reactions::pdg_element::fields_type>;
   using underlying_type_no_opt =
-      reactions::database::remove_optional_t<typename field_type::value_type>;
+      reactions::fields::remove_optional_t<typename field_type::value_type>;
 
   std::string title =
       reactions::utils::is_template_specialization_v<
-          underlying_type_no_opt, reactions::database::value_and_errors>
+          underlying_type_no_opt, reactions::fields::value_and_errors>
           ? std::string{field_type::title} + "_and_errors"
           : field_type::title;
 
@@ -195,7 +197,7 @@ static PyObject *ElementPDG_to_string(ElementPDG *self) {
       ElementPDG_to_string_impl(
           self->element,
           std::make_index_sequence<
-              std::tuple_size_v<reactions::pdg_element::fields>>()) +
+              std::tuple_size_v<reactions::pdg_element::fields_type>>()) +
       ')';
   return PyUnicode_FromString(str.c_str());
 }
@@ -217,7 +219,7 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to get access to an attribute of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(name, check, converter)   \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    if constexpr (reactions::database::is_optional_field_v<                    \
+    if constexpr (reactions::fields::is_optional_field_v<                      \
                       reactions::pdg::check>)                                  \
       if (!self->element.has_##check())                                        \
         Py_RETURN_NONE;                                                        \
