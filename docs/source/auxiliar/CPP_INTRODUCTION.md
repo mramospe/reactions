@@ -40,7 +40,7 @@ int main() {
 
    auto d = reactions::make_decay<reactions::pdg_element>("pi+ -> mu+ nu_mu");
 
-   std::cout << "Decay head/number of products: " << r.head().ptr_as_element()->name() << '/' << r.products().size() << std::endl;
+   std::cout << "Decay head/number of products: " << r.head().as_element().name() << '/' << r.products().size() << std::endl;
 
    return 0;
 }

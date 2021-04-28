@@ -1,7 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
-#include "composites.hpp"
+#include "chains.hpp"
 #include "database.hpp"
 #include "element_nubase.hpp"
 #include "element_pdg.hpp"
