@@ -182,45 +182,21 @@ namespace reactions {
 
     /// Constructor from an element
     node(std::unique_ptr<element_type> &&ptr)
-        : m_type{std::move(processes::node_kind::element)},
-          m_ptr{ptr.release()} {}
+        : m_type{processes::node_kind::element}, m_ptr{ptr.release()} {}
 
     /// Constructor from a reaction
     node(std::unique_ptr<reaction_type> &&ptr)
-        : m_type{std::move(processes::node_kind::reaction)},
-          m_ptr{ptr.release()} {}
+        : m_type{processes::node_kind::reaction}, m_ptr{ptr.release()} {}
 
     /// Construction from a decay
     node(std::unique_ptr<decay_type> &&ptr)
-        : m_type{std::move(processes::node_kind::decay)}, m_ptr{ptr.release()} {
-    }
+        : m_type{processes::node_kind::decay}, m_ptr{ptr.release()} {}
 
     /// Move constructor
-    node(node &&other) : m_type{other.m_type}, m_ptr{other.m_ptr} {
-      other.m_ptr = nullptr;
-    }
+    node(node &&other) = default;
 
     /// Destructor
-    ~node() noexcept(false) {
-
-      if (m_ptr) {
-        switch (m_type) {
-        case (processes::node_kind::element):
-          delete ptr_as_element_wrapper();
-          return;
-        case (processes::node_kind::reaction):
-          delete ptr_as_reaction();
-          return;
-        case (processes::node_kind::decay):
-          delete ptr_as_decay();
-          return;
-        case (processes::node_kind::unknown_node_kind):
-          throw reactions::internal_error(
-              "A node type should always be set (internal error); please "
-              "report the bug");
-        }
-      }
-    }
+    ~node() = default;
 
     node() = delete;
     node(node const &) = delete;
@@ -241,7 +217,7 @@ namespace reactions {
     processes::node_kind type() const { return m_type; }
 
     /// Get the pointer to the underlying object
-    node_object const *object() const { return m_ptr; }
+    node_object const *object() const { return m_ptr.get(); }
 
     /// Return the pointer to the underlying object casted to an element
     Element const *ptr_as_element() const {
@@ -250,19 +226,19 @@ namespace reactions {
 
     /// Return the pointer to the underlying object casted to a reaction
     reaction_type const *ptr_as_reaction() const {
-      return static_cast<reaction_type *>(m_ptr);
+      return static_cast<reaction_type *>(m_ptr.get());
     }
 
     /// Return the pointer to the underlying object casted to a decay
     decay_type const *ptr_as_decay() const {
-      return static_cast<decay_type *>(m_ptr);
+      return static_cast<decay_type *>(m_ptr.get());
     }
 
   protected:
     /// Internal method to return the underlying object casted to a wrapped
     /// element
     element_type const *ptr_as_element_wrapper() const {
-      return static_cast<element_type *>(m_ptr);
+      return static_cast<element_type *>(m_ptr.get());
     }
 
   private:
@@ -270,7 +246,7 @@ namespace reactions {
     processes::node_kind m_type = processes::node_kind::unknown_node_kind;
 
     /// Underlying object
-    node_object *m_ptr = nullptr;
+    std::unique_ptr<node_object> m_ptr = nullptr;
   };
 
   /// Internal utilities for the \ref reactions::processes namespace
