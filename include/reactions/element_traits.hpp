@@ -5,7 +5,6 @@
 
 #include "reactions/nubase.hpp"
 #include "reactions/pdg.hpp"
-#include "reactions/pow_enum.hpp"
 
 #include <functional>
 #include <string>
