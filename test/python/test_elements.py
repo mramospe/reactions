@@ -48,7 +48,7 @@ def test_nubase_element():
     # test LaTeX names
     assert reactions.nubase_element("1H").latex_name == "\\ce{^{1}H}"
     assert reactions.nubase_element("1n").latex_name == "\\ce{^{1}n}"
-    assert reactions.nubase_element("7Li(i)").latex_name == "\\ce{^{7}Li^{i}}"
+    assert reactions.nubase_element("7Li(i)").latex_name == "\\ce{^{7i}Li}"
 
     # errors accessing elements
     with pytest.raises(reactions.LookupError):

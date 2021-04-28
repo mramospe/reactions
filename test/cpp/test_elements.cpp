@@ -169,7 +169,7 @@ int main() {
           try {
             check_latex_name("1H", "\\ce{^{1}H}");
             check_latex_name("1n", "\\ce{^{1}n}");
-            check_latex_name("7Li(i)", "\\ce{^{7}Li^{i}}");
+            check_latex_name("7Li(i)", "\\ce{^{7i}Li}");
           } catch (reactions::internal_error &) {
             errors.push_back("Internal error detected processing LaTeX names");
           }
