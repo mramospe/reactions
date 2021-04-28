@@ -277,11 +277,26 @@ namespace reactions {
       while (count != size) {
         if (ref[count] >= '0' && ref[count] <= '9')
           out.push_back(ref[count++]);
-        else {
-          out.push_back('}');
+        else
           break;
-        }
       }
+
+      // parse the isomer
+      auto back_count = size - 1;
+
+      if (ref[back_count] == ')') {
+
+        --back_count;
+
+        while (back_count != 0 && ref[back_count] != '(')
+          out.push_back(ref[back_count--]);
+
+        if (back_count == 0)
+          throw internal_error("Missing parenthesis in name");
+      } else
+        ++back_count;
+
+      out.push_back('}'); // close superindex
 
       // parse the name
       while (count != size) {
@@ -291,27 +306,9 @@ namespace reactions {
           break;
       }
 
-      // parse the isomer
-      if (ref[count] == '(') {
+      out.push_back('}'); // close \ce
 
-        out.append("^{");
-
-        ++count;
-
-        while (count != size && ref[count] != ')')
-          out.push_back(ref[count++]);
-
-        ++count;
-
-        if (count > size)
-          throw internal_error("Missing parenthesis in name");
-
-        out.push_back('}');
-      }
-
-      out.push_back('}');
-
-      if (count != size)
+      if (count != back_count)
         throw reactions::internal_error(
             (std::string{"Failed to process LaTeX string for nucleus \""} +
              name() + "\"")
