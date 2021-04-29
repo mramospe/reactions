@@ -8,8 +8,8 @@ Reactions
 
 This package provides functionalities to define and handle reactions and decays.
 Elements involved in these processes can be customized given a user-defined class and data-base.
-A bulitin implementation of the [PDG](https://pdg.lbl.gov) database of particles and nuclei
-is included.
+A bulitin implementation of the [PDG](https://pdg.lbl.gov) database of particles and the
+[NuBase](http://amdc.in2p3.fr/web/nubase_en.html) database of nuclei is included.
 
 The Reactions package allows to define a work with trees of processes among different
 elements.
@@ -19,5 +19,5 @@ This package is written in `C++` as a header-only library, and has a `python`
 interface.
 The usage is very similar in both of them.
 
-This package is distributed as a header-only library for `C++`  and pip-installable package in python.
+This package is distributed as a header-only library for `C++`  and `pip-installable` package in python.
 There is no need to install any external software.
