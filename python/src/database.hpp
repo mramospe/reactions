@@ -1,15 +1,15 @@
 #pragma once
+#include <utility>
+
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
-#include "reactions/exceptions.hpp"
 #include "reactions/nubase.hpp"
 #include "reactions/pdg.hpp"
 
 #include "element_nubase.hpp"
 #include "element_pdg.hpp"
 #include "errors.hpp"
-#include "utils.hpp"
 
 #define REACTIONS_PYTHON_CHECK_DATABASE(database)                              \
   if (!database) {                                                             \
@@ -21,12 +21,12 @@
 
 /// Create a new PDG element
 static PyObject *element_new(reactions::pdg_element &&el) {
-  return ElementPDG_New(el);
+  return ElementPDG_New(std::forward<reactions::pdg_element>(el));
 }
 
 /// Create a new NuBase element
 static PyObject *element_new(reactions::nubase_element &&el) {
-  return ElementNuBase_New(el);
+  return ElementNuBase_New(std::forward<reactions::nubase_element>(el));
 }
 
 /// General methods to a database

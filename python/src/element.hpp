@@ -1,5 +1,4 @@
 #pragma once
-#include "reactions/pdg.hpp"
 #include "reactions/pow_enum.hpp"
 
 #include "element_nubase.hpp"

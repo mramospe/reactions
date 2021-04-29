@@ -3,7 +3,6 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
-#include "reactions/element_traits.hpp"
 #include "reactions/nubase.hpp"
 #include "reactions/pdg.hpp"
 

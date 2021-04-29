@@ -1,6 +1,8 @@
 #pragma once
 
+#include <string>
 #include <tuple>
+#include <utility>
 
 #include "reactions/fields.hpp"
 #include "reactions/nubase.hpp"
