@@ -83,7 +83,7 @@ jobs:
     - ruby --version
     - gem install github_changelog_generator
     # Generate the changelog file
-    - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG} --future-release ${TRAVIS_TAG}
+    - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG} --future-release ${TRAVIS_TAG} -t ${GITHUB_TOKEN}
     before_install: " "
     install: " "
     script: " "
