@@ -7,12 +7,12 @@
 
 // Wrapper for a node
 typedef struct {
-  PyObject_HEAD reactions::processes::node_kind c_type =
-      reactions::processes::node_kind::unknown_node_kind;
+  PyObject_HEAD reactions::processes::node_type c_type =
+      reactions::processes::node_type::unknown_node_type;
 } Node;
 
 #define REACTIONS_PYTHON_NODE_CHECK_UNKNOWN(self)                              \
-  if (self->c_type == reactions::processes::node_kind::unknown_node_kind) {    \
+  if (self->c_type == reactions::processes::node_type::unknown_node_type) {    \
     PyErr_SetString(InternalError,                                             \
                     "Node type is not defined; please report the bug");        \
     return NULL;                                                               \
@@ -33,7 +33,7 @@ static PyObject *Node_new(PyTypeObject *type, PyObject *args,
   if (!self)
     return NULL;
 
-  self->c_type = reactions::processes::node_kind::unknown_node_kind;
+  self->c_type = reactions::processes::node_type::unknown_node_type;
 
   return (PyObject *)self;
 }

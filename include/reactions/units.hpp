@@ -2,9 +2,10 @@
 \brief Definition of units
  */
 #pragma once
-#include "reactions/database.hpp"
 #include "reactions/exceptions.hpp"
 #include "reactions/pow_enum.hpp"
+#include <string>
+#include <type_traits>
 
 namespace reactions {
 

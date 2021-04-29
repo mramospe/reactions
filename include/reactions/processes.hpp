@@ -4,11 +4,10 @@
  */
 #pragma once
 
-#include <functional>
-#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "reactions/element_traits.hpp"
@@ -27,7 +26,7 @@ namespace reactions {
    */
   namespace processes {
     /// Node types
-    REACTIONS_POW_ENUM_WITH_UNKNOWN(node_kind, element, reaction, decay);
+    REACTIONS_POW_ENUM_WITH_UNKNOWN(node_type, element, reaction, decay);
 
     /*! \brief Internal function to process an expression
      *
@@ -156,121 +155,73 @@ namespace reactions {
     }
   } // namespace processes
 
-  /*! \brief Base class for types referred to a node
-   *
-   * This base class avoids the use of void* pointers
-   */
-  struct node_object {
-    node_object() = default;
-    node_object(node_object const &) = default;
-    node_object(node_object &&) = default;
-    node_object &operator=(node_object const &) = default;
-    virtual ~node_object() = default;
-  };
+  // Forward declarations
+  template <class Element> class element_wrapper;
+  template <class Element> class reaction;
+  template <class Element> class decay;
 
   /*! \brief Base class for a process node
    *
    * This abstract class allows to check if the underlying class
-   * is an element or a composite object.
+   * is an element or a chain object.
    */
-  template <class Element> class node final {
+  template <class Element, template <class> class Chain>
+  class node final
+      : protected std::variant<element_wrapper<Element>, Chain<Element>> {
 
   public:
+    using base_type = std::variant<element_wrapper<Element>, Chain<Element>>;
     using element_type = element_wrapper<Element>;
-    using reaction_type = reaction<Element>;
-    using decay_type = decay<Element>;
+    using chain_type = Chain<Element>;
 
-    /// Constructor from an element
-    node(std::unique_ptr<element_type> &&ptr)
-        : m_type{std::move(processes::node_kind::element)},
-          m_ptr{ptr.release()} {}
-
-    /// Constructor from a reaction
-    node(std::unique_ptr<reaction_type> &&ptr)
-        : m_type{std::move(processes::node_kind::reaction)},
-          m_ptr{ptr.release()} {}
-
-    /// Construction from a decay
-    node(std::unique_ptr<decay_type> &&ptr)
-        : m_type{std::move(processes::node_kind::decay)}, m_ptr{ptr.release()} {
-    }
-
-    /// Move constructor
-    node(node &&other) : m_type{other.m_type}, m_ptr{other.m_ptr} {
-      other.m_ptr = nullptr;
-    }
-
-    /// Destructor
-    ~node() noexcept(false) {
-
-      if (m_ptr) {
-        switch (m_type) {
-        case (processes::node_kind::element):
-          delete ptr_as_element_wrapper();
-          return;
-        case (processes::node_kind::reaction):
-          delete ptr_as_reaction();
-          return;
-        case (processes::node_kind::decay):
-          delete ptr_as_decay();
-          return;
-        case (processes::node_kind::unknown_node_kind):
-          throw reactions::internal_error(
-              "A node type should always be set (internal error); please "
-              "report the bug");
-        }
-      }
-    }
-
-    node() = delete;
-    node(node const &) = delete;
-    node &operator=(node const &) = delete;
+    /// Use the same constructors as \ref std::variant
+    using base_type::base_type;
 
     /// Check if the underlying class is an element
-    bool is_element() const { return m_type == processes::node_kind::element; }
+    bool is_element() const {
+      return this->type() == processes::node_type::element;
+    }
 
     /// Check if the underlying class is a reaction
     bool is_reaction() const {
-      return m_type == processes::node_kind::reaction;
+      return type() == processes::node_type::reaction;
     }
 
     /// Check if the underlying class is a decay
-    bool is_decay() const { return m_type == processes::node_kind::decay; }
+    bool is_decay() const {
+      return this->type() == processes::node_type::decay;
+    }
 
     /// Get the node type
-    processes::node_kind type() const { return m_type; }
+    processes::node_type type() const {
 
-    /// Get the pointer to the underlying object
-    node_object const *object() const { return m_ptr; }
+      if (std::holds_alternative<element_type>(*this))
+        return processes::node_type::element;
+      else {
+        if constexpr (utils::is_template_specialization_v<chain_type, reaction>)
+          return processes::node_type::reaction;
+        else if constexpr (utils::is_template_specialization_v<chain_type,
+                                                               decay>)
+          return processes::node_type::decay;
+        else
+          static_assert(utils::dependent_false_v<decltype(*this)>,
+                        "Unexpected internal compile-time error");
+      }
+    }
 
     /// Return the pointer to the underlying object casted to an element
-    Element const *ptr_as_element() const {
-      return ptr_as_element_wrapper()->operator->();
-    }
+    Element const &as_element() const { return *as_element_wrapper(); }
 
     /// Return the pointer to the underlying object casted to a reaction
-    reaction_type const *ptr_as_reaction() const {
-      return static_cast<reaction_type *>(m_ptr);
-    }
-
-    /// Return the pointer to the underlying object casted to a decay
-    decay_type const *ptr_as_decay() const {
-      return static_cast<decay_type *>(m_ptr);
+    chain_type const &as_chain() const {
+      return std::get<Chain<Element>>(*this);
     }
 
   protected:
-    /// Internal method to return the underlying object casted to a wrapped
-    /// element
-    element_type const *ptr_as_element_wrapper() const {
-      return static_cast<element_type *>(m_ptr);
+    /// Return the underlying object casted to a wrapped
+    element_type const &as_element_wrapper() const {
+      return std::get<element_type>(*this);
     }
-
-  private:
-    /// Node type
-    processes::node_kind m_type = processes::node_kind::unknown_node_kind;
-
-    /// Underlying object
-    node_object *m_ptr = nullptr;
   };
 
   /// Internal utilities for the \ref reactions::processes namespace
@@ -282,9 +233,9 @@ namespace reactions {
      * \return whether the two nodes are equal or not (processing
      * whether they are reactions, decays or elements).
      */
-    template <class Element>
-    inline bool check_nodes(std::vector<node<Element>> const &first,
-                            std::vector<node<Element>> const &second) {
+    template <class Element, template <class> class Chain>
+    inline bool check_nodes(std::vector<node<Element, Chain>> const &first,
+                            std::vector<node<Element, Chain>> const &second) {
 
       auto size = first.size();
 
@@ -307,19 +258,19 @@ namespace reactions {
             continue;
 
           switch (first[i].type()) {
-          case (processes::node_kind::element):
-            if (*(first[i].ptr_as_element()) == *(second[i].ptr_as_element()))
+          case (processes::node_type::element):
+            if (first[i].as_element() == second[i].as_element())
               mask[j] = true;
             break;
-          case (processes::node_kind::reaction):
-            if (*(first[i].ptr_as_reaction()) == *(second[i].ptr_as_reaction()))
+          case (processes::node_type::reaction):
+            if (first[i].as_chain() == second[i].as_chain())
               mask[j] = true;
             break;
-          case (processes::node_kind::decay):
-            if (*(first[i].ptr_as_decay()) == *(second[i].ptr_as_decay()))
+          case (processes::node_type::decay):
+            if (first[i].as_chain() == second[i].as_chain())
               mask[j] = true;
             break;
-          case (processes::node_kind::unknown_node_kind):
+          case (processes::node_type::unknown_node_type):
             throw reactions::internal_error(
                 "A node can not be of unknown type (internal error); please "
                 "report the bug");
@@ -343,13 +294,13 @@ namespace reactions {
    * This class wraps the template argument type, which becomes accessible
    * through the * and -> operators.
    */
-  template <class Element> class element_wrapper final : public node_object {
+  template <class Element> class element_wrapper final {
 
   public:
     /// Constructor given the underlying element
-    element_wrapper(Element &&e) : node_object{}, m_element{std::move(e)} {}
+    element_wrapper(Element &&e) : m_element{std::move(e)} {}
     /// Default destructor
-    ~element_wrapper() override = default;
+    ~element_wrapper() = default;
     /// Copy constructor
     element_wrapper(const element_wrapper &) = default;
     /// Move constructor
@@ -372,14 +323,15 @@ namespace reactions {
    *
    * Nested reactions must be expressed within parenteses.
    */
-  template <class Element> class reaction final : public node_object {
+  template <class Element> class reaction final {
 
   public:
     using element_type = element_wrapper<Element>; /// Underlying element type
     using builder_type =
         element_traits::builder_tpl_t<Element>; /// Signature type of an element
                                                 /// builder
-    using nodes_type = std::vector<node<Element>>; /// Collection of elements
+    using nodes_type =
+        std::vector<node<Element, reaction>>; /// Collection of elements
 
     /// Default move constructor
     reaction(reaction &&) = default;
@@ -432,12 +384,6 @@ namespace reactions {
              std::string::const_iterator const &end, builder_type builder)
         : reaction{begin, end, builder} {}
 
-    // Create a new instance using the protected constructor
-    friend std::unique_ptr<reaction>
-    std::make_unique<reaction>(std::string::const_iterator &,
-                               std::string::const_iterator const &,
-                               builder_type);
-
     template <class Process>
     friend Process
     reactions::processes::make_process(std::string const &,
@@ -454,18 +400,16 @@ namespace reactions {
      * a string.
      */
     reaction(std::string::const_iterator &sit,
-             std::string::const_iterator const &end, builder_type builder)
-        : node_object{} {
+             std::string::const_iterator const &end, builder_type builder) {
 
       nodes_type *current_set = &m_reactants;
 
       auto fill_element =
           [&](std::string::const_iterator const &start) -> void {
-        current_set->push_back(
-            std::make_unique<element_type>(builder(std::string{start, sit})));
+        current_set->emplace_back(builder(std::string{start, sit}));
       };
       auto fill_reaction = [&]() -> void {
-        current_set->push_back(std::make_unique<reaction>(sit, end, builder));
+        current_set->emplace_back(reaction(sit, end, builder));
       };
       auto arrow_switch = [&]() -> void {
         if (!m_reactants.size())
@@ -501,14 +445,14 @@ namespace reactions {
    * products
    *
    * This can be seen as a special reaction with only one reactant, and where
-   * subsequent composite nodes are also decays.
+   * subsequent chain nodes are also decays.
    */
-  template <class Element> class decay final : public node_object {
+  template <class Element> class decay final {
 
   public:
     using element_type = element_wrapper<Element>;
     using builder_type = element_traits::builder_tpl_t<Element>;
-    using nodes_type = std::vector<node<Element>>;
+    using nodes_type = std::vector<node<Element, decay>>;
 
     /// Default move constructor
     decay(decay &&) = default;
@@ -557,11 +501,6 @@ namespace reactions {
           std::string::const_iterator const &end, builder_type builder)
         : decay{begin, end, builder} {}
 
-    /// Create a new instance using the protected constructor
-    friend std::unique_ptr<decay>
-    std::make_unique<decay>(std::string::const_iterator &,
-                            std::string::const_iterator const &, builder_type);
-
     template <class Process>
     friend Process
     reactions::processes::make_process(std::string const &,
@@ -578,8 +517,7 @@ namespace reactions {
      * a string.
      */
     decay(std::string::const_iterator &sit,
-          std::string::const_iterator const &end, builder_type builder)
-        : node_object{} {
+          std::string::const_iterator const &end, builder_type builder) {
 
       bool fill_products = false; // keep track of the elements we are adding
 
@@ -588,8 +526,7 @@ namespace reactions {
         if (!m_head) {
           this->m_head.emplace(builder(std::string{start, sit}));
         } else if (fill_products) {
-          this->m_products.emplace_back(
-              std::make_unique<element_type>(builder(std::string{start, sit})));
+          this->m_products.emplace_back(builder(std::string{start, sit}));
         } else
           throw reactions::exceptions::__syntax_error("Missing arrow",
                                                       end - start);
@@ -599,8 +536,7 @@ namespace reactions {
           throw reactions::exceptions::__syntax_error("Missing head",
                                                       end - sit);
         } else if (fill_products) {
-          this->m_products.push_back(
-              std::make_unique<decay>(sit, end, builder));
+          this->m_products.emplace_back(decay(sit, end, builder));
         } else
           throw reactions::exceptions::__syntax_error("Missing arrow",
                                                       end - sit);

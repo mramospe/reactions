@@ -10,7 +10,6 @@
 #include "reactions/database.hpp"
 #include "reactions/exceptions.hpp"
 #include "reactions/fields.hpp"
-#include "reactions/pow_enum.hpp"
 #include "reactions/tokens.hpp"
 #include "reactions/units.hpp"
 #include "reactions/utils.hpp"

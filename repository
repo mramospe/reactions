@@ -12,6 +12,7 @@ Main arguments:
 -b|--build-cpp: build the project under a "build" directory. It can be used together with "--clean".
 -p|--build-python: build the python package in development mode (assumes to be within a virtual environment)
 -d|--build-docs: build the documentation (inside docs/build)
+-t|--format: apply the format
 -c|--clean: clean the repository of temporary files, caches, build directories, ...
 -f|--force: when specified before any number of commands described above, forces their execution, without any further interaction with the user
 
@@ -42,6 +43,19 @@ while [[ $# -gt 0 ]]; do
 	    fi
 	    shift
 	    ;;
+	-t|--format)
+
+	    echo "Formatting files"
+	    python setup.py apply_format --regex '(docs|python|include|test|scripts)'
+	    if [ $? -eq 0 ]; then
+		echo "Successfully formatted files"
+	    else
+		echo "ERROR: Failed to format files"
+		exit 1
+	    fi
+	    shift
+	    ;;
+
 	-c|--clean)
 
 	    echo "Running \"make clean\" in the documentation directory"

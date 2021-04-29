@@ -1,9 +1,9 @@
 #pragma once
-#include <optional>
 #include <sstream>
 #include <string>
+#include <type_traits>
 
-#include "reactions/database.hpp"
+#include "reactions/fields.hpp"
 
 #define REACTIONS_INSTANCE_ACCESSOR "__instance"
 

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <string>
 #include <tuple>
+#include <utility>
 
 #include "reactions/fields.hpp"
 #include "reactions/pdg.hpp"
@@ -28,7 +30,7 @@ static PyObject *ElementPDG_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::element;
+  self->node.c_type = reactions::processes::node_type::element;
 
   return (PyObject *)self;
 }

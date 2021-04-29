@@ -1,6 +1,8 @@
 #pragma once
 
+#include <string>
 #include <tuple>
+#include <utility>
 
 #include "reactions/fields.hpp"
 #include "reactions/nubase.hpp"
@@ -29,7 +31,7 @@ static PyObject *ElementNuBase_new(PyTypeObject *type,
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::element;
+  self->node.c_type = reactions::processes::node_type::element;
 
   return (PyObject *)self;
 }

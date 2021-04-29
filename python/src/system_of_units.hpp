@@ -5,8 +5,7 @@
 
 #include "reactions/nubase.hpp"
 #include "reactions/pdg.hpp"
-
-#include "utils.hpp"
+#include "reactions/units.hpp"
 
 /// Accessor to energy units
 template <class SystemOfUnits> struct energy_units_accessor {

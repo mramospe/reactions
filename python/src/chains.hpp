@@ -3,7 +3,6 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
-#include "reactions/element_traits.hpp"
 #include "reactions/nubase.hpp"
 #include "reactions/pdg.hpp"
 
@@ -185,7 +184,7 @@ static PyObject *Reaction_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::reaction;
+  self->node.c_type = reactions::processes::node_type::reaction;
 
   return (PyObject *)self;
 }
@@ -316,10 +315,9 @@ python_node_fill_reaction(Reaction *self,
 
     auto &obj = reac.reactants().at(i);
 
-    PyObject *o =
-        obj.is_element()
-            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
-            : Reaction_New(*(obj.ptr_as_reaction()));
+    PyObject *o = obj.is_element()
+                      ? python_element<Element>::new_instance(obj.as_element())
+                      : Reaction_New(obj.as_chain());
 
     if (!o) {
       PyErr_SetString(InternalError, "Unable to create element");
@@ -334,10 +332,9 @@ python_node_fill_reaction(Reaction *self,
 
     auto &obj = reac.products().at(i);
 
-    PyObject *o =
-        obj.is_element()
-            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
-            : Reaction_New(*(obj.ptr_as_reaction()));
+    PyObject *o = obj.is_element()
+                      ? python_element<Element>::new_instance(obj.as_element())
+                      : Reaction_New(obj.as_chain());
 
     if (!o) {
       PyErr_SetString(InternalError, "Unable to create element");
@@ -468,7 +465,7 @@ static PyObject *Decay_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::decay;
+  self->node.c_type = reactions::processes::node_type::decay;
 
   return (PyObject *)self;
 }
@@ -622,10 +619,9 @@ inline bool python_node_fill_decay(Decay *self,
 
     auto &obj = reac.products().at(i);
 
-    PyObject *o =
-        obj.is_element()
-            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
-            : Decay_New(*(obj.ptr_as_decay()));
+    PyObject *o = obj.is_element()
+                      ? python_element<Element>::new_instance(obj.as_element())
+                      : Decay_New(obj.as_chain());
 
     if (!o) {
       PyErr_SetString(InternalError, "Unable to create decay");

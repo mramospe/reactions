@@ -1,7 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 
-#include "composites.hpp"
+#include "chains.hpp"
 #include "database.hpp"
 #include "element_nubase.hpp"
 #include "element_pdg.hpp"
@@ -41,7 +41,7 @@ PyObject *node_type(PyObject *module, PyObject *args) {
   REACTIONS_PYTHON_NODE_CHECK_UNKNOWN(((Node *)obj));
 
   return PyUnicode_FromString(
-      reactions::processes::node_kind_properties::to_c_string(
+      reactions::processes::node_type_properties::to_c_string(
           ((Node *)obj)->c_type));
 }
 
