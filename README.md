@@ -17,7 +17,6 @@ These processes can be either a reaction, where one or more reactants generate a
 of products; or a decay, where a single element generates a set of products.
 This package is written in `C++` as a header-only library, and has a `python`
 interface.
-The usage is very similar in both of them.
 
 This package is distributed as a header-only library for `C++`  and `pip-installable` package in python.
 There is no need to install any external software.
