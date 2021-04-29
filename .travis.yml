@@ -77,15 +77,13 @@ jobs:
     - if [[ -z ${TRAVIS_TAG} || -z ${LATEST_TAG} ]]; then exit 1; fi
     # Change the name of the tag if we are not in master
     - if [ ${TRAVIS_BRANCH} != master ]; then export TRAVIS_TAG=devel-${TRAVIS_TAG}; fi
-    # Create the new tag
-    - git tag ${TRAVIS_TAG}
     # Install Ruby and github_changelog_generator
     - sudo apt-get update
     - sudo apt-get install -y ruby
     - ruby --version
     - gem install github_changelog_generator
     # Generate the changelog file
-    - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG}
+    - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG} --future-release ${TRAVIS_TAG}
     before_install: " "
     install: " "
     script: " "
