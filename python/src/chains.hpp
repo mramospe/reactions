@@ -185,7 +185,7 @@ static PyObject *Reaction_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::reaction;
+  self->node.c_type = reactions::processes::node_type::reaction;
 
   return (PyObject *)self;
 }
@@ -466,7 +466,7 @@ static PyObject *Decay_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::decay;
+  self->node.c_type = reactions::processes::node_type::decay;
 
   return (PyObject *)self;
 }

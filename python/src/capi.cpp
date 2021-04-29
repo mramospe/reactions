@@ -41,7 +41,7 @@ PyObject *node_type(PyObject *module, PyObject *args) {
   REACTIONS_PYTHON_NODE_CHECK_UNKNOWN(((Node *)obj));
 
   return PyUnicode_FromString(
-      reactions::processes::node_kind_properties::to_c_string(
+      reactions::processes::node_type_properties::to_c_string(
           ((Node *)obj)->c_type));
 }
 

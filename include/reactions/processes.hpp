@@ -26,7 +26,7 @@ namespace reactions {
    */
   namespace processes {
     /// Node types
-    REACTIONS_POW_ENUM_WITH_UNKNOWN(node_kind, element, reaction, decay);
+    REACTIONS_POW_ENUM_WITH_UNKNOWN(node_type, element, reaction, decay);
 
     /*! \brief Internal function to process an expression
      *
@@ -179,30 +179,30 @@ namespace reactions {
 
     /// Check if the underlying class is an element
     bool is_element() const {
-      return this->type() == processes::node_kind::element;
+      return this->type() == processes::node_type::element;
     }
 
     /// Check if the underlying class is a reaction
     bool is_reaction() const {
-      return type() == processes::node_kind::reaction;
+      return type() == processes::node_type::reaction;
     }
 
     /// Check if the underlying class is a decay
     bool is_decay() const {
-      return this->type() == processes::node_kind::decay;
+      return this->type() == processes::node_type::decay;
     }
 
     /// Get the node type
-    processes::node_kind type() const {
+    processes::node_type type() const {
 
       if (std::holds_alternative<element_type>(*this))
-        return processes::node_kind::element;
+        return processes::node_type::element;
       else {
         if constexpr (utils::is_template_specialization_v<chain_type, reaction>)
-          return processes::node_kind::reaction;
+          return processes::node_type::reaction;
         else if constexpr (utils::is_template_specialization_v<chain_type,
                                                                decay>)
-          return processes::node_kind::decay;
+          return processes::node_type::decay;
         else
           static_assert(utils::dependent_false_v<decltype(*this)>,
                         "Unexpected internal compile-time error");
@@ -258,19 +258,19 @@ namespace reactions {
             continue;
 
           switch (first[i].type()) {
-          case (processes::node_kind::element):
+          case (processes::node_type::element):
             if (first[i].as_element() == second[i].as_element())
               mask[j] = true;
             break;
-          case (processes::node_kind::reaction):
+          case (processes::node_type::reaction):
             if (first[i].as_chain() == second[i].as_chain())
               mask[j] = true;
             break;
-          case (processes::node_kind::decay):
+          case (processes::node_type::decay):
             if (first[i].as_chain() == second[i].as_chain())
               mask[j] = true;
             break;
-          case (processes::node_kind::unknown_node_kind):
+          case (processes::node_type::unknown_node_type):
             throw reactions::internal_error(
                 "A node can not be of unknown type (internal error); please "
                 "report the bug");
