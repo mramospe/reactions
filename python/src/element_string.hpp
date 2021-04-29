@@ -1,8 +1,8 @@
 #pragma once
 
-#include "reactions/processes.hpp"
-
 #include <string>
+
+#include "reactions/processes.hpp"
 
 // Wrapper for a string element
 typedef struct {
@@ -23,7 +23,7 @@ static PyObject *ElementString_new(PyTypeObject *type,
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::element;
+  self->node.c_type = reactions::processes::node_type::element;
 
   return (PyObject *)self;
 }
@@ -52,8 +52,22 @@ static PyObject *ElementString_get_name(ElementString *self, void *) {
 
 /// Properties of the Reaction class
 static PyGetSetDef ElementString_getsetters[] = {
-    {"name", (getter)ElementString_get_name, NULL, "Get the name", NULL},
+    {"name", (getter)ElementString_get_name, NULL, "str: Underlying name",
+     NULL},
 };
+
+/// Represent the class as a string
+static PyObject *ElementString_to_string(ElementString *self) {
+
+  PyTypeObject *type = (PyTypeObject *)PyObject_Type((PyObject *)self);
+  if (!type)
+    return NULL;
+
+  std::string const str =
+      std::string{type->tp_name} + "(name=\"" + self->element + "\")";
+
+  return PyUnicode_FromString(str.c_str());
+}
 
 /// Comparison operator(s)
 static PyObject *ElementString_richcompare(PyObject *obj1, PyObject *obj2,
@@ -74,13 +88,13 @@ static PyTypeObject ElementStringType = {
     0,                                        /* tp_getattr */
     0,                                        /* tp_setattr */
     0,                                        /* tp_as_async */
-    0,                                        /* tp_repr */
+    (reprfunc)ElementString_to_string,        /* tp_repr */
     0,                                        /* tp_as_number */
     0,                                        /* tp_as_sequence */
     0,                                        /* tp_as_mapping */
     0,                                        /* tp_hash */
     0,                                        /* tp_call */
-    0,                                        /* tp_str */
+    (reprfunc)ElementString_to_string,        /* tp_str */
     0,                                        /* tp_getattro */
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */

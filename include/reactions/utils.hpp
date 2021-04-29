@@ -4,6 +4,13 @@
 /// General utilities
 namespace reactions::utils {
 
+  /// A false type that can be used with *static_assert*
+  template <class T> struct dependent_false : std::false_type {};
+
+  /// \copydoc dependent_false
+  template <class T>
+  static constexpr auto dependent_false_v = dependent_false<T>::value;
+
   /// Internal utilities for the \ref reactions::utils namespace
   namespace detail {
     /// Index corresponding to a given element
@@ -22,12 +29,25 @@ namespace reactions::utils {
   } // namespace detail
 
   /// \copydoc detail::tuple_index
-  template <class Tuple, class E> struct tuple_index {
+  template <class E, class Tuple> struct tuple_index {
     static constexpr auto value =
         detail::tuple_index<0, Tuple, E, std::tuple_element_t<0, Tuple>>::value;
   };
 
   /// \copydoc tuple_index
-  template <class Tuple, class E>
-  static constexpr auto tuple_index_v = tuple_index<Tuple, E>::value;
+  template <class E, class Tuple>
+  static constexpr auto tuple_index_v = tuple_index<E, Tuple>::value;
+
+  /// Check whether a type is a specialization of a template
+  template <class Type, template <class...> class Template>
+  struct is_template_specialization : std::false_type {};
+
+  /// \copydoc is_template_specialization
+  template <template <class...> class Template, class... T>
+  struct is_template_specialization<Template<T...>, Template> : std::true_type {
+  };
+
+  template <class Type, template <class...> class Template>
+  static constexpr auto is_template_specialization_v =
+      is_template_specialization<Type, Template>::value;
 } // namespace reactions::utils

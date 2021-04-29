@@ -123,7 +123,7 @@ namespace reactions::pow_enum {
  * - to_string: represent an element as a string
  */
 #define REACTIONS_POW_ENUM_WITH_UNKNOWN(enum_name, ...)                        \
-  enum enum_name : int { unknown = 0, __VA_ARGS__ };                           \
+  enum enum_name : int { unknown_##enum_name = 0, __VA_ARGS__ };               \
                                                                                \
   struct enum_name##_properties {                                              \
                                                                                \
@@ -162,7 +162,7 @@ namespace reactions::pow_enum {
                     .chars[i],                                                 \
                 s) == 0)                                                       \
           return list[i];                                                      \
-      return unknown;                                                          \
+      return unknown_##enum_name;                                              \
     }                                                                          \
                                                                                \
     static enum_name from_string(std::string const &s) {                       \

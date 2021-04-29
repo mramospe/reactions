@@ -73,3 +73,4 @@ The documentation covers the following aspects:
    notebooks/user_guide
    syntax
    reference
+   auxiliar/tmp/changelog

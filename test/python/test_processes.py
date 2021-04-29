@@ -46,6 +46,8 @@ def test_reaction():
     reac = reactions.reaction('p+ p~- -> {pi+ -> mu+ nu(mu)} pi-')
     assert reac == reactions.reaction('p~- p+ -> pi- {pi+ -> nu(mu) mu+}')
 
+    reactions.reaction('1n -> 1H e-', kind='nubase')
+
 
 def test_decay():
 
@@ -86,6 +88,8 @@ def test_decay():
     assert reac == reactions.decay('pi+ -> nu(mu)~ mu-', kind='pdg')
     reac = reactions.decay('K(S)0 -> {pi+ -> mu+ nu(mu)} pi-')
     assert reac == reactions.decay('K(S)0 -> pi- {pi+ -> nu(mu) mu+}')
+
+    reactions.decay('1n -> 1H e-', kind='nubase')
 
 
 def test_syntax():

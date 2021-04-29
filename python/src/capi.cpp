@@ -1,11 +1,13 @@
-#include "composites.hpp"
+#define PY_SSIZE_T_CLEAN
+#include "Python.h"
+
+#include "chains.hpp"
 #include "database.hpp"
+#include "element_nubase.hpp"
 #include "element_pdg.hpp"
 #include "element_string.hpp"
 #include "node.hpp"
-
-#define PY_SSIZE_T_CLEAN
-#include "Python.h"
+#include "system_of_units.hpp"
 
 // Global function to check whether the input object is an element
 PyObject *is_element(PyObject *module, PyObject *args) {
@@ -39,27 +41,46 @@ PyObject *node_type(PyObject *module, PyObject *args) {
   REACTIONS_PYTHON_NODE_CHECK_UNKNOWN(((Node *)obj));
 
   return PyUnicode_FromString(
-      reactions::processes::node_kind_properties::to_c_string(
+      reactions::processes::node_type_properties::to_c_string(
           ((Node *)obj)->c_type));
 }
 
 // Module global functions
 static PyMethodDef capi_methods[] = {
     {"is_element", (PyCFunction)is_element, METH_VARARGS,
-     R"(Check if an object is of element type
+     R"(is_element(obj)
 
-:param obj: input object
-:returns: whether the object is an element
-:rtype: bool
+Check if an object is of element type
+
+Parameters
+----------
+obj :
+    Object to check
+
+Returns
+-------
+bool
+    whether the object is an element or not
 )"},
     {"node_type", (PyCFunction)node_type, METH_VARARGS,
-     R"(Get the node type as a string (`decay`, `reaction` or `element`)
+     R"(node_type(n)
 
-:param obj: input node
-:type obj: node
-:returns: node type as a string
-:rtype: str
-:raises TypeError: if the input object is not a :class:`node` object.
+Get the node type as a string (`decay`, `reaction` or `element`)
+
+Parameters
+----------
+n : node
+    Node to check
+
+Returns
+-------
+str
+    Node type as a string
+
+Raises
+------
+TypeError
+    If the input object is not a node object.
 )"},
     {NULL, NULL, 0, NULL}};
 
@@ -100,11 +121,14 @@ PyMODINIT_FUNC PyInit_capi(void) {
   // Types
   REACTIONS_PYTHON_CLASS_READY(NodeType);
   REACTIONS_PYTHON_CLASS_READY(ElementStringType);
+  REACTIONS_PYTHON_CLASS_READY(ElementNuBaseType);
   REACTIONS_PYTHON_CLASS_READY(ElementPDGType);
   REACTIONS_PYTHON_CLASS_READY(ReactionType);
   REACTIONS_PYTHON_CLASS_READY(DecayType);
   REACTIONS_PYTHON_CLASS_READY(DatabasePDGType);
+  REACTIONS_PYTHON_CLASS_READY(DatabaseNuBaseType);
   REACTIONS_PYTHON_CLASS_READY(SystemOfUnitsPDGType);
+  REACTIONS_PYTHON_CLASS_READY(SystemOfUnitsNuBaseType);
 
   // Create the module
   PyObject *m = PyModule_Create(&capi_module);
@@ -114,12 +138,16 @@ PyMODINIT_FUNC PyInit_capi(void) {
   // Add types
   REACTIONS_PYTHON_REGISTER_CLASS(m, "node", NodeType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_element", ElementPDGType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "nubase_element", ElementNuBaseType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "string_element", ElementStringType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "reaction", ReactionType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "decay", DecayType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_database_sgl", DatabasePDGType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "nubase_database_sgl", DatabaseNuBaseType);
   REACTIONS_PYTHON_REGISTER_CLASS(m, "pdg_system_of_units_sgl",
                                   SystemOfUnitsPDGType);
+  REACTIONS_PYTHON_REGISTER_CLASS(m, "nubase_system_of_units_sgl",
+                                  SystemOfUnitsNuBaseType);
 
   // Add errors
   REACTIONS_PYTHON_REGISTER_ERROR(m, DatabaseError);

@@ -3,8 +3,8 @@
  */
 #pragma once
 
+#include "reactions/nubase.hpp"
 #include "reactions/pdg.hpp"
-#include "reactions/pow_enum.hpp"
 
 #include <functional>
 #include <string>
@@ -29,13 +29,21 @@ namespace reactions::element_traits {
     };
   };
 
+  /// Definition of the properties of a NuBase element
+  template <> struct properties<reactions::nubase_element> {
+    using type = reactions::nubase_element;
+    static constexpr auto builder = [](std::string const &s) {
+      return reactions::nubase_database::instance()(s);
+    };
+  };
+
   /// Definition of the properties of a string element
   template <> struct properties<reactions::string_element> {
     using type = reactions::string_element;
     static constexpr auto builder = [](std::string const &s) { return s; };
   };
 
-  /// Actual C++ type for the given kind of element
+  /// Actual `C++` type for the given kind of element
   template <class T> using element_t = typename properties<T>::type;
 
   /// Default builder for a given kind of element

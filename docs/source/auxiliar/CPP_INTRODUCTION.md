@@ -14,8 +14,19 @@ The usage is very similar in both of them.
 This package is distributed as a header-only library for `C++`  and pip-installable package in python.
 There is no need to install any external software.
 
-The only necessary thing to work in `C++` is to add `include` as the directory
-to search for header files and use the `C++17` standard (or greater).
+However, in order to correctly set the paths to the databases it is needed to execute build the
+package.
+This can be easily done by calling
+```shell
+mkdir build
+cd build
+cmake ../
+make install
+```
+The installed headers will be placed under `build/include`.
+Afterwards, the package can be easily used by simply including the previous
+path in your set of directories to search for headers.
+Consider the following code snippet:
 
 ```cpp
 
@@ -29,14 +40,17 @@ int main() {
 
    auto d = reactions::make_decay<reactions::pdg_element>("pi+ -> mu+ nu_mu");
 
-   std::cout << "Decay head/number of products: " << r.head().ptr_as_element()->name() << '/' << r.products().size() << std::endl;
+   std::cout << "Decay head/number of products: " << r.head().as_element().name() << '/' << r.products().size() << std::endl;
 
    return 0;
 }
 ```
 
-You just need to place the latter in a `test.cpp` script and compile it with
+To compile it, you just need to place the latter in a `test.cpp` script and compile it with
 
-```bash
-gcc -std=c++17 -Iinclude -o test.cpp
+```shell
+gcc -std=c++17 -I build/include -o test.cpp
 ```
+
+This package uses the `C++` standard greater or equal to 17, so remember to specify the
+`-std=c++17` flag to your preferred compiler.

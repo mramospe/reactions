@@ -1,14 +1,14 @@
 #pragma once
 
+#define PY_SSIZE_T_CLEAN
+#include "Python.h"
+
+#include "reactions/nubase.hpp"
+#include "reactions/pdg.hpp"
+
 #include "element.hpp"
 #include "errors.hpp"
 #include "node.hpp"
-
-#include "reactions/element_traits.hpp"
-#include "reactions/pdg.hpp"
-
-#define PY_SSIZE_T_CLEAN
-#include "Python.h"
 
 // default element type
 #define REACTIONS_PYTHON_DEFAULT_ELEMENT_TYPE "string"
@@ -78,7 +78,8 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  reactions::python::element_kind ek = reactions::python::element_kind::unknown;
+  reactions::python::element_kind ek =
+      reactions::python::element_kind::unknown_element_kind;
   PyObject *reactants; // list of reactants
   PyObject *products;  // list of products
 } Reaction;
@@ -107,7 +108,7 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
 
   if (!str) {
     // initialization with no values
-    if (self->ek == reactions::python::unknown) {
+    if (self->ek == reactions::python::unknown_element_kind) {
       PyErr_SetString(
           PyExc_ValueError,
           (std::string{"Unknown element type \""} + kind + "\"").c_str());
@@ -139,6 +140,20 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
 
     break;
   }
+  case (reactions::python::element_kind::nubase): {
+
+    try {
+      auto reac = reactions::make_reaction_for<reactions::nubase_element>(
+          str, [](std::string const &s) -> reactions::nubase_element {
+            return reactions::nubase_database::instance()(s);
+          });
+      if (!python_node_fill_reaction(self, reac))
+        return -1;
+    }
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
+
+    break;
+  }
   case (reactions::python::element_kind::string): {
 
     try {
@@ -149,7 +164,7 @@ static int Reaction_init(Reaction *self, PyObject *args, PyObject *kwargs) {
     }
     REACTIONS_PYTHON_CATCH_ERRORS(-1)
   }
-  case (reactions::python::element_kind::unknown):
+  case (reactions::python::element_kind::unknown_element_kind):
 
     PyErr_SetString(PyExc_ValueError,
                     (std::string{"Unknown element type "} + kind).c_str());
@@ -169,7 +184,7 @@ static PyObject *Reaction_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::reaction;
+  self->node.c_type = reactions::processes::node_type::reaction;
 
   return (PyObject *)self;
 }
@@ -196,17 +211,9 @@ static PyObject *Reaction_get_products(Reaction *self, void *) {
 /// Properties of the Reaction class
 static PyGetSetDef Reaction_getsetters[] = {
     {"reactants", (getter)Reaction_get_reactants, NULL,
-     R"(Objects at the left hand-side of a reaction
-
-:type: list(node)
-)",
-     NULL},
+     "list(node): Objects at the left hand-side of a reaction", NULL},
     {"products", (getter)Reaction_get_products, NULL,
-     R"(Objects at the right hand-side of a reaction
-
-:type: list(node)
-)",
-     NULL},
+     "list(node): Objects at the right hand-side of a reaction", NULL},
     {NULL},
 };
 
@@ -308,10 +315,9 @@ python_node_fill_reaction(Reaction *self,
 
     auto &obj = reac.reactants().at(i);
 
-    PyObject *o =
-        obj.is_element()
-            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
-            : Reaction_New(*(obj.ptr_as_reaction()));
+    PyObject *o = obj.is_element()
+                      ? python_element<Element>::new_instance(obj.as_element())
+                      : Reaction_New(obj.as_chain());
 
     if (!o) {
       PyErr_SetString(InternalError, "Unable to create element");
@@ -326,10 +332,9 @@ python_node_fill_reaction(Reaction *self,
 
     auto &obj = reac.products().at(i);
 
-    PyObject *o =
-        obj.is_element()
-            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
-            : Reaction_New(*(obj.ptr_as_reaction()));
+    PyObject *o = obj.is_element()
+                      ? python_element<Element>::new_instance(obj.as_element())
+                      : Reaction_New(obj.as_chain());
 
     if (!o) {
       PyErr_SetString(InternalError, "Unable to create element");
@@ -351,7 +356,8 @@ typedef struct {
   // base class
   Node node;
   // attributes
-  reactions::python::element_kind ek = reactions::python::element_kind::unknown;
+  reactions::python::element_kind ek =
+      reactions::python::element_kind::unknown_element_kind;
   PyObject *head;     // head of the decay
   PyObject *products; // list of products
 } Decay;
@@ -380,7 +386,7 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
   if (!str) {
     // initialization with no values
-    if (self->ek == reactions::python::element_kind::unknown) {
+    if (self->ek == reactions::python::element_kind::unknown_element_kind) {
       PyErr_SetString(
           PyExc_ValueError,
           (std::string{"Unknown element type \""} + kind + "\"").c_str());
@@ -414,6 +420,20 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
     break;
   }
+  case (reactions::python::element_kind::nubase): {
+
+    try {
+      auto dec = reactions::make_decay_for<reactions::nubase_element>(
+          str, [](std::string const &s) -> reactions::nubase_element {
+            return reactions::nubase_database::instance()(s);
+          });
+      if (!python_node_fill_decay(self, dec))
+        return -1;
+    }
+    REACTIONS_PYTHON_CATCH_ERRORS(-1)
+
+    break;
+  }
   case (reactions::python::element_kind::string): {
 
     try {
@@ -425,7 +445,7 @@ static int Decay_init(Decay *self, PyObject *args, PyObject *kwargs) {
 
     break;
   }
-  case (reactions::python::element_kind::unknown):
+  case (reactions::python::element_kind::unknown_element_kind):
 
     PyErr_SetString(PyExc_ValueError,
                     (std::string{"Unknown element type "} + kind).c_str());
@@ -445,7 +465,7 @@ static PyObject *Decay_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::decay;
+  self->node.c_type = reactions::processes::node_type::decay;
 
   return (PyObject *)self;
 }
@@ -484,17 +504,11 @@ static PyObject *Decay_get_products(Decay *self, void *) {
 /// Properties of the Decay class
 static PyGetSetDef Decay_getsetters[] = {
     {"head", (getter)Decay_get_head, (setter)Decay_set_head,
-     R"(Element at the left hand-side of a decay
-
-:type: pdg_element or string_element
-)",
+     "pdg_element, nubase_element or string_element: Element at the left "
+     "hand-side of a decay",
      NULL},
     {"products", (getter)Decay_get_products, NULL,
-     R"(Objects at the right hand-side of a decay
-
-:type: list(node)
-)",
-     NULL},
+     "list(node): Objects at the right hand-side of a decay", NULL},
     {NULL},
 };
 
@@ -605,10 +619,9 @@ inline bool python_node_fill_decay(Decay *self,
 
     auto &obj = reac.products().at(i);
 
-    PyObject *o =
-        obj.is_element()
-            ? python_element<Element>::new_instance(*(obj.ptr_as_element()))
-            : Decay_New(*(obj.ptr_as_decay()));
+    PyObject *o = obj.is_element()
+                      ? python_element<Element>::new_instance(obj.as_element())
+                      : Decay_New(obj.as_chain());
 
     if (!o) {
       PyErr_SetString(InternalError, "Unable to create decay");

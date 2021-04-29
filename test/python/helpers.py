@@ -5,30 +5,50 @@ import functools
 import reactions
 
 
+def check_is_singleton(sgl):
+    assert sgl() is sgl()
+
+
+def restore_database(database):
+    """
+    Decorate a function and restore a database path on exit, and clear the
+    cache
+    """
+    def wrapper(function):
+        @functools.wraps(function)
+        def _wrapper(*args, **kwargs):
+            db = database.get_database_path()
+            try:
+                output = function(*args, **kwargs)
+            finally:  # if the function fails we keep having a valid database
+                database.set_database_path(db)
+                database.clear_cache()
+            return output
+        return _wrapper
+    return wrapper
+
+
+def restore_nubase_database(function):
+    """
+    Decorate a function and restore the NuBase database path on exit, and clear the
+    cache
+    """
+    return restore_database(reactions.nubase_database)(function)
+
+
 def restore_pdg_database(function):
     """
     Decorate a function and restore the PDG database path on exit, and clear the
     cache
     """
-    @functools.wraps(function)
-    def wrapper(*args, **kwargs):
-        db = reactions.pdg_database.get_database_path()
-        try:
-            output = function(*args, **kwargs)
-        finally:  # if the function fails we keep having a valid database
-            reactions.pdg_database.set_database_path(db)
-            reactions.pdg_database.clear_cache()
-        return output
-    return wrapper
+    return restore_database(reactions.pdg_database)(function)
 
 
-def toggle_database_cache_status(db=None, clear_user_cache=False):
+def toggle_database_cache_status(db, clear_user_cache=False):
     """
     Yield the database two times with different cache status: one with it
     enabled and another one disabled.
     """
-    db = db or reactions.pdg_database
-
     # here starts with the cache enabled
     db.enable_cache()
     yield db

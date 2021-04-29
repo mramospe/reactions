@@ -91,7 +91,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output_table', type=str, help='Output table')
     parser.add_argument('--input-table', '-i', type=str, default=None,
-                        help='PDG database table. If it is not provided the table is downloaded form the internet')
+                        help='PDG database table. If it is not provided the table is downloaded from the internet')
     parser.add_argument('--overwrite', '-w', action='store_true',
                         help='If set, overwrite the output file, if existing')
     args = parser.parse_args()

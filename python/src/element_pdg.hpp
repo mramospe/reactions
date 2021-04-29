@@ -1,16 +1,22 @@
 #pragma once
 
+#include <string>
+#include <tuple>
+#include <utility>
+
+#include "reactions/fields.hpp"
+#include "reactions/pdg.hpp"
+
 #include "errors.hpp"
 #include "node.hpp"
 #include "types.hpp"
-
-#include "reactions/pdg.hpp"
+#include "utils.hpp"
 
 // Wrapper for a PDG element
 typedef struct {
   // base class
   Node node;
-  // attributes (same as pdg::pdg_element)
+  // attributes (same as pdg_element)
   reactions::pdg_element element;
 } ElementPDG;
 
@@ -24,7 +30,7 @@ static PyObject *ElementPDG_new(PyTypeObject *type, PyObject *Py_UNUSED(args),
     return NULL;
 
   // Set the type for the base class
-  self->node.c_type = reactions::processes::node_kind::element;
+  self->node.c_type = reactions::processes::node_type::element;
 
   return (PyObject *)self;
 }
@@ -110,9 +116,9 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
 
       double value, error_lower, error_upper;
       if (!PyArg_ParseTuple(mass, "ddd", &value, &error_lower, &error_upper)) {
-        PyErr_SetString(
-            PyExc_ValueError,
-            "Mass argument must be a sequence of three floating point objects");
+        PyErr_SetString(PyExc_ValueError,
+                        "Mass argument must be a sequence of three floating "
+                        "point objects or None");
         return -1;
       }
 
@@ -145,6 +151,59 @@ static int ElementPDG_init(ElementPDG *self, PyObject *args, PyObject *kwargs) {
   return 0;
 }
 
+// Represent the field of a PDG element as a string
+template <std::size_t I>
+std::string ElementPDG_field_to_string(reactions::pdg_element const &el) {
+
+  using field_type =
+      std::tuple_element_t<I, reactions::pdg_element::fields_type>;
+  using underlying_type_no_opt =
+      reactions::fields::remove_optional_t<typename field_type::value_type>;
+
+  std::string title =
+      reactions::utils::is_template_specialization_v<
+          underlying_type_no_opt, reactions::fields::value_and_errors>
+          ? std::string{field_type::title} + "_and_errors"
+          : field_type::title;
+
+  if constexpr (I == 0) {
+    if (el.has<field_type>())
+      return title + '=' + reactions::python::to_string(el.get<field_type>());
+    else
+      return title + "=None";
+  } else {
+    if (el.has<field_type>())
+      return std::string{", "} + title + '=' +
+             reactions::python::to_string(el.get<field_type>());
+    else
+      return std::string{", "} + title + "=None";
+  }
+}
+
+// Represent a PDG element as a string (implementation)
+template <std::size_t... I>
+std::string ElementPDG_to_string_impl(reactions::pdg_element const &el,
+                                      std::index_sequence<I...>) {
+  return (ElementPDG_field_to_string<I>(el) + ...);
+}
+
+/// Representation of the class as a string
+static PyObject *ElementPDG_to_string(ElementPDG *self) {
+
+  PyTypeObject *type = (PyTypeObject *)PyObject_Type((PyObject *)self);
+  if (!type)
+    return NULL;
+
+  auto const str =
+      std::string{type->tp_name} + '(' +
+      ElementPDG_to_string_impl(
+          self->element,
+          std::make_index_sequence<
+              std::tuple_size_v<reactions::pdg_element::fields_type>>()) +
+      ')';
+  return PyUnicode_FromString(str.c_str());
+}
+
 /// Comparison operator(s)
 static PyObject *ElementPDG_richcompare(PyObject *obj1, PyObject *obj2, int op);
 
@@ -162,7 +221,7 @@ static PyMethodDef ElementPDG_methods[] = {
 /// Define a function to get access to an attribute of a PDG element
 #define REACTIONS_PYTHON_ELEMENTPDG_GETTER_CHECK_DEF(name, check, converter)   \
   static PyObject *ElementPDG_get_##name(ElementPDG *self, void *) {           \
-    if constexpr (reactions::database::is_optional_field_v<                    \
+    if constexpr (reactions::fields::is_optional_field_v<                      \
                       reactions::pdg::check>)                                  \
       if (!self->element.has_##check())                                        \
         Py_RETURN_NONE;                                                        \
@@ -217,31 +276,36 @@ REACTIONS_PYTHON_ELEMENTPDG_FUNCTION_DEF(latex_name,
 
 /// Properties of the ElementPDG class
 static PyGetSetDef ElementPDG_getsetters[] = {
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(name, "Name of the element"),
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(pdg_id, "PDG ID"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(name, "str: Name of the element"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(pdg_id, "int: PDG ID"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(three_charge,
-                                            "Three times the charge"),
+                                            "int: Three times the charge"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        mass, "Mass value (:py:obj:`None` if missing)"),
+        mass, "float or None: Mass value (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        mass_error_lower, "Lower mass error (:py:obj:`None` if missing)"),
+        mass_error_lower,
+        "float or None: Lower mass error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        mass_error_upper, "Upper mass error (:py:obj:`None` if missing)"),
+        mass_error_upper,
+        "float or None: Upper mass error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        width, "Width value (:py:obj:`None` if missing)"),
+        width, "float or None: Width value (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        width_error_lower, "Lower width error (:py:obj:`None` if missing)"),
+        width_error_lower,
+        "float or None: Lower width error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        width_error_upper, "Upper width error (:py:obj:`None` if missing)"),
+        width_error_upper,
+        "float or None: Upper width error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        is_self_cc, "Whether this element is self charge-conjugate"),
-    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(charge, "Value of the charge"),
+        is_self_cc, "bool: Whether this element is self charge-conjugate"),
+    REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(charge,
+                                            "float: Value of the charge"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        mass_error, "Mass error (:py:obj:`None` if missing)"),
+        mass_error, "float or None: Mass error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        width_error, "Width error (:py:obj:`None` if missing)"),
+        width_error, "float or None: Width error (:py:obj:`None` if missing)"),
     REACTIONS_PYTHON_ELEMENTPDG_GETTER_DESC(
-        latex_name, "Representation of the name to be processed by LaTeX "
+        latex_name, "str: Representation of the name to be processed by LaTeX "
                     "(needs to be inserted inside a mathematical expression)"),
 };
 
@@ -255,13 +319,13 @@ static PyTypeObject ElementPDGType = {
     0,                                        /* tp_getattr */
     0,                                        /* tp_setattr */
     0,                                        /* tp_as_async */
-    0,                                        /* tp_repr */
+    (reprfunc)ElementPDG_to_string,           /* tp_repr */
     0,                                        /* tp_as_number */
     0,                                        /* tp_as_sequence */
     0,                                        /* tp_as_mapping */
     0,                                        /* tp_hash */
     0,                                        /* tp_call */
-    0,                                        /* tp_str */
+    (reprfunc)ElementPDG_to_string,           /* tp_str */
     0,                                        /* tp_getattro */
     0,                                        /* tp_setattro */
     0,                                        /* tp_as_buffer */
