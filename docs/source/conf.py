@@ -73,7 +73,7 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
     else:
         if subprocess.call(['wget', f'https://github.com/mramospe/reactions/archive/refs/tags/v{reactions.__version__}-full-changelog.md', '-O', tmp_changelog]) != 0:
             warnings.warn(
-                RuntimeWarning, 'Unable to find full changelog; setting it to an empty file')
+                'Unable to find full changelog; setting it to an empty file', RuntimeWarning)
 
     subprocess.check_call(['pandoc', tmp_changelog, '-o',
                            os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
