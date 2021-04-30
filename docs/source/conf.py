@@ -71,7 +71,7 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
         subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
                                '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
     else:
-        if subprocess.call(['wget', f'https://github.com/mramospe/reactions/archive/refs/tags/v{reactions.__version__}-full-changelog.md', '-O', tmp_changelog]) != 0:
+        if subprocess.call(['wget', f'https://github.com/mramospe/reactions/releases/download/v{reactions.__version__}/v{reactions.__version__}-full-changelog.md', '-O', tmp_changelog]) != 0:
             warnings.warn(
                 'Unable to find full changelog; setting it to an empty file', RuntimeWarning)
 
