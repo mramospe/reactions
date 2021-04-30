@@ -75,7 +75,7 @@ jobs:
     - export LATEST_TAG=$(git describe --tags $(git rev-list --exclude=${EXCLUDE_PATTERN} --tags --max-count=1))
     - if [[ -z ${NEW_TAG} || -z ${LATEST_TAG} ]]; then exit 1; fi
     # Change the name of the tag if we are not in master
-    - if [ ${TRAVIS_BRANCH} != master ]; then export TRAVIS_TAG=devel-${TRAVIS_TAG}; else export TRAVIS_TAG=${NEW_TAG}; fi
+    - if [ ${TRAVIS_BRANCH} != master ]; then export TRAVIS_TAG=devel-${NEW_TAG}; else export TRAVIS_TAG=${NEW_TAG}; fi
     # Install Ruby and github_changelog_generator
     - sudo apt-get update
     - sudo apt-get install -y ruby
