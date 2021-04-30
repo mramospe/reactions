@@ -20,7 +20,7 @@ respectively.
 .. code-block:: python
 
    import reactions
-   se = reactions.string_element('A') # by string
+   reactions.string_element('A') # by string
 
    reac = reactions.reaction('A B -> C D E F')
    assert len(reac.reactants) == 2
