@@ -23,6 +23,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+import warnings
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -64,17 +66,23 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
 
     os.makedirs(auxiliar_tmp_dir, exist_ok=True)
 
+    if os.environ.get('IS_LOCAL_BUILD', False):
+        tmp_changelog = os.path.join(tmpdir, 'changelog.md')
+        subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
+                               '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
+    else:
+        if subprocess.call(['wget', f'https://github.com/mramospe/reactions/archive/refs/tags/v{reactions.__version__}-full-changelog.md', '-O', tmp_changelog]) != 0:
+            warnings.warn(
+                RuntimeWarning, 'Unable to find full changelog; setting it to an empty file')
+
+    subprocess.check_call(['pandoc', tmp_changelog, '-o',
+                           os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
+
     subprocess.check_call(['python', os.path.join(
         root, 'scripts', 'display-table.py'), 'pdg', '--output', os.path.join(static_doc_dir, 'pdg_table.pdf')])
 
     subprocess.check_call(['python', os.path.join(
         root, 'scripts', 'display-table.py'), 'nubase', '--output', os.path.join(static_doc_dir, 'nubase_table.pdf')])
-
-    tmp_changelog = os.path.join(tmpdir, 'changelog.md')
-    subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
-                           '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
-    subprocess.check_call(['pandoc', tmp_changelog, '-o',
-                           os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
 
 # -- General configuration ------------------------------------------------
 

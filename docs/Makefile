@@ -3,7 +3,7 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS       =
-SPHINXBUILD      = python -msphinx
+SPHINXBUILD      = IS_LOCAL_BUILD=true python -msphinx
 SPHINXPROJ       = reactions
 SOURCEDIR        = source
 BUILDDIR        := $(if $(BUILDDIR),$(BUILDDIR),./build)
