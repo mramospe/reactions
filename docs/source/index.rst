@@ -11,16 +11,16 @@ elements.
 These processes can be either a reaction, where one or more reactants generate a set
 of products; or a decay, where a single element generates a set of products.
 The current implementation allows to work directly with named objects (where each
-element is identified by a string) or with PDG elements, using the information from
-the PDG database for that purpose.
-In the latter, objects can be accessed either by name or by PDG ID.
+element is identified by a string); with PDG elements, using the information from
+the PDG database; and with NuBase elements, using the information
+from the NuBase database.
+In the last two cases, objects can be accessed either by name or by PDG/NuBase ID,
+respectively.
 
 .. code-block:: python
 
    import reactions
    se = reactions.string_element('A') # by string
-   pe1 = reactions.string_element('pi+') # using the PDG database (by name)
-   pe2 = reactions.string_element(+211) # using the PDG database (by ID)
 
    reac = reactions.reaction('A B -> C D E F')
    assert len(reac.reactants) == 2
@@ -30,8 +30,9 @@ In the latter, objects can be accessed either by name or by PDG ID.
    assert dec.head.name == 'A'
    assert len(dec.products) == 2
 
-   dec = reactions.decay('pi+ -> mu+ nu_mu', kind='pdg') # use the PDG database
-   assert dec.head.pdg_id == +211
+   reactions.decay('pi+ -> mu+ nu(mu)', kind='pdg') # use the PDG database
+
+   reactions.decay('1n -> 1H e-', kind='nubase') # use the NuBase database
 
 The keyword argument `kind` determines what kind of elements will constitute the
 reaction/decay.
@@ -52,8 +53,9 @@ the package as a script
 
 .. code-block:: bash
 
-   python -m reactions --decays 'A -> B C' --reactions 'A B -> C D' --kind string
-   python -m reactions --decays 'KS0 -> pi+ pi-' --reactions 'e+ e- -> gamma gamma' --kind pdg
+   python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
+   python -m reactions check-syntax --decays 'K(S)0 -> pi+ pi-' --reactions 'e+ e- -> gamma gamma' --kind pdg
+   python -m reactions check-syntax --decays '1n -> 1H e-' --reactions '2H 2H -> 4He' --kind nubase
 
 You can check the script options invoking:
 
