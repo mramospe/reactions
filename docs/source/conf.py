@@ -35,6 +35,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(reactions.__file__)))
 # directories are modified according to the needs of Sphinx.
 with tempfile.TemporaryDirectory() as tmpdir:
 
+    # Install dependencies
+    subprocess.check_call(['sudo', 'apt-get', 'update'])
+    subprocess.check_call(['sudo', 'apt-get', 'install', 'ruby-dev'])
+    subprocess.check_call(['gem', 'install', 'github_changelog_generator'])
+
+    # Install the C++ static files
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
     ori_doxyfile = os.path.join(root, 'docs', 'Doxyfile')
@@ -70,12 +76,6 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
     subprocess.check_call(['python', os.path.join(
         root, 'scripts', 'display-table.py'), 'nubase', '--output', os.path.join(static_doc_dir, 'nubase_table.pdf')])
 
-    os.environ['GEM_HOME'] = os.path.join(auxiliar_tmp_dir, 'gems')
-    subprocess.check_call(
-        ['gem', 'install', 'github_changelog_generator'], cwd=root, env=dict(os.environ))
-
-    os.environ['PATH'] = ':'.join(
-        [os.environ['PATH'], os.path.join(os.environ['GEM_HOME'], 'bin')])
     tmp_changelog = os.path.join(tmpdir, 'changelog.md')
     subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
                            '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root, env=dict(os.environ))
