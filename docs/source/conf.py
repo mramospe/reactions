@@ -99,7 +99,7 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
         else:
             subprocess.check_call(['pandoc', tmp_changelog, '-o',
                                    os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
-    else:
+    elif version_tag is None:
         # a local build
         subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
                                '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
