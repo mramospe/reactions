@@ -76,6 +76,8 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
     version_tag = os.environ.get(
         'READTHEDOCS_VERSION', None)  # set by ReadTheDocs
 
+    print(f'ReadTheDocs build version: {version_tag}')
+
     if version_tag and re.compile('^(v[0-9]*\.[0-9]*\.[0-9]|stable)$').match(version_tag):
 
         if version_tag != 'stable' and version_tag != reactions.__version__:
