@@ -1,7 +1,7 @@
 """
 Process a sets of reactions and/or decays, checking its syntax
 """
-from . import pdg_database, reaction, decay
+from . import nubase_database, pdg_database, reaction, decay
 
 import argparse
 
@@ -19,7 +19,10 @@ def check_syntax(reactions, decays, kind):
 
 def print_table(kind):
     """ Print the table of particles """
-    if kind == 'pdg':
+    if kind == 'nubase':
+        with open(nubase_database.get_database_path()) as db:
+            print(db.read())
+    elif kind == 'pdg':
         with open(pdg_database.get_database_path()) as db:
             print(db.read())
     else:
@@ -36,14 +39,14 @@ p_check_syntax.add_argument('--reactions', nargs='+', type=str,
                             help='Set of reactions to check')
 p_check_syntax.add_argument('--decays', nargs='+', type=str,
                             help='Set of decays to check')
-p_check_syntax.add_argument('--kind', type=str, choices=('string', 'pdg'),
+p_check_syntax.add_argument('--kind', type=str, choices=('string', 'nubase', 'pdg'),
                             default='string', help='Type of the elements')
 
 p_print_table = subparsers.add_parser(
     print_table.__name__.replace('_', '-'), help=print_table.__doc__)
 p_print_table.set_defaults(function=print_table)
-p_print_table.add_argument('--kind', type=str, choices=('pdg',),
-                           default='pdg', help='Element kind of the table to print')
+p_print_table.add_argument('kind', type=str, choices=('nubase', 'pdg'),
+                           help='Element kind of the table to print')
 
 args = parser.parse_args()
 
