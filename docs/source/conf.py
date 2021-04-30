@@ -23,7 +23,6 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import time
 import warnings
 
 # If extensions (or modules to document with autodoc) are in another directory,
