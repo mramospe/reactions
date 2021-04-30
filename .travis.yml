@@ -70,19 +70,20 @@ jobs:
     # Export the path to the package
     - export PYTHONPATH=${PYTHONPATH}:python
     # Define the new and previous tags
-    - export TRAVIS_TAG=v$(python -c "import reactions; print(reactions.__version__)")
-    - if [[ ! ${TRAVIS_TAG} =~ "dev" ]]; then export EXCLUDE_PATTERN='*dev*'; fi
+    - export NEW_TAG=v$(python -c "import reactions; print(reactions.__version__)")
+    - if [[ ! ${NEW_TAG} =~ "dev" ]]; then export EXCLUDE_PATTERN='*dev*'; fi
     - export LATEST_TAG=$(git describe --tags $(git rev-list --exclude=${EXCLUDE_PATTERN} --tags --max-count=1))
-    - if [[ -z ${TRAVIS_TAG} || -z ${LATEST_TAG} ]]; then exit 1; fi
+    - if [[ -z ${NEW_TAG} || -z ${LATEST_TAG} ]]; then exit 1; fi
     # Change the name of the tag if we are not in master
-    - if [ ${TRAVIS_BRANCH} != master ]; then export TRAVIS_TAG=devel-${TRAVIS_TAG}; fi
+    - if [ ${TRAVIS_BRANCH} != master ]; then export TRAVIS_TAG=devel-${NEW_TAG}; else export TRAVIS_TAG=${NEW_TAG}; fi
     # Install Ruby and github_changelog_generator
     - sudo apt-get update
     - sudo apt-get install -y ruby
     - ruby --version
     - gem install github_changelog_generator
     # Generate the changelog file
-    - ./repository changelog -o ${TRAVIS_TAG}-changelog.md --since-tag ${LATEST_TAG} --future-release ${TRAVIS_TAG} -t ${GITHUB_TOKEN}
+    - ./repository changelog -o ${NEW_TAG}-changelog.md --since-tag ${LATEST_TAG} --future-release ${NEW_TAG} -t ${GITHUB_TOKEN}
+    - ./repository changelog -o ${NEW_TAG}-full-changelog.md --since-tag v0.0.0 --future-release ${NEW_TAG} -t ${GITHUB_TOKEN}
     before_install: " "
     install: " "
     script: " "
@@ -91,7 +92,9 @@ jobs:
         token: ${GITHUB_TOKEN}
         tag_name: ${TRAVIS_TAG}
         name: ${TRAVIS_TAG}
-        file: ${TRAVIS_TAG}-changelog.md
+        file:
+        - ${NEW_TAG}-changelog.md
+        - ${NEW_TAG}-full-changelog.md
         skip_cleanup: true
         draft: true
         on:
