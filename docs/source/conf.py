@@ -37,6 +37,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(reactions.__file__)))
 # directories are modified according to the needs of Sphinx.
 with tempfile.TemporaryDirectory() as tmpdir:
 
+    # Install the C++ static files
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
     ori_doxyfile = os.path.join(root, 'docs', 'Doxyfile')
