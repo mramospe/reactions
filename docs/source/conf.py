@@ -36,8 +36,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(reactions.__file__)))
 with tempfile.TemporaryDirectory() as tmpdir:
 
     # Install dependencies
-    subprocess.check_call(['sudo', 'apt-get', 'update'])
-    subprocess.check_call(['sudo', 'apt-get', 'install', 'ruby-dev'])
+    subprocess.check_call(['apt-get', 'update'])
+    subprocess.check_call(['apt-get', 'install', 'ruby-dev'])
     subprocess.check_call(['gem', 'install', 'github_changelog_generator'])
 
     # Install the C++ static files
