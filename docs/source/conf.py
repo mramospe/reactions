@@ -18,12 +18,13 @@
 # serve to show the default.
 
 import os
+import re
 import reactions
 import shutil
 import subprocess
 import sys
 import tempfile
-import warnings
+import time
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -66,17 +67,42 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
 
     os.makedirs(auxiliar_tmp_dir, exist_ok=True)
 
+    # If this is executed by ReadTheDocs (READTHEDOCS_VERSION is set), the changelog
+    # from the current version is used. This also works for the "stable" version. For
+    # other builds, like "latest", no changelog is used. If we are running a local
+    # build, the changelog is generated locally.
     tmp_changelog = os.path.join(tmpdir, 'changelog.md')
-    if os.environ.get('IS_LOCAL_BUILD', False):
+
+    version_tag = os.environ.get(
+        'READTHEDOCS_VERSION', None)  # set by ReadTheDocs
+
+    if version_tag and re.compile('^(v[0-9]*\.[0-9]*\.[0-9]|stable)$').match(version_tag):
+
+        if version_tag != 'stable' and version_tag != reactions.__version__:
+            raise RuntimeError(
+                'Tag version is different from the package version')
+
+        timeout = 3600  # 1 hour
+        start = time.time()
+        while time.time() - start < timeout:
+            sc = subprocess.call(
+                ['wget', f'https://github.com/mramospe/reactions/releases/download/v{reactions.__version__}/v{reactions.__version__}-full-changelog.md', '-O', tmp_changelog])
+            if sc == 0:
+                break
+            else:
+                time.sleep(30)  # wait 30 seconds
+
+        if sc != 0:
+            raise RuntimeError('Missing full catalog in tagged build')
+        else:
+            subprocess.check_call(['pandoc', tmp_changelog, '-o',
+                                   os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
+    else:
+        # a local build
         subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
                                '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
-    else:
-        if subprocess.call(['wget', f'https://github.com/mramospe/reactions/releases/download/v{reactions.__version__}/v{reactions.__version__}-full-changelog.md', '-O', tmp_changelog]) != 0:
-            warnings.warn(
-                'Unable to find full changelog; setting it to an empty file', RuntimeWarning)
-
-    subprocess.check_call(['pandoc', tmp_changelog, '-o',
-                           os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
+        subprocess.check_call(['pandoc', tmp_changelog, '-o',
+                               os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
 
     subprocess.check_call(['python', os.path.join(
         root, 'scripts', 'display-table.py'), 'pdg', '--output', os.path.join(static_doc_dir, 'pdg_table.pdf')])
