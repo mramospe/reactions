@@ -137,18 +137,17 @@ while [[ $# -gt 0 ]]; do
 
 	changelog)
 
-	    hash github_changelog_generator 2>/dev/null || {
-		echo >&2 "I require github_changelog_generator but it's not installed. You can install it via
+	    hash docker 2>/dev/null || {
+		echo >&2 "I require docker but it's not installed. You can install it via
 
-sudo apt-get install ruby-full
-gem install github_changelog_generator
+sudo apt-get install docker
 
 Aborting";
 		exit 1;
 	    }
 
 	    echo "Running GitHub changelog generator"
-	    github_changelog_generator -u mramospe -p reactions $@
+	    docker run -it --rm -v $(pwd -P):/usr/local/src/your-app githubchangeloggenerator/github-changelog-generator -u mramospe -p reactions $@
 	    if [ $? ]; then exit 0; else exit 1; fi
 	    ;;
 

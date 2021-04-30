@@ -35,11 +35,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(reactions.__file__)))
 # directories are modified according to the needs of Sphinx.
 with tempfile.TemporaryDirectory() as tmpdir:
 
-    # Install dependencies
-    subprocess.check_call(['apt-get', 'update'])
-    subprocess.check_call(['apt-get', 'install', 'ruby-dev'])
-    subprocess.check_call(['gem', 'install', 'github_changelog_generator'])
-
     # Install the C++ static files
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
