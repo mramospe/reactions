@@ -80,9 +80,9 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
 
     if version_tag and re.compile('^(v[0-9]*\.[0-9]*\.[0-9]|stable)$').match(version_tag):
 
-        if version_tag != 'stable' and version_tag != reactions.__version__:
+        if version_tag != 'stable' and version_tag != f'v{reactions.__version__}':
             raise RuntimeError(
-                'Tag version is different from the package version')
+                f'Tag version "{version_tag}" is different from the package version "v{reactions.__version__}"')
 
         timeout = 3600  # 1 hour
         start = time.time()
