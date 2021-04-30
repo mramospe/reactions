@@ -70,9 +70,15 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
     subprocess.check_call(['python', os.path.join(
         root, 'scripts', 'display-table.py'), 'nubase', '--output', os.path.join(static_doc_dir, 'nubase_table.pdf')])
 
+    os.environ['GEM_HOME'] = os.path.join(auxiliar_tmp_dir, 'gems')
+    subprocess.check_call(
+        ['gem', 'install', 'github_changelog_generator'], cwd=root, env=dict(os.environ))
+
+    os.environ['PATH'] = ':'.join(
+        [os.environ['PATH'], os.path.join(os.environ['GEM_HOME'], 'bin')])
     tmp_changelog = os.path.join(tmpdir, 'changelog.md')
     subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
-                           '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
+                           '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root, env=dict(os.environ))
     subprocess.check_call(['pandoc', tmp_changelog, '-o',
                            os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
 
