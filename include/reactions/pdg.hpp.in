@@ -90,10 +90,10 @@ namespace reactions {
     }
 
     /// Get the energy units
-    energy_units const &get_energy_units() const { return m_energy_units; }
+    energy_units get_energy_units() const { return m_energy_units; }
 
     /// Access the given units
-    template <class Units> Units const &units() const {
+    template <class Units> Units units() const {
       if constexpr (std::is_same_v<Units, energy_units>)
         return get_energy_units();
       else
