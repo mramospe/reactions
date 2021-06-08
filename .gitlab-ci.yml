@@ -71,5 +71,6 @@ module:
    stage: test
    script:
       - source vpython3/bin/activate
-      - python -m reactions print-table
+      - python -m reactions print-table nubase
+      - python -m reactions print-table pdg
       - python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
