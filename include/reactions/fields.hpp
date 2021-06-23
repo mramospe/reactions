@@ -166,8 +166,16 @@ namespace reactions::fields {
   };
 
   /// Represent a value, its error and a identifier tag
+  template <class ValueType, class TagType, class Enable = void>
+  struct value_and_error_with_tag;
+
+  /// \copydoc value_and_error_with_tag
   template <class ValueType, class TagType>
-  struct value_and_error_with_tag : value_and_error<ValueType> {
+  struct value_and_error_with_tag<
+      ValueType, TagType,
+      std::enable_if_t<(std::is_floating_point_v<ValueType> &&
+                        std::is_integral_v<TagType>),
+                       void>> : value_and_error<ValueType> {
 
     using base_type = value_and_error<ValueType>;
 
