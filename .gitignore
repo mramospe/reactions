@@ -5,6 +5,4 @@ reactions.egg-info/
 __pycache__
 *.so
 docs/build
-/include/reactions/nubase.hpp
-/include/reactions/pdg.hpp
 .coverage
