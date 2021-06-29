@@ -41,10 +41,12 @@ file(GLOB_RECURSE HEADER_FILES_TO_CONFIG ${PROJECT_SOURCE_DIR}/include/reactions
 install(FILES ${HEADER_FILES} DESTINATION include/reactions)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/python/reactions/data DESTINATION ${PROJECT_BINARY_DIR})
+
 set(PDG_TABLE ${PROJECT_BINARY_DIR}/data/pdg_mass_width_2020.txt)
 set(NUBASE_TABLE ${PROJECT_BINARY_DIR}/data/nubase_2020.txt)
 foreach(include_file ${HEADER_FILES_TO_CONFIG})
   string(REPLACE ".in" "" file_name ${include_file})
+  string(REPLACE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR} file_name ${file_name})
   configure_file(${include_file} ${file_name})
 endforeach()
 
@@ -57,7 +59,7 @@ install(FILES ${HEADER_FILES} DESTINATION ${PROJECT_BINARY_DIR}/include/reaction
 #
 if(INSTALL_TESTS)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/test)
-    include_directories(include test/cpp)
+    include_directories(${PROJECT_BINARY_DIR}/include include test/cpp)
     file(GLOB TEST_SOURCES ${PROJECT_SOURCE_DIR}/test/cpp/*.cpp)
     set(CMAKE_CXX_FLAGS "-O3 -pedantic -Wall -Wextra")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -pedantic -Wall -Wextra")
