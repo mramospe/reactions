@@ -160,8 +160,8 @@ namespace reactions {
     pdg_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
 
     /// Construct the element from the contents
-    explicit pdg_element(base_type &&tuple)
-        : base_type{std::forward<base_type>(tuple)} {}
+    explicit pdg_element(base_type &&other)
+        : base_type{std::forward<base_type>(other)} {}
 
     /*! \brief Compare the ID of the two particles
      *
