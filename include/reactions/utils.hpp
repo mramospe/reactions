@@ -1,3 +1,6 @@
+/*! \file
+  \brief Functions and structs to handle templated types.
+*/
 #pragma once
 #include <tuple>
 

@@ -394,7 +394,7 @@ namespace reactions {
      * This constructor is called internally when creating reactions that
      * contain other reactions.
      *
-     * \param begin iterator pointing to the beginning of the string.
+     * \param sit iterator pointing to the current read position in the string.
      * \param end iterator pointing to the end of the string.
      * \param builder function to create the underlying element from
      * a string.

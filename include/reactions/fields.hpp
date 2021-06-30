@@ -38,7 +38,7 @@ namespace reactions {
   - **value_type**: a type representing the object that is stored (can be a
   \ref std::optional).
 
-  - **units_reference_type**: a resolved type of the \ref fields::reference
+  - **units_reference_type**: a resolved type of the \ref units::reference
   template, containing the units of the field and the associated units in the
   database. If the field has no units, \ref units::none must be used.
 
@@ -50,7 +50,7 @@ namespace reactions {
   (*Subfield*) that identifies the member.
 
   The access to a value of a field (or a member of a field) is handled by
-  \ref fields::accessor, which automatically handles the system of units
+  \ref units::accessor, which automatically handles the system of units
   and the access to members of a field. If at some point the associated
   type is a \ref std::optional, the value is accessed without checking its
   validity.
@@ -339,9 +339,9 @@ namespace reactions::fields {
   /// Accessor to a value/error field
   template <class Field> static constexpr get_t<Field> get;
 
-  /// Optional for \ref float type
+  /// Optional for floating point type
   using float_opt = std::optional<float>;
-  /// Optional for \ref double type
+  /// Optional for double floating point type
   using double_opt = std::optional<double>;
   /// Optional \ref value_and_error for single-precision floating-point type
   using ve_float_opt = std::optional<value_and_error<float>>;
