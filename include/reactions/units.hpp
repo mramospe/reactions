@@ -1,5 +1,5 @@
-/* \file
-\brief Definition of units
+/*! \file
+  \brief Definition of units
  */
 #pragma once
 #include "reactions/exceptions.hpp"
