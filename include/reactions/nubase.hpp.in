@@ -189,8 +189,8 @@ namespace reactions {
     nubase_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
 
     /// Construct the element from the contents
-    explicit nubase_element(base_type &&tuple)
-        : base_type{std::forward<base_type>(tuple)} {}
+    explicit nubase_element(base_type &&other)
+        : base_type{std::forward<base_type>(other)} {}
 
     /*! \brief Compare the ID of the two particles
      *

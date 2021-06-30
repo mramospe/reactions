@@ -58,11 +58,11 @@ int main() {
           !c3.has_mass() || !c3.has_width())
         errors.push_back("Problems found building custom PDG elements");
 
-      auto check_latex_name = [&db, &errors](std::string const &name,
+      auto check_latex_name = [&db, &errors](std::string const &element_name,
                                              std::string const &reference) {
-        auto const ln = db(name).latex_name();
+        auto const ln = db(element_name).latex_name();
         if (ln != reference)
-          errors.push_back("Wrong LaTeX name for particle \"" + name +
+          errors.push_back("Wrong LaTeX name for particle \"" + element_name +
                            "\": \"" + ln + "\" (reference: \"" + reference +
                            "\")");
       };
@@ -157,13 +157,14 @@ int main() {
               !c3.has_mass_excess() || !c3.has_half_life())
             errors.push_back("Problems found building custom NUBASE elements");
 
-          auto check_latex_name = [&db, &errors](std::string const &name,
-                                                 std::string const &reference) {
-            auto const ln = db(name).latex_name();
+          auto check_latex_name = [&db,
+                                   &errors](std::string const &element_name,
+                                            std::string const &reference) {
+            auto const ln = db(element_name).latex_name();
             if (ln != reference)
-              errors.push_back("Wrong LaTeX name for particle \"" + name +
-                               "\": \"" + ln + "\" (reference: \"" + reference +
-                               "\")");
+              errors.push_back("Wrong LaTeX name for particle \"" +
+                               element_name + "\": \"" + ln +
+                               "\" (reference: \"" + reference + "\")");
           };
 
           try {
