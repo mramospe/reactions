@@ -1,8 +1,6 @@
 dist: xenial
 language: python
 
-if: (branch IN (master, devel)) OR (head_branch IN (master, devel))
-
 os: linux
 addons:
   apt:
