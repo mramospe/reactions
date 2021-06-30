@@ -25,6 +25,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import warnings
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -62,55 +63,62 @@ OUTPUT_DIRECTORY = {cpp_doc_dir}
 ''')
     subprocess.check_call(['doxygen'], cwd=tmpdir)
 
-    # Generate additional documents needed by the documentation, like tables, plots, ...
-    auxiliar_tmp_dir = os.path.join(auxiliar_dir, 'tmp')
+    # This part is only executed if we are not on a lazy build
+    if os.getenv('REACTIONS_SPHINX_LAZY_BUILD', None) is None:
 
-    os.makedirs(auxiliar_tmp_dir, exist_ok=True)
+        # Generate additional documents needed by the documentation, like tables, plots, ...
+        auxiliar_tmp_dir = os.path.join(auxiliar_dir, 'tmp')
 
-    # If this is executed by ReadTheDocs (READTHEDOCS_VERSION is set), the changelog
-    # from the current version is used. This also works for the "stable" version. For
-    # other builds, like "latest", no changelog is used. If we are running a local
-    # build, the changelog is generated locally.
-    tmp_changelog = os.path.join(tmpdir, 'changelog.md')
+        os.makedirs(auxiliar_tmp_dir, exist_ok=True)
 
-    version_tag = os.environ.get(
-        'READTHEDOCS_VERSION', None)  # set by ReadTheDocs
+        # If this is executed by ReadTheDocs (READTHEDOCS_VERSION is set), the changelog
+        # from the current version is used. This also works for the "stable" version. For
+        # other builds, like "latest", no changelog is used. If we are running a local
+        # build, the changelog is generated locally.
+        tmp_changelog = os.path.join(tmpdir, 'changelog.md')
 
-    print(f'ReadTheDocs build version: {version_tag}')
+        version_tag = os.environ.get(
+            'READTHEDOCS_VERSION', None)  # set by ReadTheDocs
 
-    if version_tag and re.compile('^(v[0-9]*\.[0-9]*\.[0-9]|stable)$').match(version_tag):
+        print(f'ReadTheDocs build version: {version_tag}')
 
-        if version_tag != 'stable' and version_tag != f'v{reactions.__version__}':
-            raise RuntimeError(
-                f'Tag version "{version_tag}" is different from the package version "v{reactions.__version__}"')
+        if version_tag and re.compile('^(v[0-9]*\.[0-9]*\.[0-9]|stable)$').match(version_tag):
 
-        timeout = 3600  # 1 hour
-        start = time.time()
-        while time.time() - start < timeout:
-            sc = subprocess.call(
-                ['wget', f'https://github.com/mramospe/reactions/releases/download/v{reactions.__version__}/v{reactions.__version__}-full-changelog.md', '-O', tmp_changelog])
-            if sc == 0:
-                break
+            if version_tag != 'stable' and version_tag != f'v{reactions.__version__}':
+                raise RuntimeError(
+                    f'Tag version "{version_tag}" is different from the package version "v{reactions.__version__}"')
+
+            timeout = 3600  # 1 hour
+            start = time.time()
+            while time.time() - start < timeout:
+                sc = subprocess.call(
+                    ['wget', f'https://github.com/mramospe/reactions/releases/download/v{reactions.__version__}/v{reactions.__version__}-full-changelog.md', '-O', tmp_changelog])
+                if sc == 0:
+                    break
+                else:
+                    time.sleep(30)  # wait 30 seconds
+
+            if sc != 0:
+                raise RuntimeError('Missing full catalog in tagged build')
             else:
-                time.sleep(30)  # wait 30 seconds
-
-        if sc != 0:
-            raise RuntimeError('Missing full catalog in tagged build')
-        else:
+                subprocess.check_call(['pandoc', tmp_changelog, '-o',
+                                       os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
+        elif version_tag is None:
+            # a local build
+            subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
+                                   '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
             subprocess.check_call(['pandoc', tmp_changelog, '-o',
                                    os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
-    elif version_tag is None:
-        # a local build
-        subprocess.check_call(['bash', 'repository', 'changelog', '-o', tmp_changelog,
-                               '--include-tags-regex', '^v[0-9]*\.[0-9]*\.[0-9]$', '--since-tag', 'v0.0.0'], cwd=root)
-        subprocess.check_call(['pandoc', tmp_changelog, '-o',
-                               os.path.join(auxiliar_tmp_dir, 'changelog.rst')])
 
-    subprocess.check_call(['python', os.path.join(
-        root, 'scripts', 'display-table.py'), 'pdg', '--output', os.path.join(static_doc_dir, 'pdg_table.pdf')])
+        subprocess.check_call(['python', os.path.join(
+            root, 'scripts', 'display-table.py'), 'pdg', '--output', os.path.join(static_doc_dir, 'pdg_table.pdf')])
 
-    subprocess.check_call(['python', os.path.join(
-        root, 'scripts', 'display-table.py'), 'nubase', '--output', os.path.join(static_doc_dir, 'nubase_table.pdf')])
+        subprocess.check_call(['python', os.path.join(
+            root, 'scripts', 'display-table.py'), 'nubase', '--output', os.path.join(static_doc_dir, 'nubase_table.pdf')])
+
+    else:
+        warnings.warn(
+            'Doing a lazy build since the REACTIONS_SPHINX_LAZY_BUILD environment variable has been set; tables and changelog will not be generated', UserWarning)
 
 # -- General configuration ------------------------------------------------
 
