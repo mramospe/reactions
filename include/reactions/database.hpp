@@ -11,6 +11,7 @@
 #include "reactions/exceptions.hpp"
 #include "reactions/fields.hpp"
 
+/// Common tools and base objects to handle databases
 namespace reactions::database {
 
   /*! \brief Base database class
