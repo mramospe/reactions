@@ -1,5 +1,5 @@
 /*! \file
- * \brief Define the base database class
+  \brief Define the base database class
  */
 #pragma once
 #include <fstream>
