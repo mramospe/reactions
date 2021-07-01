@@ -1,5 +1,5 @@
 /*! \file
- * \brief Define the base database class
+  \brief Define the base database class
  */
 #pragma once
 #include <fstream>
@@ -11,6 +11,7 @@
 #include "reactions/exceptions.hpp"
 #include "reactions/fields.hpp"
 
+/// Common tools and base objects to handle databases
 namespace reactions::database {
 
   /*! \brief Base database class

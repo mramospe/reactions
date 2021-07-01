@@ -14,8 +14,9 @@
 
 namespace reactions {
 
-  /// Structures representing the fields of a \ref reactions::nubase_element
-  /// object
+  /*! \brief Structures representing the fields of a \ref
+   * reactions::nubase_element object
+   */
   namespace nubase {
 
     /// Range of a variable in a file
