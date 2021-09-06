@@ -1,5 +1,5 @@
-/* \file
-\brief Definition of units
+/*! \file
+  \brief Definition of units
  */
 #pragma once
 #include "reactions/exceptions.hpp"
@@ -217,7 +217,7 @@ namespace reactions {
     /// \copydoc accessor_t
     template <class Field, class Subfield, class... S>
     struct accessor_t<Field, Subfield, S...> {
-      /// \copydoc accessor_t::operator()
+      /// Access the value of the subfield and process the units
       template <class T>
       constexpr fields::field_member_type_t<Field, Subfield, S...> const &
       operator()(T const &f) const {

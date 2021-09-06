@@ -144,46 +144,6 @@ class ApplyFormatCommand(DirectoryWorker):
                 raise RuntimeError('Problems found while formatting C files')
 
 
-class ApplyCopyrightCommand(DirectoryWorker):
-
-    description = 'add the copyright to the files in the directories'
-
-    def _check_add_copyright(self, path, preamble):
-        """
-        Check that the given file has the provided copyright and add it in case
-        it is not present.
-        """
-        with open(path) as f:
-            data = f.read()
-
-        if not preamble in data:
-
-            if data.startswith('#!'):  # is a script
-                lines = data.splitlines(keepends=True)
-                text = f'{lines[0]}{preamble}{"".join(lines[1:])}'
-            else:
-                text = f'{preamble}{data}'
-
-            with open(path, 'wt') as f:
-                f.write(text)
-
-    def run(self):
-        """
-        Execution of the command action.
-        """
-        for directory in self.directories:
-            python_files = python_files_in(directory)
-            c_files = cpp_files_in(directory)
-
-            lic = license_for_language('python')
-            for pf in python_files:
-                self._check_add_copyright(pf, lic)
-
-            lic = license_for_language('cpp')
-            for cf in c_files:
-                self._check_add_copyright(cf, lic)
-
-
 class CheckFormatCommand(DirectoryWorker):
 
     description = 'check the format of the files of a certain type in a given directory'

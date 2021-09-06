@@ -62,7 +62,7 @@ jobs:
     script: pytest
     after_success: if [[ ${TRAVIS_PULL_REQUEST} != "false" ]]; then codecov; fi
   - name: deploy
-    if: branch = devel || branch = master
+    if: branch IN (master, devel)
     python: 3.7
     before_deploy:
     # Define the Git configuration

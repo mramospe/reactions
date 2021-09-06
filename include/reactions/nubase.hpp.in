@@ -14,8 +14,9 @@
 
 namespace reactions {
 
-  /// Structures representing the fields of a \ref reactions::nubase_element
-  /// object
+  /*! \brief Structures representing the fields of a \ref
+   * reactions::nubase_element object
+   */
   namespace nubase {
 
     /// Range of a variable in a file
@@ -103,13 +104,13 @@ namespace reactions {
     }
 
     /// Get the energy units
-    energy_units const &get_energy_units() const { return m_energy_units; }
+    energy_units get_energy_units() const { return m_energy_units; }
 
     /// Get the time units
-    time_units const &get_time_units() const { return m_time_units; }
+    time_units get_time_units() const { return m_time_units; }
 
     /// Access the given units
-    template <class Units> Units const &units() const {
+    template <class Units> Units units() const {
       if constexpr (std::is_same_v<Units, energy_units>)
         return get_energy_units();
       else if constexpr (std::is_same_v<Units, time_units>)
@@ -189,8 +190,8 @@ namespace reactions {
     nubase_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
 
     /// Construct the element from the contents
-    explicit nubase_element(base_type &&tuple)
-        : base_type{std::forward<base_type>(tuple)} {}
+    explicit nubase_element(base_type &&other)
+        : base_type{std::forward<base_type>(other)} {}
 
     /*! \brief Compare the ID of the two particles
      *
@@ -321,18 +322,16 @@ namespace reactions {
     std::string const &name() const { return get<nubase::name>(); }
 
     /// NuBase ID
-    int const &nubase_id() const { return get<nubase::nubase_id>(); }
+    int nubase_id() const { return get<nubase::nubase_id>(); }
 
     /// Atomic number
-    int const &atomic_number() const { return get<nubase::atomic_number>(); }
+    int atomic_number() const { return get<nubase::atomic_number>(); }
 
     /// Mass number
-    int const &mass_number() const { return get<nubase::mass_number>(); }
+    int mass_number() const { return get<nubase::mass_number>(); }
 
     /// Whether the element is its own charge-conjugate
-    bool const &is_ground_state() const {
-      return get<nubase::is_ground_state>();
-    }
+    bool is_ground_state() const { return get<nubase::is_ground_state>(); }
 
     /*! Get the mass of the element
      *
@@ -358,7 +357,7 @@ namespace reactions {
     }
 
     /// Whether the mass excess has been calculated from systematics
-    bool const &mass_excess_from_systematics() const {
+    bool mass_excess_from_systematics() const {
       return get<nubase::mass_excess, fields::tag>();
     }
 
@@ -384,12 +383,12 @@ namespace reactions {
     }
 
     /// Whether the half-life has been calculated from systematics
-    bool const &half_life_from_systematics() const {
+    bool half_life_from_systematics() const {
       return get<nubase::half_life, fields::tag>();
     }
 
     /// Whether the element is its own charge-conjugate
-    bool const &is_stable() const { return get<nubase::is_stable>(); }
+    bool is_stable() const { return get<nubase::is_stable>(); }
   };
 
   /*! \brief Database of elements with the NuBase information
