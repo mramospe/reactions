@@ -159,7 +159,7 @@ namespace reactions {
 
     /// Construct the element from an initializer list
     template <class... Args>
-    pdg_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
+    pdg_element(Args &&...args) : base_type{std::forward<Args>(args)...} {}
 
     /// Construct the element from the contents
     explicit pdg_element(base_type &&other)
@@ -603,7 +603,7 @@ namespace reactions {
      * specified by including a tilde before the charge or at the end of the
      * name, where adecuate.
      */
-    template <class... Args> void register_element(Args &&... args) {
+    template <class... Args> void register_element(Args &&...args) {
       return base_type::register_element(std::forward<Args>(args)...);
     }
 

@@ -127,7 +127,7 @@ namespace reactions::database {
      * any of the database used.
      *
      */
-    template <class... Args> void register_element(Args &&... args) {
+    template <class... Args> void register_element(Args &&...args) {
 
       element_type new_element{std::forward<Args>(args)...};
 
@@ -317,7 +317,7 @@ namespace reactions::database {
 
       /// Add a new element (by the user)
       template <class... Args>
-      element_type const &add_user_element(Args &&... args) {
+      element_type const &add_user_element(Args &&...args) {
         element_type new_element{std::forward<Args>(args)...};
         auto e = end();
         if (std::find_if(begin(), e,
