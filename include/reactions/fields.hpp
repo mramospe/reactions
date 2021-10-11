@@ -21,7 +21,7 @@ namespace reactions {
   template <class... Args> struct fill : std::tuple<Args...> {
     /// Build the class from the contents
     using base_type = std::tuple<Args...>;
-    constexpr fill(Args &&... args) : base_type{std::forward<Args>(args)...} {}
+    constexpr fill(Args &&...args) : base_type{std::forward<Args>(args)...} {}
   };
 
   /// Static object that defines a missing field within an object

@@ -187,7 +187,7 @@ namespace reactions {
 
     /// Construct the element from an initializer list
     template <class... Args>
-    nubase_element(Args &&... args) : base_type{std::forward<Args>(args)...} {}
+    nubase_element(Args &&...args) : base_type{std::forward<Args>(args)...} {}
 
     /// Construct the element from the contents
     explicit nubase_element(base_type &&other)
@@ -426,7 +426,7 @@ namespace reactions {
      * - A possible isomer state identifier can be added between parentheses.
      *
      */
-    template <class... Args> void register_element(Args &&... args) {
+    template <class... Args> void register_element(Args &&...args) {
       return base_type::register_element(std::forward<Args>(args)...);
     }
 
