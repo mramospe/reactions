@@ -39,7 +39,9 @@ jobs:
             python3 -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
       - run:
           name: Python module functionality
-          command: pytest
+          command: |
+            python3 -m pip install --force-reinstall -r test/python/requirements.txt
+            pytest
       - run:
           name: Test the installation of a CMake dependent project
           environment:
@@ -55,7 +57,7 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
-          command: python3 -m pip install -r requirements.txt
+          command: python3 -m pip install --force-reinstall -r test/python/requirements.txt
       - run:
           name: Check C++ format
           command: |
