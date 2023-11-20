@@ -1,0 +1,134 @@
+version: 2.1
+jobs:
+  build-and-test:
+    docker:
+      - image: ubuntu:20.04
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get update -y
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y git cmake g++-10
+      - checkout
+      - run:
+          name: Install the C++ package
+          environment:
+            CC: gcc-10
+            CXX: g++-10
+          command: |
+            mkdir build
+            cd build
+            cmake ../ -DINSTALL_TESTS=ON -DCMAKE_CXX_COMPILER=${CXX}
+            make install
+            cd ..
+      - run:
+          name: Install the Python package
+	  command: pip install .
+      - run:
+          name: Run the main tests
+          command: |
+            ./build/test/test_elements
+            ./build/test/test_database
+            ./build/test/test_processes
+      - run:
+          name: Python module tools
+	  command: |
+	    pip install .
+    	    python -m reactions print-table nubase
+            python -m reactions print-table pdg
+            python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
+      - run:
+          name: Python module functionality
+	  command: pytest
+      - run:
+          name: Test the installation of a CMake dependent project
+          environment:
+            CC: gcc-10
+            CXX: g++-10
+          command: |
+            cd test/cmake
+            python build-and-run.py
+  format:
+    docker:
+      - image: ubuntu:20.04
+    steps:
+      - run:
+          name: Install dependencies
+	  command: pip install -r requirements.txt
+      - run:
+          name: Check C++ format
+          command: |
+	    python setup.py check_format --regex '(include|python|test|docs|scripts)'
+	    python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
+  changelogs:
+    docker:
+      - image: ubuntu:20.04
+    steps:
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get update -y
+            apt-get install -y git ruby
+            ruby --version
+            gem install github_changelog_generator -v 1.15.2
+            mkdir -p /tmp/deployment/changelogs
+      - checkout
+      - run:
+          name: Generate changelogs
+          command: |
+            # Define the new and previous tags
+            VERSION=v$(cat version.txt)
+            if [[ ! ${VERSION} =~ "dev" ]]; then EXCLUDE_PATTERN='*dev*'; fi
+            LATEST_TAG=$(git describe --tags $(git rev-list --exclude=${EXCLUDE_PATTERN} --tags --max-count=1))
+            if [[ -z ${VERSION} || -z ${LATEST_TAG} ]]; then exit 1; fi
+            # Display the tags
+            echo "Using tags: ${VERSION} (new) ${LATEST_TAG} (latest)"
+            # Change the name of the tag if we are not in master
+            if [ ${CIRCLE_BRANCH} != master ]; then RELEASE_TAG=devel-${VERSION}; else RELEASE_TAG=${VERSION}; fi
+            echo ${RELEASE_TAG} >> /tmp/deployment/tag.txt
+            # Generate the changelogs
+            github_changelog_generator -u mramospe -p reactions -o /tmp/deployment/changelogs/${VERSION}-changelog.md --since-tag ${LATEST_TAG} --future-release ${VERSION} -t ${GITHUB_TOKEN} --release-branch devel --exclude-labels "new version"
+            github_changelog_generator -u mramospe -p reactions -o /tmp/deployment/changelogs/${VERSION}-full-changelog.md --since-tag v0.0.0 --future-release ${VERSION} -t ${GITHUB_TOKEN} --release-branch devel --exclude-labels "new version"
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - deployment
+  deploy:
+    docker:
+      - image: alpine:latest
+    steps:
+      - attach_workspace:
+          at: /tmp
+      - run:
+          name: Install GitHub interface
+          command: apk add git github-cli openssh
+      - checkout
+      - run:
+          name: Publish release
+          command: |
+            VERSION=v$(cat version.txt)
+            RELEASE_TAG=$(cat /tmp/deployment/tag.txt)
+            RELEASE_NOTES=/tmp/deployment/changelogs/${VERSION}-changelog.md
+            CHANGELOGS=/tmp/deployment/changelogs/*.md
+            gh release create --draft --notes-file ${RELEASE_NOTES} --target ${CIRCLE_SHA1} --title ${RELEASE_TAG} ${RELEASE_TAG} ${CHANGELOGS}
+
+basic-deploy-filters: &basic-deploy-filters
+  filters:
+    branches:
+      only:
+        - master
+        - devel
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - build-and-test
+      - format
+  project:
+    jobs:
+      - changelogs:
+          <<: *basic-deploy-filters
+      - deploy:
+          requires:
+            - changelogs
