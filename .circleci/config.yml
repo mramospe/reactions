@@ -8,7 +8,7 @@ jobs:
           name: Install dependencies
           command: |
             apt-get update -y
-            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y git cmake g++-10 python3
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y git cmake g++-10 python3-dev
       - checkout
       - run:
           name: Install the C++ package
@@ -55,7 +55,7 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
-          command: pip install -r requirements.txt
+          command: python3 -m pip install -r requirements.txt
       - run:
           name: Check C++ format
           command: |
