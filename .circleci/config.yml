@@ -57,7 +57,10 @@ jobs:
       - checkout
       - run:
           name: Install dependencies
-          command: python3 -m pip install --force-reinstall -r test/python/requirements.txt
+          command: |
+            apt-get update -y
+            apt-get install python3-dev python3-pip
+            python3 -m pip install --force-reinstall -r test/python/requirements.txt
       - run:
           name: Check C++ format
           command: |
