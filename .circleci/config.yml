@@ -8,7 +8,7 @@ jobs:
           name: Install dependencies
           command: |
             apt-get update -y
-            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y git cmake g++-10
+            DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get install -y git cmake g++-10 python3
       - checkout
       - run:
           name: Install the C++ package
@@ -23,7 +23,7 @@ jobs:
             cd ..
       - run:
           name: Install the Python package
-          command: pip install .
+          command: python3 -m pip install .
       - run:
           name: Run the main tests
           command: |
@@ -33,10 +33,10 @@ jobs:
       - run:
           name: Python module tools
           command: |
-            pip install .
-            python -m reactions print-table nubase
-            python -m reactions print-table pdg
-            python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
+            python3 -m pip install .
+            python3 -m reactions print-table nubase
+            python3 -m reactions print-table pdg
+            python3 -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
       - run:
           name: Python module functionality
           command: pytest
@@ -47,19 +47,20 @@ jobs:
             CXX: g++-10
           command: |
             cd test/cmake
-            python build-and-run.py
+            python3 build-and-run.py
   format:
     docker:
       - image: ubuntu:20.04
     steps:
+      - checkout
       - run:
           name: Install dependencies
           command: pip install -r requirements.txt
       - run:
           name: Check C++ format
           command: |
-            python setup.py check_format --regex '(include|python|test|docs|scripts)'
-            python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
+            python3 setup.py check_format --regex '(include|python|test|docs|scripts)'
+            python3 setup.py check_pyflakes --regex '(python|test|docs|scripts)'
   changelogs:
     docker:
       - image: ubuntu:20.04
