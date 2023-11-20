@@ -1,7 +1,7 @@
 Reactions
 =========
 
-[![Build Status](https://travis-ci.com/mramospe/reactions.svg?branch=master)](https://travis-ci.com/mramospe/reactions)
+[![Build Status](https://circleci.com/gh/mramospe/reactions/tree/master.svg?style=svg)](https://circleci.com/gh/mramospe/reactions/tree/master)
 [![Coverage](https://codecov.io/gh/mramospe/reactions/branch/master/graph/badge.svg)](https://codecov.io/gh/mramospe/reactions)
 [![Documentation Status](https://readthedocs.org/projects/reactions/badge/?version=latest)](https://reactions.readthedocs.io/en/latest/?badge=latest)
 [![Documentation (Python)](https://img.shields.io/badge/python_documentation-link-blue.svg)](https://reactions.readthedocs.io/en/latest)

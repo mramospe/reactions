@@ -93,7 +93,9 @@ namespace reactions::fields {
   constexpr auto is_optional_field_v = is_optional_field<Field>::value;
 
   /// If the input type is an optional, get the underying type
-  template <class T> struct remove_optional { using type = T; };
+  template <class T> struct remove_optional {
+    using type = T;
+  };
 
   /// \copydoc remove_optional
   template <class T> struct remove_optional<std::optional<T>> {
