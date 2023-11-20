@@ -23,7 +23,7 @@ jobs:
             cd ..
       - run:
           name: Install the Python package
-	  command: pip install .
+          command: pip install .
       - run:
           name: Run the main tests
           command: |
@@ -32,14 +32,14 @@ jobs:
             ./build/test/test_processes
       - run:
           name: Python module tools
-	  command: |
-	    pip install .
-    	    python -m reactions print-table nubase
+          command: |
+            pip install .
+            python -m reactions print-table nubase
             python -m reactions print-table pdg
             python -m reactions check-syntax --decays 'A -> B C' --reactions 'A B -> C D' --kind string
       - run:
           name: Python module functionality
-	  command: pytest
+          command: pytest
       - run:
           name: Test the installation of a CMake dependent project
           environment:
@@ -54,12 +54,12 @@ jobs:
     steps:
       - run:
           name: Install dependencies
-	  command: pip install -r requirements.txt
+          command: pip install -r requirements.txt
       - run:
           name: Check C++ format
           command: |
-	    python setup.py check_format --regex '(include|python|test|docs|scripts)'
-	    python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
+            python setup.py check_format --regex '(include|python|test|docs|scripts)'
+            python setup.py check_pyflakes --regex '(python|test|docs|scripts)'
   changelogs:
     docker:
       - image: ubuntu:20.04
