@@ -42,6 +42,7 @@ jobs:
           command: |
             python3 -m pip install --force-reinstall -r test/python/requirements.txt
             pytest
+            codecov
       - run:
           name: Test the installation of a CMake dependent project
           environment:
