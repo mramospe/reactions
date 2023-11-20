@@ -1,12 +1,14 @@
-image: gitlab-registry.cern.ch/lhcb-docker/analysis-ci/cc7:latest
+default:
+   image: gitlab-registry.cern.ch/lhcb-docker/analysis-ci/cc7:latest
+   tags:
+      - cvmfs
+   before_script:
+      - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_99 x86_64-centos7-gcc10-opt
+      - "export PYTHONPATH=$(echo $PYTHONPATH | awk -v RS=: -v ORS=: '/LCG.*site-packages/ {next} {print}' | sed 's/:*$//')"
 
 stages:
    - build
    - test
-
-before_script:
-   - source /cvmfs/sft.cern.ch/lcg/views/setupViews.sh LCG_99 x86_64-centos7-gcc10-opt
-   - "export PYTHONPATH=$(echo $PYTHONPATH | awk -v RS=: -v ORS=: '/LCG.*site-packages/ {next} {print}' | sed 's/:*$//')"
 
 build-cpp:
    stage: build
